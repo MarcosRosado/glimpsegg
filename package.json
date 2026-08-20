@@ -32,7 +32,8 @@
     "publish": {
       "provider": "github",
       "owner": "MarcosRosado",
-      "repo": "glimpsegg"
+      "repo": "glimpsegg",
+      "releaseType": "release"
     },
     "files": [
       "dist/**/*",
