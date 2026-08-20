@@ -1,0 +1,9 @@
+# Os SVG de marca são hasheados pelo gate `npm run icons:check`. Sem isto, o
+# checkout do Windows converte LF em CRLF e o sha256 do mesmo conteúdo muda,
+# quebrando o gate no runner (e só nele).
+*.svg -text
+
+# Binários: nunca converter fim de linha nem tentar diff textual.
+*.png binary
+*.ico binary
+*.icns binary

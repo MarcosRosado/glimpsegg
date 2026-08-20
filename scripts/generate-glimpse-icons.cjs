@@ -34,12 +34,29 @@ const ICO_SIZES = [16, 32, 48, 64, 128, 256];
 
 const checkOnly = process.argv.includes('--check');
 
-const rel = (f) => path.relative(rootDir, f);
+// Separador POSIX sempre: no Windows, path.relative devolve "build\\icon.svg" e as
+// chaves do manifesto (gerado no Linux) não casariam.
+const rel = (f) => path.relative(rootDir, f).split(path.sep).join('/');
 const die = (msg) => {
   console.error(`✗ ${msg}`);
   process.exit(1);
 };
-const sha256 = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+// Extensões cujo conteúdo o git pode reescrever no checkout.
+const TEXT_EXT = new Set(['.svg']);
+const sha256 = (f) => {
+  const buf = fs.readFileSync(f);
+  // O checkout do Windows converte LF em CRLF nos arquivos de texto, mudando o
+  // sha256 do mesmo conteúdo. Normaliza antes de hashear para o gate comparar
+  // conteúdo, não fim de linha. (O .gitattributes evita a conversão; isto
+  // mantém o gate correto mesmo com autocrlf configurado de outra forma.)
+  if (TEXT_EXT.has(path.extname(f).toLowerCase())) {
+    return crypto
+      .createHash('sha256')
+      .update(buf.toString('utf8').replace(/\r\n/g, '\n'), 'utf8')
+      .digest('hex');
+  }
+  return crypto.createHash('sha256').update(buf).digest('hex');
+};
 
 // ---------------------------------------------------------------- binário IM
 
