@@ -1,8 +1,10 @@
 /**
- * Patch do Dota 2 que serve de referência para as análises.
+ * Patch do Dota 2 que serve de referência inicial/fallback para as análises.
  *
- * Antes era um literal solto no JSX do Navbar, onde ninguém o encontrava para
- * atualizar. O ideal é puxar de `constants { gameVersions }` da STRATZ; até lá,
- * este é o único ponto a editar quando o patch virar.
+ * Versão atual de referência embutida: 7.41e.
+ * Em execução, o app consulta dinamicamente a Valve (Steam News API),
+ * OpenDota e STRATZ para manter o patch sempre sincronizado e atualizado
+ * em tempo real, sem necessidade de atualização do app.
  */
-export const CURRENT_GAME_PATCH = '7.38c';
+export const CURRENT_GAME_PATCH = '7.41e';
+

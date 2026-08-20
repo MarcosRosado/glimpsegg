@@ -18,6 +18,7 @@ import { resolveSteamId } from '../../services/steamResolver';
 import { useLanguage } from '../../context/LanguageContext';
 import { ProfileHistoryItem } from '../../types/dota';
 import { extractSteamIdFromStratzToken } from '../../utils/stratzToken';
+import { useGamePatch } from '../../hooks/useGamePatch';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -45,10 +46,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
 
-  // Updater state
   const [appVersion, setAppVersion] = useState<string>('1.0.0');
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateStatusText, setUpdateStatusText] = useState<string | null>(null);
+  const { patch: dotaPatch } = useGamePatch(apiKey);
 
   useEffect(() => {
     if (isOpen) {
@@ -309,12 +310,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* Auto Updater Section */}
+          {/* Auto Updater & Version Section */}
           <div className="pt-3 border-t border-slate-800/80 space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400 font-mono">
-                {t('appVersion')}: <strong className="text-slate-200">v{appVersion}</strong>
-              </span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-slate-400">
+                <span>
+                  {t('appVersion')}: <strong className="text-slate-200">v{appVersion}</strong>
+                </span>
+                <span className="hidden sm:inline text-slate-700">·</span>
+                <span title={t('gamePatchTooltip')}>
+                  {t('gamePatch')}: <strong className="text-cyan-300">{dotaPatch}</strong>
+                </span>
+              </div>
 
               <button
                 type="button"

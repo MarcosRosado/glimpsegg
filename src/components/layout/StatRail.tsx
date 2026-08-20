@@ -3,7 +3,7 @@ import { Flame, Zap, Coins, LucideIcon } from 'lucide-react';
 import { PlayerProfileSummary } from '../../types/dota';
 import { computeRecentFormStats } from '../../utils/recentFormStats';
 import { formatPercent } from '../../utils/dotaFormatters';
-import { CURRENT_GAME_PATCH } from '../../constants/gameVersion';
+import { useGamePatch } from '../../hooks/useGamePatch';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface StatRailProps {
@@ -46,6 +46,7 @@ const RailStat: React.FC<RailStatProps> = ({
  */
 export const StatRail: React.FC<StatRailProps> = ({ profile }) => {
   const { t } = useLanguage();
+  const { patch } = useGamePatch();
   const stats = computeRecentFormStats(profile.recentMatches);
 
   if (stats.count === 0) return null;
@@ -56,8 +57,8 @@ export const StatRail: React.FC<StatRailProps> = ({ profile }) => {
   return (
     <div className="border-t border-slate-800/60 bg-[#0a0f1a]/60">
       <div className="w-full max-w-[1850px] mx-auto px-4 sm:px-6 h-7 flex items-center gap-3 overflow-x-auto no-scrollbar text-[11px] font-mono text-slate-400">
-        <RailStat label={t('gamePatch')} tooltip={t('gamePatchTooltip')}>
-          <span className="text-slate-300 font-semibold tabular-nums">{CURRENT_GAME_PATCH}</span>
+        <RailStat label={t('gamePatch')} tooltip={`${t('gamePatchTooltip')} (${patch})`}>
+          <span className="text-slate-300 font-semibold tabular-nums">{patch}</span>
         </RailStat>
 
         <RailStat
