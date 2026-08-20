@@ -23,14 +23,14 @@ jobs:
       tag: ${{ steps.bump.outputs.tag }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Compute, commit and tag next version
         id: bump
@@ -59,7 +59,7 @@ jobs:
           npm version "$next" --no-git-tag-version --allow-same-version
 
           git config user.name  "Marcos Rosado"
-          git config user.email "contato@marcosrosado.dev"
+          git config user.email "37305197+MarcosRosado@users.noreply.github.com"
 
           # [skip ci] evita re-disparo; na prática um push feito com o GITHUB_TOKEN
           # padrão já não dispara novos workflow runs — é a segunda barreira.
@@ -90,14 +90,14 @@ jobs:
       # Checa out a tag recém-criada: sem isso o electron-builder empacotaria a
       # versão antiga do package.json e os assets colidiriam com a release anterior.
       - name: Checkout Release Tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.version.outputs.tag }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install Linux Dependencies
