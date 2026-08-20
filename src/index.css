@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #070a10;
+    --bg-card: #0d1320;
+    --bg-card-hover: #121c2e;
+    --border-card: #182438;
+    --radiant-green: #10b981;
+    --dire-red: #f43f5e;
+    --dota-gold: #f59e0b;
+    --dota-blue: #06b6d4;
+    --glimpse-cyan: #22d3ee;
+    --glimpse-emerald: #10b981;
+    --glimpse-violet: #8b5cf6;
+  }
+
+  html {
+    font-size: 17.5px; /* Proportionally scales all rem units by ~10% for improved desktop legibility */
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #070a10;
+    color: #f1f5f9;
+    font-size: 0.925rem;
+    line-height: 1.5;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Sleek GlimpseGG dark scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #080c14;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #0e7490;
+  }
+}
+
+/* Custom GlimpseGG UI utilities */
+.glass-panel {
+  background: rgba(13, 19, 32, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(34, 211, 238, 0.08);
+}
+
+.glass-card {
+  background: rgba(14, 21, 35, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-hover:hover {
+  background: rgba(18, 28, 46, 0.95);
+  border-color: rgba(34, 211, 238, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px -4px rgba(6, 182, 212, 0.15);
+}
+
+.glow-glimpse {
+  box-shadow: 0 0 25px -4px rgba(34, 211, 238, 0.3);
+}
+
+.glow-radiant {
+  box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.25);
+}
+
+.glow-dire {
+  box-shadow: 0 0 20px -3px rgba(244, 63, 94, 0.25);
+}
+
+.glow-gold {
+  box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.25);
+}

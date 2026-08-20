@@ -1,0 +1,143 @@
+name: Build & Release GlimpseGG
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Serializa as releases: dois pushes em sequência não podem disputar a mesma tag.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Bump version & tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Compute, commit and tag next version
+        id: bump
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          latest="$(git tag -l 'v*' --sort=-v:refname | head -n1 || true)"
+          if [ -z "$latest" ]; then
+            # Primeira release do repo: usa a versão do package.json como está.
+            next="$(node -p "require('./package.json').version")"
+            echo "Nenhuma tag encontrada; primeira release em v$next"
+          else
+            base="${latest#v}"
+            IFS='.' read -r major minor patch <<< "$base"
+            next="${major}.${minor}.$((patch + 1))"
+            echo "Última tag $latest; próxima versão v$next"
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v$next" >/dev/null; then
+            echo "::error::A tag v$next já existe. Abortando para não sobrescrever uma release." >&2
+            exit 1
+          fi
+
+          npm version "$next" --no-git-tag-version --allow-same-version
+
+          git config user.name  "Marcos Rosado"
+          git config user.email "contato@marcosrosado.dev"
+
+          # [skip ci] evita re-disparo; na prática um push feito com o GITHUB_TOKEN
+          # padrão já não dispara novos workflow runs — é a segunda barreira.
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "package.json já está em $next; apenas criando a tag"
+          else
+            git add package.json package-lock.json
+            git commit -m "chore: release v$next [skip ci]"
+            git push origin HEAD:main
+          fi
+
+          git tag "v$next"
+          git push origin "v$next"
+
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "tag=v$next"    >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Build & Release (${{ matrix.os }})
+    needs: version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      # Checa out a tag recém-criada: sem isso o electron-builder empacotaria a
+      # versão antiga do package.json e os assets colidiriam com a release anterior.
+      - name: Checkout Release Tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools libfuse2
+
+      - name: Install Project Dependencies
+        run: npm ci
+
+      - name: Compile Frontend Bundle
+        run: npm run build
+
+      - name: Package & Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          case "${{ runner.os }}" in
+            Linux)   builder_args="--linux AppImage" ;;
+            Windows) builder_args="--win" ;;
+            macOS)   builder_args="--mac" ;;
+            *) echo "::error::runner.os inesperado: ${{ runner.os }}" >&2; exit 1 ;;
+          esac
+
+          # Retry porque o upload de assets grandes (.exe/.dmg) já estourou o
+          # timeout do httpExecutor do electron-builder. Com nome de artefato
+          # único por target e uma release nova por push, repetir é seguro.
+          for attempt in 1 2 3; do
+            echo "::group::electron-builder (tentativa $attempt/3)"
+            if npx electron-builder $builder_args --publish always; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "Falhou na tentativa $attempt/3"
+            [ "$attempt" -lt 3 ] && sleep $((attempt * 30))
+          done
+
+          echo "::error::electron-builder falhou nas 3 tentativas" >&2
+          exit 1

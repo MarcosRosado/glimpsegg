@@ -1,0 +1,41 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies and Build Outputs
+node_modules
+dist
+dist-ssr
+release
+*.local
+*.tsbuildinfo
+
+# Environment Variables & Secrets
+# Deliberadamente amplo: qualquer .env* fica fora do Git, incluindo backups
+# (.env.bak, .env.old, .env.copy). O padrao estreito anterior nao pegava esses.
+.env*
+!.env.example
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local Scripts & Sensitive Maintenance
+scripts/sanitize-git-repo.sh
+scripts/build-and-deploy-local.sh
+test-*.ts
+test-*.js
+*.tmp
+

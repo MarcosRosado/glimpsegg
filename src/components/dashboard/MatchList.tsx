@@ -1,0 +1,436 @@
+import React, { useState, useMemo } from 'react';
+import { Crosshair, ScanEye, Swords, ChevronRight, Zap, Trophy, Shield, Clock, Flame, RotateCcw, Award, Crown, Coins } from 'lucide-react';
+import { PlayerMatchSummary } from '../../types/dota';
+import { getHero } from '../../constants/heroes';
+import { getItem } from '../../constants/items';
+import { formatDuration, formatTimeAgo, getImpBadgeStyle } from '../../utils/dotaFormatters';
+import { handleHeroImageError, handleItemImageError } from '../../utils/imageFallback';
+import { useLanguage } from '../../context/LanguageContext';
+
+interface MatchTag {
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+  className: string;
+  priority: number;
+}
+
+function getAccumulatedMatchTags(match: PlayerMatchSummary): MatchTag[] {
+  const tags: MatchTag[] = [];
+  const durMin = (match.durationSeconds || 2100) / 60;
+  const kda = match.kda || ((match.kills + match.assists) / Math.max(1, match.deaths));
+
+  // 1. RESULTADO DA PARTIDA (Match Dynamic Outcome)
+  if (match.isVictory) {
+    if (durMin <= 32 && (kda >= 5.0 || match.goldPerMinute >= 720 || match.imp >= 25)) {
+      tags.push({
+        key: 'dyn-stomp',
+        label: 'Massacre',
+        icon: <Flame className="w-2.5 h-2.5" />,
+        className: 'bg-orange-500/20 text-orange-300 border-orange-500/40 font-bold',
+        priority: 75,
+      });
+    } else if (durMin >= 42 || match.deaths >= 7) {
+      tags.push({
+        key: 'dyn-comeback',
+        label: 'Virada',
+        icon: <RotateCcw className="w-2.5 h-2.5" />,
+        className: 'bg-purple-500/20 text-purple-300 border-purple-500/40 font-bold',
+        priority: 70,
+      });
+    } else {
+      tags.push({
+        key: 'dyn-win',
+        label: 'Vitória Sólida',
+        icon: <Swords className="w-2.5 h-2.5" />,
+        className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-medium',
+        priority: 30,
+      });
+    }
+  } else {
+    if (durMin >= 40) {
+      tags.push({
+        key: 'dyn-contested',
+        label: 'Partida Disputada',
+        icon: <Swords className="w-2.5 h-2.5" />,
+        className: 'bg-blue-500/20 text-blue-300 border-blue-500/40 font-medium',
+        priority: 40,
+      });
+    } else if (durMin <= 28) {
+      tags.push({
+        key: 'dyn-fast-loss',
+        label: 'Derrota Rápida',
+        icon: <Flame className="w-2.5 h-2.5" />,
+        className: 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-medium',
+        priority: 35,
+      });
+    } else {
+      tags.push({
+        key: 'dyn-loss',
+        label: 'Derrota',
+        icon: <Shield className="w-2.5 h-2.5" />,
+        className: 'bg-rose-500/15 text-rose-300 border-rose-500/30 font-medium',
+        priority: 20,
+      });
+    }
+  }
+
+  // 2. RESULTADO DA ROTA (Lane Outcome)
+  if ((match.imp >= 15 && kda >= 4) || (match.numLastHits >= 230 && match.deaths <= 3)) {
+    tags.push({
+      key: 'lane-stomp',
+      label: 'Dominou a Rota',
+      className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold',
+      priority: 80,
+    });
+  } else if (match.imp >= 5 || (kda >= 3.0 && match.isVictory)) {
+    tags.push({
+      key: 'lane-won',
+      label: 'Venceu a Rota',
+      className: 'bg-teal-500/20 text-teal-300 border-teal-500/40 font-medium',
+      priority: 60,
+    });
+  } else if (match.imp <= -10 || (match.deaths >= 7 && !match.isVictory)) {
+    tags.push({
+      key: 'lane-lost',
+      label: 'Rota Difícil',
+      className: 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-medium',
+      priority: 55,
+    });
+  } else {
+    tags.push({
+      key: 'lane-even',
+      label: 'Rota Equilibrada',
+      className: 'bg-slate-500/20 text-slate-300 border-slate-500/40 font-medium',
+      priority: 25,
+    });
+  }
+
+  // 3. DESTAQUES INDIVIDUAIS (Awards & Accolades)
+  if (match.award === 'MVP' || match.imp >= 35) {
+    tags.push({
+      key: 'award-mvp',
+      label: 'MVP',
+      icon: <Trophy className="w-3 h-3 text-amber-400" />,
+      className: 'bg-amber-500/20 text-amber-300 border-amber-500/50 font-black shadow-sm shadow-amber-950',
+      priority: 100,
+    });
+  }
+
+  if (match.award === 'TOP_SUPPORT' || (['POSITION_4', 'POSITION_5'].includes(match.role) && match.imp >= 15 && match.award !== 'MVP')) {
+    tags.push({
+      key: 'award-top-sup',
+      label: 'Top Sup',
+      icon: <Shield className="w-3 h-3 text-purple-400" />,
+      className: 'bg-purple-500/20 text-purple-300 border-purple-500/50 font-bold',
+      priority: 90,
+    });
+  }
+
+  if (match.deaths === 0) {
+    tags.push({
+      key: 'acc-immortal',
+      label: 'Imortal (0 Mortes)',
+      icon: <Crown className="w-2.5 h-2.5 text-cyan-400" />,
+      className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-bold',
+      priority: 85,
+    });
+  }
+
+  if (match.imp >= 25 && match.award !== 'MVP' && match.imp < 35) {
+    tags.push({
+      key: 'acc-high-imp',
+      label: `Impacto +${match.imp}`,
+      icon: <Zap className="w-2.5 h-2.5 text-amber-400" />,
+      className: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40 font-bold',
+      priority: 65,
+    });
+  }
+
+  if (match.goldPerMinute >= 750) {
+    tags.push({
+      key: 'acc-heavy-farm',
+      label: `${match.goldPerMinute} GPM Farm`,
+      icon: <Coins className="w-2.5 h-2.5 text-amber-400" />,
+      className: 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-medium',
+      priority: 50,
+    });
+  }
+
+  if (match.deaths > 0 && kda >= 10) {
+    tags.push({
+      key: 'acc-kda-10',
+      label: `KDA ${kda.toFixed(1)}`,
+      className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-medium',
+      priority: 45,
+    });
+  }
+
+  // Sort strictly by priority descending and cap at maximum 3 most important tags!
+  return tags
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 3);
+}
+
+interface MatchListProps {
+  matches: PlayerMatchSummary[];
+  selectedMatchId: string | null;
+  onSelectMatch: (matchId: string) => void;
+}
+
+export const MatchList: React.FC<MatchListProps> = ({ matches, selectedMatchId, onSelectMatch }) => {
+  const { t } = useLanguage();
+  const [outcomeFilter, setOutcomeFilter] = useState<'ALL' | 'WON' | 'LOST'>('ALL');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredMatches = useMemo(() => {
+    return matches.filter((m) => {
+      // Outcome filter
+      if (outcomeFilter === 'WON' && !m.isVictory) return false;
+      if (outcomeFilter === 'LOST' && m.isVictory) return false;
+
+      // Role filter
+      if (roleFilter !== 'ALL' && m.role !== roleFilter) return false;
+
+      // Hero search
+      if (searchQuery.trim()) {
+        const hero = getHero(m.heroId);
+        if (!hero.displayName.toLowerCase().includes(searchQuery.toLowerCase())) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [matches, outcomeFilter, roleFilter, searchQuery]);
+
+  return (
+    <div className="glass-card rounded-2xl p-5 border border-slate-800/80 shadow-xl bg-[#0b101a]">
+      {/* Header & Filter Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
+            <ScanEye className="w-4 h-4 text-cyan-400" />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-slate-100 tracking-wide">
+              Partidas Recentes & Performance Detalhada
+            </h2>
+            <span className="text-[11px] text-slate-400 font-mono">
+              {t('showingMatches', { count: filteredMatches.length, total: matches.length })}
+            </span>
+          </div>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Outcome Filter */}
+          <div className="flex bg-slate-900/90 p-0.5 rounded-lg border border-slate-800 text-xs font-semibold">
+            <button
+              onClick={() => setOutcomeFilter('ALL')}
+              className={`px-3 py-1 rounded-md transition ${
+                outcomeFilter === 'ALL' ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {t('allMatches')}
+            </button>
+            <button
+              onClick={() => setOutcomeFilter('WON')}
+              className={`px-3 py-1 rounded-md transition ${
+                outcomeFilter === 'WON' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {t('wonMatches')}
+            </button>
+            <button
+              onClick={() => setOutcomeFilter('LOST')}
+              className={`px-3 py-1 rounded-md transition ${
+                outcomeFilter === 'LOST' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {t('lostMatches')}
+            </button>
+          </div>
+
+          {/* Role Filter */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="bg-slate-900/90 border border-slate-800 text-xs text-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-cyan-500/60 font-mono transition"
+          >
+            <option value="ALL">{t('allRoles')}</option>
+            <option value="POSITION_1">{t('pos1')}</option>
+            <option value="POSITION_2">{t('pos2')}</option>
+            <option value="POSITION_3">{t('pos3')}</option>
+            <option value="POSITION_4">{t('pos4')}</option>
+            <option value="POSITION_5">{t('pos5')}</option>
+          </select>
+
+          {/* Search Hero */}
+          <input
+            type="text"
+            placeholder={t('filterByHeroOrId')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-slate-900/90 border border-slate-800 text-xs text-slate-300 rounded-lg px-3 py-1.5 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 w-40 font-mono transition"
+          />
+        </div>
+      </div>
+
+      {/* Match Table / Rows */}
+      <div className="space-y-2">
+        {filteredMatches.length === 0 ? (
+          <div className="text-center py-12 text-slate-500 text-xs font-mono">
+            {t('noMatchesFound')}
+          </div>
+        ) : (
+          filteredMatches.map((match) => {
+            const hero = getHero(match.heroId);
+            const impStyle = getImpBadgeStyle(match.imp);
+            const isSelected = selectedMatchId === match.matchId;
+
+            return (
+              <div
+                key={match.matchId}
+                onClick={() => onSelectMatch(match.matchId)}
+                className={`grid grid-cols-1 xl:grid-cols-[minmax(280px,1fr)_110px_110px_90px_210px_24px] items-center gap-4 p-3.5 rounded-xl border transition-all cursor-pointer group ${
+                  isSelected
+                    ? 'border-cyan-500/80 bg-cyan-500/10 shadow-lg shadow-cyan-950/30'
+                    : 'border-slate-800/80 bg-slate-900/40 hover:bg-slate-800/60 hover:border-slate-700'
+                }`}
+              >
+                {/* 1. Left: Hero, Role, Outcome & Match Dynamics */}
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {/* Hero Portrait with Victory/Defeat Indicator Bar */}
+                  <div className="relative shrink-0">
+                    <img
+                      src={hero.avatarUrl}
+                      alt={hero.displayName}
+                      className="w-14 h-8 object-cover rounded-lg border border-slate-700 shadow-md"
+                      onError={handleHeroImageError}
+                    />
+                    <div
+                      className={`absolute top-0 bottom-0 left-0 w-1.5 rounded-l-lg ${
+                        match.isVictory ? 'bg-emerald-400' : 'bg-rose-500'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-bold text-sm text-slate-100 group-hover:text-amber-400 transition mr-0.5 whitespace-nowrap">
+                        {hero.displayName}
+                      </span>
+
+                      {/* Accumulating Tags: Top 3 by priority */}
+                      {getAccumulatedMatchTags(match).map((tag) => (
+                        <span
+                          key={tag.key}
+                          className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-all whitespace-nowrap ${tag.className}`}
+                        >
+                          {tag.icon}
+                          <span>{tag.label}</span>
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 font-mono">
+                      <span className={`font-bold ${match.isVictory ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {match.isVictory ? t('win') : t('loss')}
+                      </span>
+                      <span>•</span>
+                      <span className="text-purple-300">{match.role.replace('POSITION_', 'Pos ')}</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <Clock className="w-3 h-3 text-slate-500" />
+                        {formatDuration(match.durationSeconds)}
+                      </span>
+                      <span>•</span>
+                      <span>{formatTimeAgo(match.startDateTime)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. KDA */}
+                <div className="text-left xl:text-center font-mono">
+                  <div className="font-bold text-slate-200 text-xs">
+                    <span className="text-emerald-400">{match.kills}</span> /{' '}
+                    <span className="text-rose-400">{match.deaths}</span> /{' '}
+                    <span className="text-amber-400">{match.assists}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-sans">{match.kda.toFixed(1)} {t('kda')}</div>
+                </div>
+
+                {/* 3. CS & GPM */}
+                <div className="text-left xl:text-center font-mono">
+                  <div className="font-bold text-slate-300 text-xs">
+                    {match.goldPerMinute} <span className="text-[10px] text-slate-500">GPM</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-sans">
+                    {match.numLastHits} / {match.numDenies} CS
+                  </div>
+                </div>
+
+                {/* 4. Prominent IMP Rating */}
+                <div className="text-left xl:text-center font-mono">
+                  <div
+                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-xl border text-xs font-black shadow-md ${impStyle.bg} ${impStyle.text} ${impStyle.border}`}
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>{match.imp >= 0 ? `+${match.imp}` : match.imp}</span>
+                  </div>
+                  <div className="text-[9px] text-slate-400 font-sans mt-0.5">{t('impImpact')}</div>
+                </div>
+
+                {/* 5. Item Inventory */}
+                <div className="flex items-center xl:justify-center">
+                  <div className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-lg border border-slate-800">
+                    {match.items.map((itemId, idx) => {
+                      const item = getItem(itemId);
+                      return (
+                        <div
+                          key={idx}
+                          className="w-7 h-5 rounded bg-slate-900 border border-slate-800/80 overflow-hidden shrink-0"
+                          title={item.displayName}
+                        >
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.displayName}
+                              className="w-full h-full object-cover"
+                              onError={handleItemImageError}
+                            />
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                    {/* Neutral Item */}
+                    {match.neutralItem ? (
+                      <div
+                        className="w-6 h-5 rounded-full border border-amber-500/60 overflow-hidden shrink-0 ml-1 bg-slate-900"
+                        title={getItem(match.neutralItem).displayName}
+                      >
+                        <img
+                          src={getItem(match.neutralItem).imageUrl}
+                          alt="Neutral"
+                          className="w-full h-full object-cover"
+                          onError={handleItemImageError}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* 6. Open Arrow */}
+                <div className="hidden xl:flex items-center justify-center text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all">
+                  <ChevronRight className="w-5 h-5" />
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
