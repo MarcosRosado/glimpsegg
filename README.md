@@ -23,7 +23,7 @@ Construído com Electron + React + TypeScript + Vite. Interface em português (p
 
 ## Requisitos
 
-- Node.js 20+ (desenvolvido em 24.x)
+- Node.js 24+
 - npm 10+
 
 ## Instalação
@@ -55,6 +55,37 @@ Para usar dados reais:
 > expiração embutida no JWT. Nunca commite o token, nem cole em issues, pull requests ou prints de
 > tela. Ele é um Bearer token: quem tiver o valor consome a sua quota de API.
 
+## Privacidade
+
+**GlimpseGG não tem servidor próprio.** Não existe backend, banco de dados ou serviço
+operado por este projeto. Nada que você faz no app é enviado para nenhuma infraestrutura
+nossa, porque ela não existe.
+
+Consequências práticas:
+
+- **Nenhum dado seu é armazenado em servidor.** Não há cadastro, conta, login nem perfil
+  do lado do projeto.
+- **Nenhuma telemetria ou analytics.** O app não coleta métricas de uso, não tem crash
+  reporter e não embute SDK de rastreamento.
+- **O token da STRATZ nunca sai da sua máquina**, exceto no header `Authorization` das
+  chamadas que vão direto para a própria STRATZ — que é quem o emitiu.
+
+O app é apenas um cliente: ele fala direto com APIs públicas de terceiros para montar as
+telas. Para transparência, tudo com que ele se comunica:
+
+| Destino | Para quê | O que é enviado |
+| --- | --- | --- |
+| `api.stratz.com` | Detalhes de partida, benchmarks, tendências | Seu token e o Steam Account ID consultado |
+| `api.opendota.com` | Perfis, duplas, busca por vanity URL | O Steam Account ID ou termo de busca |
+| `cdn.cloudflare.steamstatic.com` | Ícones de heróis e itens (Valve) | Nada além da requisição da imagem |
+| `avatars.steamstatic.com` | Avatares de jogadores (Valve) | Nada além da requisição da imagem |
+| `www.opendota.com` | Ícones de rank | Nada além da requisição da imagem |
+| `fonts.googleapis.com`, `fonts.gstatic.com` | Fontes Inter e JetBrains Mono | Nada além da requisição da fonte |
+| `github.com` | Verificação de atualização do app | Nada além da versão consultada |
+
+Uma Content-Security-Policy no bundle de produção restringe as conexões exatamente a
+essa lista — qualquer outro destino é bloqueado pelo próprio Chromium.
+
 ### Onde o token é armazenado
 
 Em texto claro, **localmente**, sem criptografia:
@@ -64,9 +95,9 @@ Em texto claro, **localmente**, sem criptografia:
   `~/Library/Application Support/GlimpseGG` no macOS).
 - **Browser (dev):** `localStorage`, chave `stratz_api_key`.
 
-O token nunca é embutido no bundle nem nos artefatos de release — ele só existe na máquina de quem
-executa o app. Ainda assim, trate a máquina como o limite de confiança: qualquer processo com acesso
-ao seu perfil de usuário consegue ler esse arquivo.
+O token nunca é embutido no bundle nem nos artefatos de release. Trate a máquina como o
+limite de confiança: qualquer processo com acesso ao seu perfil de usuário consegue ler
+esse arquivo.
 
 ## Desenvolvimento
 
