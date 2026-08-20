@@ -1,0 +1,111 @@
+{
+  "name": "glimpsegg",
+  "productName": "GlimpseGG",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "GlimpseGG - Tactical Dota 2 Post-Game Match Analysis & Performance Intelligence Desktop App",
+  "author": "Marcos Rosado <contato@marcosrosado.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MarcosRosado/glimpsegg.git"
+  },
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "electron:dev": "concurrently -k \"cross-env NODE_ENV=development vite\" \"wait-on tcp:5173 && electron .\"",
+    "electron:start": "cross-env NODE_ENV=production electron .",
+    "electron:test-clean": "cross-env NODE_ENV=development electron . --user-data-dir=/tmp/glimpsegg-clean-test",
+    "dist": "npm run build && electron-builder --linux AppImage",
+    "dist:all": "npm run build && electron-builder -mwl",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "gg.glimpse.app",
+    "productName": "GlimpseGG",
+    "executableName": "glimpsegg",
+    "artifactName": "GlimpseGG-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "MarcosRosado",
+      "repo": "glimpsegg"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "build/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game;Utility;",
+      "icon": "build/icons"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.games"
+    },
+    "nsis": {
+      "artifactName": "GlimpseGG-Setup-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "GlimpseGG-Portable-${version}-${arch}.${ext}"
+    }
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
+    "electron-updater": "^6.8.9",
+    "lucide-react": "^1.31.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "recharts": "^3.10.1",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "autoprefixer": "^10.5.4",
+    "concurrently": "^10.0.5",
+    "cross-env": "^10.1.0",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
+    "oxlint": "^1.75.0",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0",
+    "wait-on": "^9.1.0"
+  }
+}
