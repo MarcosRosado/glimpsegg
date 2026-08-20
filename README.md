@@ -6,6 +6,19 @@ vantagem, mapa de visão e insights acionáveis por jogador.
 
 Construído com Electron + React + TypeScript + Vite. Interface em português (pt-BR) e inglês (en-US).
 
+## Por que existe
+
+O GlimpseGG não tenta ser uma alternativa à STRATZ nem propor uma metodologia nova. O objetivo é
+mais estreito: **manter atualizado o que a STRATZ mostrava**.
+
+A STRATZ parou de receber atualizações, e o custo disso aparece a cada patch — heróis e itens novos
+não entram nas bases, então partidas que os incluem ficam sem exibição correta e fora de qualquer
+análise. Não é que a leitura fique pior: ela simplesmente não acontece para o conteúdo recente.
+
+O GlimpseGG preenche essa lacuna. **O cálculo das métricas é o mesmo empregado pela STRATZ** — a
+intenção não é divergir dos números que você já conhecia, e sim continuar produzindo-os para o
+patch atual, com heróis e itens novos devidamente reconhecidos, exibidos e analisados.
+
 ## Recursos
 
 **Dashboard do jogador**
@@ -115,8 +128,31 @@ Outros scripts:
 | `npm run build` | Type-check (`tsc -b`) + bundle de produção |
 | `npm run electron:start` | Electron sobre o bundle já compilado |
 | `npm run electron:test-clean` | Electron com `userData` isolado, para testar o onboarding do zero |
+| `npm run icons:generate` | Rasteriza todos os ícones a partir de `build/icon.svg` |
+| `npm run icons:check` | Confere se os binários de ícone estão em sincronia com o master |
 | `npm run dist` | Empacota AppImage para Linux |
 | `npm run dist:all` | Empacota macOS + Windows + Linux |
+
+### Identidade visual
+
+A arte da marca vive em dois lugares, e **alterar um exige revisar o outro**:
+
+| Arquivo | Papel |
+| --- | --- |
+| `build/icon.svg` | Fonte-mestre do ícone de app. Todos os PNGs, o `.ico` e o `public/favicon.svg` são **gerados** dele — não edite os derivados à mão. |
+| `src/components/brand/BrandMark.tsx` | Monograma in-app (Navbar, splash, onboarding). Redesenho manual na grade de 24px, `currentColor`. |
+
+Depois de mexer no master, rode `npm run icons:generate` e **commite os binários junto com o SVG**:
+o CI não regenera ícones, então um commit sem eles publica uma release com a arte antiga sem
+qualquer sinal de erro. O `npm run icons:check` roda no CI justamente para barrar isso.
+
+Duas restrições do master, ambas impostas por preflight no gerador:
+
+- **Nada de elementos de texto** — a fonte que o fontconfig resolve varia por máquina
+  (`fc-match "JetBrains Mono"` aqui devolve Noto Sans), então o mesmo SVG rasterizaria diferente
+  em cada lugar. Letras vão como `<path>`.
+- **ImageMagick com delegate `RSVG`** — sem librsvg o ImageMagick cai no renderizador `MSVG`
+  interno, que ignora gradientes e filtros e produziria um ícone destruído sem erro.
 
 ### Fontes de dados
 

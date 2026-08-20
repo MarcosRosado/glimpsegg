@@ -141,7 +141,7 @@ function createWindow() {
     minHeight: 720,
     backgroundColor: '#080b11',
     title: 'GlimpseGG - Tactical Dota 2 Analytics & Performance Intelligence',
-    icon: path.join(__dirname, '../build/icon.png'),
+    icon: path.join(__dirname, '../build/icons/256x256.png'),
     frame: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),

@@ -109,6 +109,12 @@ jobs:
       - name: Install Project Dependencies
         run: npm ci
 
+      # O CI não gera ícones: o que está commitado é o que a release publica.
+      # Este check compara os binários com o sha256 dos masters no manifesto, então
+      # "editei o SVG e esqueci de regenerar" falha aqui em vez de sair publicado.
+      - name: Verify Icons Are In Sync
+        run: npm run icons:check
+
       - name: Compile Frontend Bundle
         run: npm run build
 

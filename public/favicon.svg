@@ -1,104 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    GlimpseGG - monograma "G" como fita temporal.
+    Um gesto contínuo, varrido no anti-horário (rewind), afunilando de 14 para 44
+    unidades de espessura. Tres camadas apenas: fundo, fita, nucleo.
+
+    A fita é gerada por amostragem densa (o comando A do SVG nao expressa raio
+    variavel sem degraus nas junções). Nao editar o path a mao.
+    Contrapartida in-app: src/components/brand/BrandMark.tsx - alterar um exige revisar o outro.
+    Sem elementos de texto: a fonte resolvida pelo fontconfig varia por maquina.
+  -->
   <defs>
-    <!-- Background Gradient -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0b111e" />
-      <stop offset="50%" stop-color="#070c16" />
-      <stop offset="100%" stop-color="#04070d" />
+    <radialGradient id="bgGrad" cx="50%" cy="38%" r="72%">
+      <stop offset="0%" stop-color="#131c30" />
+      <stop offset="55%" stop-color="#0b1120" />
+      <stop offset="100%" stop-color="#070a10" />
+    </radialGradient>
+
+    <!-- userSpaceOnUse: a fita e a barra precisam do MESMO mapeamento, senao a
+         costura entre elas fica visivel (cada bbox mapearia o gradiente sozinho). -->
+    <linearGradient id="ribbonGrad" gradientUnits="userSpaceOnUse" x1="118" y1="112" x2="424" y2="418">
+      <stop offset="0%" stop-color="#22d3ee" />
+      <stop offset="52%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
     </linearGradient>
 
-    <!-- Border Glow -->
-    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.8" />
-      <stop offset="50%" stop-color="#06b6d4" stop-opacity="0.3" />
-      <stop offset="100%" stop-color="#10b981" stop-opacity="0.6" />
-    </linearGradient>
-
-    <!-- Gem Facet Gradients -->
-    <linearGradient id="gemTop" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#67e8f9" />
-      <stop offset="100%" stop-color="#06b6d4" />
-    </linearGradient>
-    <linearGradient id="gemLeft" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0891b2" />
-      <stop offset="100%" stop-color="#0e7490" />
-    </linearGradient>
-    <linearGradient id="gemRight" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#14b8a6" />
-      <stop offset="100%" stop-color="#0f766e" />
-    </linearGradient>
-    <linearGradient id="gemBottom" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#06b6d4" />
-      <stop offset="100%" stop-color="#042f2e" />
-    </linearGradient>
-    <linearGradient id="gemCore" x1="0%" y1="0%" x2="100%" y2="100%">
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="30%" stop-color="#a5f3fc" />
-      <stop offset="70%" stop-color="#22d3ee" />
-      <stop offset="100%" stop-color="#0891b2" />
-    </linearGradient>
-
-    <!-- Glow Filter -->
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="14" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-    <filter id="coreGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
+      <stop offset="32%" stop-color="#a5f3fc" stop-opacity="0.85" />
+      <stop offset="68%" stop-color="#22d3ee" stop-opacity="0.42" />
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0" />
+    </radialGradient>
   </defs>
 
-  <!-- Base Squircle Background -->
-  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="6" />
+  <!-- 1. Fundo -->
+  <rect x="32" y="32" width="448" height="448" rx="112"
+        fill="url(#bgGrad)" stroke="#22d3ee" stroke-opacity="0.1" stroke-width="4" />
 
-  <!-- Subtle Tactical Grid / Crosshair rings -->
-  <circle cx="256" cy="256" r="172" fill="none" stroke="#06b6d4" stroke-width="1.5" stroke-opacity="0.15" stroke-dasharray="8 8" />
-  <circle cx="256" cy="256" r="128" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-opacity="0.25" />
-
-  <!-- Radial Vision Beams / Horizontal Sightlines -->
-  <line x1="64" y1="256" x2="116" y2="256" stroke="#22d3ee" stroke-width="2.5" stroke-opacity="0.4" stroke-linecap="round" />
-  <line x1="396" y1="256" x2="448" y2="256" stroke="#22d3ee" stroke-width="2.5" stroke-opacity="0.4" stroke-linecap="round" />
-  <line x1="256" y1="64" x2="256" y2="116" stroke="#22d3ee" stroke-width="2.5" stroke-opacity="0.4" stroke-linecap="round" />
-  <line x1="256" y1="396" x2="256" y2="448" stroke="#22d3ee" stroke-width="2.5" stroke-opacity="0.4" stroke-linecap="round" />
-
-  <!-- Ambient Glow Behind Gem -->
-  <circle cx="256" cy="256" r="90" fill="#06b6d4" opacity="0.18" filter="url(#glow)" />
-
-  <!-- Eye of True Sight Outer Aperture / Orbit (Modern Clean Minimalist) -->
-  <g filter="url(#glow)">
-    <path d="M 120 256 C 165 175 347 175 392 256 C 347 337 165 337 120 256 Z" 
-          fill="none" 
-          stroke="#22d3ee" 
-          stroke-width="5" 
-          stroke-linecap="round" 
-          stroke-linejoin="round" />
+  <!-- 2. A fita. A barra do G entra por dentro como stroke de cap redondo, cobrindo
+       a tampa reta da fita - por isso a junção é invisivel. -->
+  <g fill="url(#ribbonGrad)">
+    <path d="M 368.61 161.51 L 364.83 157.02 L 360.87 152.69 L 356.74 148.51 L 352.44 144.49 L 347.99 140.65 L 343.38 136.99 L 338.62 133.51 L 333.73 130.22 L 328.7 127.13 L 323.55 124.24 L 318.29 121.55 L 312.92 119.07 L 307.45 116.81 L 301.89 114.77 L 296.25 112.95 L 290.54 111.35 L 284.76 109.98 L 278.93 108.85 L 273.06 107.94 L 267.15 107.27 L 261.21 106.84 L 255.26 106.64 L 249.29 106.69 L 243.34 106.97 L 237.39 107.48 L 231.46 108.24 L 225.57 109.23 L 219.71 110.46 L 213.91 111.92 L 208.16 113.61 L 202.48 115.53 L 196.88 117.68 L 191.36 120.05 L 185.94 122.64 L 180.63 125.45 L 175.42 128.47 L 170.34 131.69 L 165.38 135.12 L 160.57 138.75 L 155.9 142.57 L 151.38 146.57 L 147.02 150.76 L 142.83 155.12 L 138.81 159.64 L 134.98 164.33 L 131.33 169.17 L 127.88 174.15 L 124.62 179.27 L 121.57 184.52 L 118.73 189.89 L 116.11 195.38 L 113.7 200.97 L 111.52 206.65 L 109.56 212.42 L 107.84 218.27 L 106.34 224.19 L 105.09 230.17 L 104.07 236.19 L 103.3 242.26 L 102.76 248.35 L 102.47 254.47 L 102.43 260.6 L 102.62 266.73 L 103.07 272.85 L 103.76 278.95 L 104.69 285.02 L 105.86 291.06 L 107.27 297.05 L 108.93 302.98 L 110.82 308.84 L 112.94 314.63 L 115.3 320.33 L 117.88 325.94 L 120.68 331.45 L 123.71 336.84 L 126.95 342.11 L 130.4 347.25 L 134.06 352.26 L 137.91 357.11 L 141.96 361.82 L 146.19 366.36 L 150.61 370.73 L 155.2 374.92 L 159.96 378.93 L 164.87 382.75 L 169.94 386.37 L 175.15 389.79 L 180.5 393 L 185.98 396 L 191.57 398.78 L 197.28 401.34 L 203.09 403.66 L 208.99 405.76 L 214.97 407.62 L 221.02 409.24 L 227.14 410.62 L 233.32 411.75 L 239.54 412.64 L 245.79 413.28 L 252.07 413.67 L 258.36 413.8 L 264.66 413.69 L 270.95 413.33 L 277.23 412.71 L 283.48 411.85 L 289.7 410.73 L 295.87 409.37 L 301.98 407.76 L 308.03 405.9 L 314.01 403.81 L 319.9 401.48 L 325.7 398.91 L 331.4 396.11 L 336.98 393.08 L 342.44 389.83 L 347.77 386.37 L 352.96 382.69 L 358.01 378.8 L 362.89 374.72 L 367.62 370.44 L 372.17 365.97 L 376.55 361.32 L 380.73 356.49 L 384.73 351.5 L 388.52 346.35 L 392.11 341.05 L 395.49 335.61 L 398.65 330.03 L 401.58 324.33 L 404.29 318.51 L 406.77 312.58 L 409.01 306.56 L 411 300.45 L 412.76 294.25 L 414.26 287.99 L 415.52 281.67 L 416.52 275.3 L 417.27 268.89 L 417.76 262.46 L 418 256 L 374 256 L 374.01 260.71 L 373.84 265.42 L 373.48 270.13 L 372.92 274.82 L 372.19 279.49 L 371.26 284.13 L 370.15 288.73 L 368.86 293.29 L 367.38 297.8 L 365.72 302.25 L 363.89 306.64 L 361.88 310.95 L 359.69 315.18 L 357.34 319.33 L 354.82 323.38 L 352.14 327.33 L 349.31 331.17 L 346.31 334.91 L 343.17 338.52 L 339.89 342.01 L 336.46 345.36 L 332.9 348.58 L 329.21 351.66 L 325.4 354.59 L 321.47 357.37 L 317.43 360 L 313.29 362.46 L 309.04 364.75 L 304.71 366.88 L 300.28 368.84 L 295.78 370.61 L 291.21 372.21 L 286.58 373.63 L 281.88 374.86 L 277.14 375.9 L 272.36 376.75 L 267.54 377.42 L 262.69 377.89 L 257.83 378.16 L 252.95 378.25 L 248.07 378.14 L 243.2 377.83 L 238.33 377.33 L 233.49 376.63 L 228.67 375.74 L 223.89 374.66 L 219.15 373.39 L 214.46 371.93 L 209.83 370.28 L 205.26 368.44 L 200.77 366.42 L 196.36 364.23 L 192.04 361.85 L 187.81 359.31 L 183.68 356.59 L 179.66 353.71 L 175.75 350.67 L 171.97 347.48 L 168.31 344.13 L 164.79 340.63 L 161.4 337 L 158.16 333.23 L 155.08 329.33 L 152.14 325.3 L 149.37 321.16 L 146.76 316.91 L 144.32 312.55 L 142.06 308.1 L 139.97 303.55 L 138.07 298.92 L 136.35 294.22 L 134.82 289.44 L 133.47 284.61 L 132.33 279.72 L 131.37 274.78 L 130.62 269.81 L 130.06 264.81 L 129.7 259.78 L 129.54 254.74 L 129.59 249.69 L 129.83 244.64 L 130.28 239.61 L 130.93 234.59 L 131.78 229.6 L 132.82 224.64 L 134.07 219.72 L 135.51 214.85 L 137.15 210.04 L 138.98 205.29 L 141 200.62 L 143.2 196.03 L 145.59 191.52 L 148.16 187.11 L 150.91 182.8 L 153.82 178.61 L 156.91 174.52 L 160.16 170.57 L 163.56 166.74 L 167.12 163.04 L 170.83 159.49 L 174.68 156.09 L 178.67 152.84 L 182.78 149.75 L 187.02 146.82 L 191.38 144.07 L 195.84 141.48 L 200.41 139.08 L 205.08 136.86 L 209.83 134.82 L 214.66 132.97 L 219.57 131.32 L 224.55 129.86 L 229.58 128.6 L 234.67 127.54 L 239.8 126.69 L 244.96 126.04 L 250.14 125.6 L 255.35 125.36 L 260.56 125.33 L 265.78 125.51 L 270.99 125.9 L 276.18 126.49 L 281.35 127.29 L 286.49 128.3 L 291.59 129.52 L 296.64 130.94 L 301.63 132.56 L 306.56 134.37 L 311.41 136.39 L 316.19 138.6 L 320.87 141 L 325.47 143.59 L 329.95 146.36 L 334.33 149.31 L 338.59 152.44 L 342.72 155.73 L 346.73 159.19 L 350.59 162.81 L 354.31 166.59 L 357.88 170.51 A 7 7 0 0 1 368.61 161.51 Z" />
+    <path d="M 396 256 L 318 256" fill="none" stroke="url(#ribbonGrad)"
+          stroke-width="44" stroke-linecap="round" />
   </g>
 
-  <!-- Gem / Iris Center Facets -->
-  <!-- Top Facet -->
-  <polygon points="256,165 315,225 256,256 197,225" fill="url(#gemTop)" opacity="0.95" />
-  <!-- Left Facet -->
-  <polygon points="197,225 256,256 256,315 170,256" fill="url(#gemLeft)" opacity="0.9" />
-  <!-- Right Facet -->
-  <polygon points="315,225 342,256 256,315 256,256" fill="url(#gemRight)" opacity="0.9" />
-  <!-- Bottom Point -->
-  <polygon points="170,256 256,315 256,347 256,315" fill="url(#gemBottom)" opacity="0.8" />
-
-  <!-- Core Eye Pupil / Crystal Core (Octagon / Diamond with Pure Radiant Focus) -->
-  <polygon points="256,206 292,220 306,256 292,292 256,306 220,292 206,256 220,220" 
-           fill="url(#gemCore)" 
-           stroke="#e0f2fe" 
-           stroke-width="3" 
-           filter="url(#coreGlow)" />
-
-  <!-- Inner Radiant Spark -->
-  <circle cx="256" cy="256" r="16" fill="#ffffff" />
-  <circle cx="251" cy="251" r="5" fill="#ffffff" opacity="0.9" />
-
-  <!-- Corner Tactical Brackets -->
-  <path d="M 56 96 L 56 56 L 96 56" fill="none" stroke="#06b6d4" stroke-width="3" stroke-linecap="round" opacity="0.4" />
-  <path d="M 456 96 L 456 56 L 416 56" fill="none" stroke="#06b6d4" stroke-width="3" stroke-linecap="round" opacity="0.4" />
-  <path d="M 56 416 L 56 456 L 96 456" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" opacity="0.4" />
-  <path d="M 456 416 L 456 456 L 416 456" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" opacity="0.4" />
+  <!-- 3. Nucleo. Halo por gradiente transparente, nao por filtro: nenhum
+       feGaussianBlur, para nao virar mancha nos tamanhos pequenos. -->
+  <circle cx="256" cy="256" r="48" fill="url(#coreGlow)" />
+  <circle cx="256" cy="256" r="15" fill="#eefdff" />
 </svg>

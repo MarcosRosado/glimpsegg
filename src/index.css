@@ -88,3 +88,13 @@
 .glow-gold {
   box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.25);
 }
+
+/* Rail de estatísticas do topbar: a scrollbar global de 6px comeria 20% de uma
+   faixa de ~30px, então o overflow horizontal rola sem barra visível. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

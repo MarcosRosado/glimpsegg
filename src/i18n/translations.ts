@@ -31,6 +31,20 @@ export const translations = {
     quickProfiles: 'Perfis Rápidos & Favoritos',
     searching: 'Buscando...',
 
+    // Topbar Stat Rail
+    railForm: 'Forma',
+    railFormTooltip: 'Últimos {count} jogos',
+    railImpTooltip: 'Impacto médio (IMP) nos últimos {count} jogos',
+    railKdaTooltip: 'Média K/D/A nos últimos {count} jogos',
+    railFarm: 'Farm',
+    railFarmTooltip: 'Ouro por minuto médio nos últimos {count} jogos',
+    railCareer: 'Carreira',
+    railCareerTooltip: 'Taxa de vitória na carreira ({total} partidas)',
+    gamePatch: 'Patch',
+    gamePatchTooltip: 'Patch do Dota 2 usado como referência das análises',
+    homeTooltip: 'Ir para o Painel',
+    apiKeyMissing: 'Sem chave STRATZ — clique para configurar',
+
     // Profile & Career
     careerMatches: 'Partidas Registradas',
     winRate: 'Taxa de Vitória',
@@ -288,6 +302,20 @@ export const translations = {
     switchProfile: 'Load Profile',
     quickProfiles: 'Quick Profiles & Favorites',
     searching: 'Searching...',
+
+    // Topbar Stat Rail
+    railForm: 'Form',
+    railFormTooltip: 'Last {count} games',
+    railImpTooltip: 'Average impact (IMP) over the last {count} games',
+    railKdaTooltip: 'Average K/D/A over the last {count} games',
+    railFarm: 'Farm',
+    railFarmTooltip: 'Average gold per minute over the last {count} games',
+    railCareer: 'Career',
+    railCareerTooltip: 'Career win rate ({total} matches)',
+    gamePatch: 'Patch',
+    gamePatchTooltip: 'Dota 2 patch used as the baseline for the analyses',
+    homeTooltip: 'Go to Dashboard',
+    apiKeyMissing: 'No STRATZ key — click to configure',
 
     // Profile & Career
     careerMatches: 'Recorded Matches',

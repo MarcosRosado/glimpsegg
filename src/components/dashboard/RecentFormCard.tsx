@@ -1,9 +1,10 @@
 import React from 'react';
-import { Activity, TrendingUp, Zap, Award } from 'lucide-react';
+import { Activity, TrendingUp, Zap } from 'lucide-react';
 import { PlayerMatchSummary } from '../../types/dota';
 import { getHero } from '../../constants/heroes';
 import { handleHeroImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
+import { computeRecentFormStats } from '../../utils/recentFormStats';
 
 interface RecentFormCardProps {
   recentMatches: PlayerMatchSummary[];
@@ -13,14 +14,8 @@ interface RecentFormCardProps {
 export const RecentFormCard: React.FC<RecentFormCardProps> = ({ recentMatches, onSelectMatch }) => {
   const { t } = useLanguage();
   const matches10 = recentMatches.slice(0, 10);
-  const wins = matches10.filter((m) => m.isVictory).length;
-  const losses = matches10.length - wins;
-  const winrate = matches10.length > 0 ? Math.round((wins / matches10.length) * 100) : 0;
-  
-  // Calculate average IMP in recent games
-  const avgImp = matches10.length > 0
-    ? Math.round(matches10.reduce((sum, m) => sum + (m.imp || 0), 0) / matches10.length)
-    : 0;
+  // Mesmos agregados que a stat rail do topbar consome.
+  const { wins, losses, winRate: winrate, avgImp } = computeRecentFormStats(recentMatches);
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-slate-800/80 shadow-lg bg-[#0b101a]">

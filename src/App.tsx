@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/layout/Navbar';
+import { BrandMark } from './components/brand/BrandMark';
+import { BrandLockup } from './components/brand/BrandLockup';
 import { StratzTrendsCard } from './components/dashboard/StratzTrendsCard';
 import { StratzTeammatesCard } from './components/dashboard/StratzTeammatesCard';
 import { RecentFormCard } from './components/dashboard/RecentFormCard';
@@ -334,14 +336,13 @@ function MainAppContent() {
       <div className="min-h-screen bg-[#070a10] flex flex-col items-center justify-center space-y-6 select-none animate-in fade-in duration-300">
         <div className="relative">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-950 via-slate-900 to-violet-950 border border-cyan-500/50 flex items-center justify-center shadow-2xl shadow-cyan-950/80">
-            <Layers className="w-10 h-10 text-cyan-400 animate-pulse" />
+            <BrandMark className="w-10 h-10 text-cyan-400 animate-pulse" />
           </div>
           <div className="absolute -inset-1 rounded-2xl bg-cyan-500/20 blur-lg -z-10 animate-pulse" />
         </div>
         <div className="text-center space-y-2">
           <h1 className="text-xl font-black text-white tracking-wider flex items-center justify-center gap-1">
-            <span>GLIMPSE</span>
-            <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">GG</span>
+            <BrandLockup className="flex items-center gap-1" />
           </h1>
           <div className="flex items-center justify-center gap-2 text-xs text-cyan-400/90 font-mono">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
