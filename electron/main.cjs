@@ -242,8 +242,13 @@ ipcMain.handle('api:stratz-graphql', async (event, { query, variables, customApi
     }
 
     const json = await response.json();
+    // `success` tem de significar a mesma coisa nos dois transportes (IPC e fetch direto
+    // do navegador em `npm run dev`). Antes daqui saia `success: true` para qualquer HTTP 200,
+    // mesmo com `json.errors` preenchido, enquanto o caminho browser usava `!json.errors`.
+    // A divergencia fazia um erro parcial de GraphQL funcionar no Electron e cair
+    // silenciosamente no mock em dev.
     return {
-      success: true,
+      success: !json.errors || json.errors.length === 0,
       data: json.data,
       errors: json.errors,
     };
