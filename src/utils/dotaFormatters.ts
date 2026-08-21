@@ -177,3 +177,21 @@ export function formatLaneName(lane: string): string {
       return lane || 'Lane';
   }
 }
+
+/**
+ * Relogio da partida, preservando tempos negativos.
+ *
+ * `formatDuration` clampa em '0:00' para valores <= 0, o que esta correto para
+ * duracao (nao existe partida de -1s). Mas eventos da STRATZ usam o relogio da
+ * partida, que comeca negativo: wards colocadas antes do horn vem com
+ * `time: -54`, e sairiam como '0:00' — apagando exatamente a informacao de que
+ * foram pre-horn.
+ */
+export function formatMatchClock(seconds: number): string {
+  if (isNaN(seconds)) return '0:00';
+  const sign = seconds < 0 ? '-' : '';
+  const abs = Math.abs(seconds);
+  const mins = Math.floor(abs / 60);
+  const secs = Math.floor(abs % 60);
+  return `${sign}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
