@@ -31,8 +31,9 @@ patch atual, com heróis e itens novos devidamente reconhecidos, exibidos e anal
 **Análise de partida** — quatro abas por jogador
 - `OVERVIEW` — scoreboard, visão geral dos times, timeline de vantagem
 - `PERFORMANCE` — métricas contra baseline de herói/posição
-- `VISION` — posicionamento de wards no minimapa
-- `COACHING` — insights automáticos derivados das métricas da partida
+- `VISION` — wards reais no minimapa, com tempo de vida, autor, dewards e cobertura
+- `COACHING` — diagnóstico determinístico: comparação com a média do próprio herói na
+  própria posição, recomendação de build por win rate do patch, e forense de morte
 
 ## Requisitos
 
@@ -130,6 +131,8 @@ Outros scripts:
 | `npm run electron:test-clean` | Electron com `userData` isolado, para testar o onboarding do zero |
 | `npm run icons:generate` | Rasteriza todos os ícones a partir de `build/icon.svg` |
 | `npm run icons:check` | Confere se os binários de ícone estão em sincronia com o master |
+| `npm test` | Testes unitários (vitest) das funções puras — roda no CI antes do build |
+| `npm run test:watch` | Idem, em modo watch |
 | `npm run dist` | Empacota AppImage para Linux |
 | `npm run dist:all` | Empacota macOS + Windows + Linux |
 
@@ -156,13 +159,31 @@ Duas restrições do master, ambas impostas por preflight no gerador:
 
 ### Fontes de dados
 
-- **STRATZ** (GraphQL, `api.stratz.com`) — detalhes de partida, benchmarks, tendências. Requer token.
+- **STRATZ** (GraphQL, `api.stratz.com`) — detalhes de partida, eventos de ward e morte,
+  `heroAverage` (média do herói por posição), e os agregados de `heroStats`
+  (`itemFullPurchase`, `heroVsHeroMatchup`) que alimentam a recomendação de build. Requer token.
 - **OpenDota** (REST, `api.opendota.com`) — perfis, duplas, busca por vanity URL. Público, sem chave.
+
+Não há nenhum modelo de linguagem envolvido. O motor de coaching é determinístico: cada
+número exibido rastreia para um campo específico da resposta da STRATZ, e o card mostra a
+procedência (média do herói, dados do patch, esta partida, ou estimativa genérica) junto
+com o tamanho da amostra. Quando o replay não foi processado pela STRATZ, a análise
+correspondente simplesmente não aparece — nada é estimado para preencher a lacuna.
+
+### Assets de terceiros
+
+- `public/minimap.png` — minimapa do Dota 2 (patch 7.41), obtido em
+  <https://liquipedia.net/dota2/Minimap>. É arte da Valve, incluída aqui apenas para
+  renderizar o posicionamento de wards. Não é coberta pela licença MIT deste repositório.
+  O mapeamento de coordenadas foi calibrado contra esta imagem: com as células 64–192 da
+  STRATZ esticadas de borda a borda, as duas runas de poder do rio caem sobre a água e
+  97% de uma amostra de 544 wards reais caem sobre terreno.
 
 ## Releases
 
 Todo push na `main` incrementa a versão patch, cria a tag e publica uma release com os artefatos das
-três plataformas, via GitHub Actions.
+três plataformas, via GitHub Actions. Os gates são `icons:check`, `npm test` e `npm run build`
+— um teste vermelho bloqueia a release.
 
 ## Contato
 
