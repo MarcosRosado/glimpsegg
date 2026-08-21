@@ -2,7 +2,7 @@
   "name": "glimpsegg",
   "productName": "GlimpseGG",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "description": "GlimpseGG - Tactical Dota 2 Post-Game Match Analysis & Performance Intelligence Desktop App",
   "author": "Marcos Rosado <contato@marcosrosado.dev>",
