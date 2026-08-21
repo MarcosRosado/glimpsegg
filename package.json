@@ -14,6 +14,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "icons:generate": "node scripts/generate-glimpse-icons.cjs",
     "icons:check": "node scripts/generate-glimpse-icons.cjs --check",
     "electron:dev": "concurrently -k \"cross-env NODE_ENV=development vite\" \"wait-on tcp:5173 && electron .\"",
@@ -109,6 +111,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
+    "vitest": "^4.1.11",
     "wait-on": "^9.1.0"
   }
 }

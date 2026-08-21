@@ -115,6 +115,14 @@ jobs:
       - name: Verify Icons Are In Sync
         run: npm run icons:check
 
+      # Gate de testes antes do build. Todo push na main dispara release completo, e o
+      # unico gate anterior era icones + compilacao — nada verificava a logica de
+      # parsing de ward, alinhamento de series ou as regras de coaching. Um erro de
+      # sinal ali sai publicado sem ninguem perceber, entao um teste vermelho tem de
+      # bloquear o release de proposito.
+      - name: Run Unit Tests
+        run: npm test
+
       - name: Compile Frontend Bundle
         run: npm run build
 
