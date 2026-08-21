@@ -231,11 +231,18 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
                 <Eye className="w-4 h-4 text-cyan-400" />
                 <span className="text-slate-300 font-sans font-medium">{t('wardsPlaced')}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">{aggregates.radiantWards}</span>
-                <span className="text-slate-600">vs</span>
-                <span className="text-rose-400 font-bold">{aggregates.direWards}</span>
-              </div>
+              {/* Sem dado de visao é "—", nao "0 vs 0". Antes havia um fallback
+                  inventado (`: 4` Radiant / `: 3` Dire) que mostrava o Radiant
+                  sistematicamente a frente em toda partida sem dado. */}
+              {aggregates.wardsMeasured ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-400 font-bold">{aggregates.radiantWards}</span>
+                  <span className="text-slate-600">vs</span>
+                  <span className="text-rose-400 font-bold">{aggregates.direWards}</span>
+                </div>
+              ) : (
+                <span className="text-slate-500 text-xs font-sans">{t('noVisionDataShort')}</span>
+              )}
             </div>
           </div>
         </div>

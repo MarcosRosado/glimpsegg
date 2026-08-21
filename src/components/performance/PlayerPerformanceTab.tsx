@@ -8,7 +8,18 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { MatchDetails, MatchPlayer } from '../../types/dota';
+import { MatchDetails, MatchPlayer, PlayerLaneResult } from '../../types/dota';
+import { TranslationKey } from '../../i18n/translations';
+
+/** Resultado real de lane (STRATZ) -> chave i18n. Substituiu o "88%" inventado. */
+const LANE_RESULT_KEY: Record<PlayerLaneResult, TranslationKey> = {
+  STOMP_WON: 'laneResultStompWon',
+  WON: 'laneResultWon',
+  TIE: 'laneResultTie',
+  LOST: 'laneResultLost',
+  STOMP_LOST: 'laneResultStompLost',
+  UNKNOWN: 'laneResultUnknown',
+};
 import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
 import { getRoleBaseline } from '../../constants/baselines';
@@ -439,8 +450,10 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                 {t('laningBreakdown')}
               </h4>
             </div>
-            <span className="text-xs text-emerald-400 font-mono font-bold">
-              {player.laningStats?.laneEfficiencyPct || 88}% {t('laneOutcomeWon')}
+            <span className="text-xs font-mono font-bold text-slate-300">
+              {player.laningStats
+                ? t(LANE_RESULT_KEY[player.laningStats.laneResult])
+                : t('dataUnavailableShort')}
             </span>
           </div>
 

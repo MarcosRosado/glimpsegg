@@ -71,11 +71,25 @@ export function calculateRadarStats(player: MatchPlayer, teamTotalKills: number,
   if (player.deaths === 0) survivabilityScore = 100;
   survivabilityScore = Math.min(100, Math.max(15, survivabilityScore));
 
-  // 5. Objectives (0 - 100): Tower Damage, Wards, Dewards
-  const towerScore = (player.towerDamage / Math.max(500, baseline.towerDamage)) * 40;
-  const wardCount = player.wardEvents ? player.wardEvents.length : 0;
-  const visionScore = (wardCount / Math.max(2, baseline.wardsPlaced + baseline.sentriesPlaced)) * 40;
-  const objectivesScore = Math.min(100, Math.max(10, towerScore + visionScore + 20));
+  // 5. Objectives (0 - 100): dano em estrutura + visao.
+  //
+  // Antes, `wardCount` era sempre 4 (as wards falsas), entao este eixo era uma
+  // constante por role. Com dado real, uma partida SEM visao daria 0 e derrubaria o
+  // eixo — o que seria trocar uma mentira por outra. Correcao: quando nao ha dado de
+  // visao, o termo sai e o peso é REDISTRIBUIDO para o dano em estrutura, em vez de
+  // pontuar zero. Ausencia de dado nao é desempenho ruim.
+  const hasVision = !!player.visionStats?.hasData;
+  const towerRatio = player.towerDamage / Math.max(500, baseline.towerDamage);
+  let objectivesScore: number;
+  if (hasVision) {
+    const wardCount = player.visionStats!.wardsPlaced;
+    const wardTarget = Math.max(2, baseline.wardsPlaced + baseline.sentriesPlaced);
+    objectivesScore = towerRatio * 40 + (wardCount / wardTarget) * 40 + 20;
+  } else {
+    // Peso cheio (80) no unico termo medido.
+    objectivesScore = towerRatio * 80 + 20;
+  }
+  objectivesScore = Math.min(100, Math.max(10, objectivesScore));
 
   return {
     laning: Math.round(laningScore),

@@ -576,7 +576,7 @@ function MainAppContent() {
               <div className="space-y-6">
                 {/* Player Quick Switcher */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  <span className="text-xs text-slate-400 font-mono">Inspecting:</span>
+                  <span className="text-xs text-slate-400 font-mono">{t('inspectingLabel')}</span>
                   {selectedMatch.players.map((p) => (
                     <button
                       key={p.playerSlot}
@@ -608,11 +608,12 @@ function MainAppContent() {
               />
             )}
 
-            {/* Tab 4: AI Coaching & Tactical Insights */}
+            {/* Tab 4: Coaching determinístico (motor de regras + dados do patch) */}
             {activeMatchTab === 'COACHING' && activeMatchPlayer && (
               <CoachingInsightsTab
                 player={activeMatchPlayer}
                 match={selectedMatch}
+                apiKey={apiKey}
               />
             )}
           </div>

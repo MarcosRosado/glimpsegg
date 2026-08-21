@@ -29,6 +29,12 @@ export interface TeamAggregates {
   direHealing: number;
   radiantWards: number;
   direWards: number;
+  radiantObservers: number;
+  direObservers: number;
+  radiantSentries: number;
+  direSentries: number;
+  /** false => a partida nao tem dado de visao. A UI deve mostrar "—", nao "0 vs 0". */
+  wardsMeasured: boolean;
 }
 
 export function computeMatchAwards(match: MatchDetails): {
@@ -52,6 +58,11 @@ export function computeMatchAwards(match: MatchDetails): {
         direHealing: 0,
         radiantWards: 0,
         direWards: 0,
+        radiantObservers: 0,
+        direObservers: 0,
+        radiantSentries: 0,
+        direSentries: 0,
+        wardsMeasured: false,
       },
     };
   }
@@ -63,20 +74,32 @@ export function computeMatchAwards(match: MatchDetails): {
   let direTowerDamage = 0;
   let radiantHealing = 0;
   let direHealing = 0;
+  // Antes daqui saia um fallback inventado — `: 4` para Radiant e `: 3` para Dire.
+  // Nao era so numero falso: era numero falso COM VIES DE LADO, entao toda partida
+  // sem dado mostrava o Radiant sistematicamente a frente em visao.
+  // Ausencia de dado agora é ausencia, sinalizada por `wardsMeasured`.
   let radiantWards = 0;
   let direWards = 0;
+  let radiantObservers = 0;
+  let direObservers = 0;
+  let radiantSentries = 0;
+  let direSentries = 0;
 
   players.forEach((p) => {
     if (p.isRadiant) {
       radiantHeroDamage += p.heroDamage || 0;
       radiantTowerDamage += p.towerDamage || 0;
       radiantHealing += p.heroHealing || 0;
-      radiantWards += (p.wardEvents ? p.wardEvents.length : 4);
+      radiantObservers += p.wardEvents?.filter((w) => w.type === 'OBSERVER').length ?? 0;
+      radiantSentries += p.wardEvents?.filter((w) => w.type === 'SENTRY').length ?? 0;
+      radiantWards += p.wardEvents?.length ?? 0;
     } else {
       direHeroDamage += p.heroDamage || 0;
       direTowerDamage += p.towerDamage || 0;
       direHealing += p.heroHealing || 0;
-      direWards += (p.wardEvents ? p.wardEvents.length : 3);
+      direObservers += p.wardEvents?.filter((w) => w.type === 'OBSERVER').length ?? 0;
+      direSentries += p.wardEvents?.filter((w) => w.type === 'SENTRY').length ?? 0;
+      direWards += p.wardEvents?.length ?? 0;
     }
   });
 
@@ -93,6 +116,11 @@ export function computeMatchAwards(match: MatchDetails): {
     direHealing,
     radiantWards,
     direWards,
+    radiantObservers,
+    direObservers,
+    radiantSentries,
+    direSentries,
+    wardsMeasured: match.availability ? match.availability.wards : players.some((p) => !!p.wardEvents),
   };
 
   // Sort players by IMP / Impact

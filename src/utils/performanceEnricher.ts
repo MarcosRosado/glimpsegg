@@ -2,6 +2,7 @@ import { MatchPlayer, MatchDetails, DetailedCombatStats, DetailedFarmStats, Deta
 import { getItem } from '../constants/items';
 import { getHero } from '../constants/heroes';
 import { getHeroAbilities } from '../constants/abilities';
+import { sumAll, sumDeltas } from './insights/timeSeries';
 
 // Standard benchmarks for core items (seconds)
 const ITEM_BENCHMARKS: Record<number, number> = {
@@ -55,19 +56,30 @@ export function getEnrichedCombatStats(player: MatchPlayer, durationSec: number)
   if (player.combatStats) return player.combatStats;
 
   const totalDmg = Math.max(1000, player.heroDamage);
+
+  // Se a partida trouxe o relatorio de dano real, ele MANDA. O chute por role
+  // (`isCaster ? 0.65 : 0.25`) abaixo só sobrevive como fallback para partida nao
+  // parseada, e nesse caso `isEstimated` fica true para a UI poder rotular.
+  const real = player.damageReport?.receivedTotal ?? null;
   const isCaster = ['POSITION_2', 'POSITION_4', 'POSITION_5'].includes(player.role);
-  
+
   const magicPct = isCaster ? 0.65 : 0.25;
   const physPct = isCaster ? 0.25 : 0.68;
   const purePct = Math.max(0.05, 1 - (magicPct + physPct));
 
-  const physicalDamage = Math.round(totalDmg * physPct);
-  const magicalDamage = Math.round(totalDmg * magicPct);
-  const pureDamage = Math.round(totalDmg * purePct);
+  const physicalDamage = real ? real.physicalDamage : Math.round(totalDmg * physPct);
+  const magicalDamage = real ? real.magicalDamage : Math.round(totalDmg * magicPct);
+  const pureDamage = real ? real.pureDamage : Math.round(totalDmg * purePct);
 
-  const damageReceived = player.heroDamageReceived || Math.round(player.deaths * 2400 + totalDmg * 0.45);
+  const damageReceived = real
+    ? real.physicalDamage + real.magicalDamage + real.pureDamage
+    : player.heroDamageReceived || Math.round(player.deaths * 2400 + totalDmg * 0.45);
   const damageMitigated = Math.round(damageReceived * 0.42);
 
+  // As unidades de stunDuration/disableDuration da API sao ambiguas, entao aqui
+  // seguimos com a heuristica em segundos para nao afirmar um numero errado com cara
+  // de exato. A comparacao confiavel desses campos vive em threatProfile.ts, e é
+  // sempre RAZAO contra a media do heroi, nunca valor absoluto.
   const baseStun = player.role === 'POSITION_4' || player.role === 'POSITION_5' ? 38.5 : 16.2;
   const stunDurationSec = parseFloat((baseStun + (player.assists * 1.8)).toFixed(1));
   const disableDurationSec = parseFloat((stunDurationSec * 1.45).toFixed(1));
@@ -108,10 +120,14 @@ export function getEnrichedFarmStats(player: MatchPlayer, durationSec: number): 
   if (player.farmStats) return player.farmStats;
 
   const totalCS = Math.max(1, player.numLastHits);
-  const cs10 = player.laningStats?.lastHits10 || Math.round(totalCS * 0.22);
-  const cs5 = Math.round(cs10 * 0.45);
-  const cs15 = Math.round(cs10 + (totalCS - cs10) * 0.35);
-  const cs20 = Math.round(cs10 + (totalCS - cs10) * 0.6);
+
+  // Curva de CS REAL quando as series por minuto existem. `lastHitsPerMinute` é DELTA,
+  // entao CS@N é a soma dos N primeiros minutos.
+  const lh = player.series?.lastHitsPerMinute ?? null;
+  const cs5 = sumDeltas(lh, 0, 5) ?? Math.round((player.laningStats?.lastHits10 ?? totalCS * 0.22) * 0.45);
+  const cs10 = sumDeltas(lh, 0, 10) ?? player.laningStats?.lastHits10 ?? Math.round(totalCS * 0.22);
+  const cs15 = sumDeltas(lh, 0, 15) ?? Math.round(cs10 + (totalCS - cs10) * 0.35);
+  const cs20 = sumDeltas(lh, 0, 20) ?? Math.round(cs10 + (totalCS - cs10) * 0.6);
 
   const networth = Math.max(1000, player.networth);
   const isCore = ['POSITION_1', 'POSITION_2', 'POSITION_3'].includes(player.role);
@@ -123,7 +139,14 @@ export function getEnrichedFarmStats(player: MatchPlayer, durationSec: number): 
   const passiveGold = Math.max(500, networth - (laneCreepGold + neutralGold + heroKillGold + towerGold));
 
   const isSupport = ['POSITION_4', 'POSITION_5'].includes(player.role);
-  const campsStacked = isSupport ? Math.floor(durationSec / 320) : Math.floor(durationSec / 900);
+  // campStack real quando existe (DELTA por minuto), senao a heuristica por duracao.
+  const realStacks = sumAll(player.series?.campStack);
+  const campsStacked =
+    realStacks !== null
+      ? realStacks
+      : isSupport
+        ? Math.floor(durationSec / 320)
+        : Math.floor(durationSec / 900);
   const stacksCleared = isCore ? Math.floor(durationSec / 450) : 1;
 
   const runesBounty = Math.floor(durationSec / 360);
@@ -179,6 +202,45 @@ export function getEnrichedAbilityUpgrades(player: MatchPlayer, durationSec: num
   if (player.abilityUpgrades && player.abilityUpgrades.length > 0) return player.abilityUpgrades;
 
   const hero = getHero(player.heroId);
+
+  // Build de skill REAL, quando a partida foi parseada. Só cai no template fixo
+  // Q/W/E/R abaixo quando `abilities` nao veio — e nesse caso é uma aproximacao,
+  // nao a ordem que o jogador de fato escolheu.
+  if (player.abilityBuild && player.abilityBuild.length > 0) {
+    const known = getHeroAbilities(player.heroId, hero.shortName);
+    // `AbilityInfo` nao guarda abilityId (e HERO_ABILITIES_MAP so cobre alguns herois),
+    // entao casamos por ORDEM DE PRIMEIRA APARICAO: a primeira skill aprendida ocupa o
+    // primeiro slot conhecido, e assim por diante. É aproximado no ROTULO, mas a ordem
+    // e os TEMPOS sao reais — antes tudo aqui vinha de um template fixo Q/W/E/R.
+    const slotByAbilityId = new Map<number, number>();
+    let nextSlot = 0;
+    for (const a of player.abilityBuild) {
+      if (a.isTalent || a.abilityId <= 0) continue;
+      if (!slotByAbilityId.has(a.abilityId)) {
+        slotByAbilityId.set(a.abilityId, nextSlot);
+        nextSlot += 1;
+      }
+    }
+
+    return player.abilityBuild
+      .filter((a) => a.abilityId > 0)
+      .map((a, idx) => {
+        const slotIdx = slotByAbilityId.get(a.abilityId);
+        const meta = a.isTalent || slotIdx === undefined ? undefined : known[slotIdx];
+        return {
+          abilityId: a.abilityId,
+          name: meta?.name || String(a.abilityId),
+          displayName: meta?.displayName || (a.isTalent ? 'Talent' : `#${a.abilityId}`),
+          slot: a.isTalent ? 'TALENT' : meta?.slot,
+          imageUrl: meta?.imageUrl || '',
+          level: idx + 1,
+          timeSec: a.timeSec,
+          isTalent: a.isTalent,
+          isUltimate: meta?.isUltimate,
+          type: a.isTalent ? 'TALENT' : 'SKILL',
+        } as AbilityUpgrade;
+      });
+  }
   const heroAbilities = getHeroAbilities(player.heroId, hero.shortName);
   const qSkill = heroAbilities.find((a) => a.slot === 'Q') || heroAbilities[0];
   const wSkill = heroAbilities.find((a) => a.slot === 'W') || heroAbilities[1] || heroAbilities[0];

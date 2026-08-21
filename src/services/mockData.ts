@@ -1,4 +1,10 @@
-import { MatchDetails, PlayerProfileSummary } from '../types/dota';
+import { MatchDetails, MatchPlayer, PlayerProfileSummary } from '../types/dota';
+import {
+  buildVisionData,
+  computePlayerVisionStats,
+  emptyVisionData,
+  wardsBySlot,
+} from './visionMapper';
 
 export const MOCK_PROFILE: PlayerProfileSummary = {
   steamAccountId: '155353139',
@@ -151,7 +157,7 @@ export const MOCK_PROFILE: PlayerProfileSummary = {
   ],
 };
 
-export const MOCK_MATCH_KEZ: MatchDetails = {
+const MOCK_KEZ_BASE = {
   id: '7928410291',
   didRadiantWin: true,
   durationSeconds: 2240, // 37:20
@@ -206,7 +212,7 @@ export const MOCK_MATCH_KEZ: MatchDetails = {
         denies10: 16,
         gold10: 4850,
         exp10: 5200,
-        laneEfficiencyPct: 92,
+        laneResult: 'STOMP_WON',
         firstCoreItemTimingSec: 810, // 13:30 Battlefury
         firstCoreItemId: 145,
         killsInLane: 2,
@@ -219,10 +225,6 @@ export const MOCK_MATCH_KEZ: MatchDetails = {
         { itemId: 116, time: 1470, isCoreItem: true }, // BKB 24:30
         { itemId: 139, time: 1820, isCoreItem: true }, // Butterfly 30:20
         { itemId: 208, time: 2110, isCoreItem: true }, // Abyssal Blade 35:10
-      ],
-      wardEvents: [
-        { time: 180, type: 'OBSERVER', x: 88, y: 155, isRadiant: true },
-        { time: 720, type: 'SENTRY', x: 92, y: 148, isRadiant: true },
       ],
     },
     {
@@ -255,7 +257,7 @@ export const MOCK_MATCH_KEZ: MatchDetails = {
         denies10: 12,
         gold10: 4200,
         exp10: 5100,
-        laneEfficiencyPct: 82,
+        laneResult: 'WON',
         firstCoreItemTimingSec: 960,
         firstCoreItemId: 121,
         killsInLane: 1,
@@ -313,14 +315,6 @@ export const MOCK_MATCH_KEZ: MatchDetails = {
       items: [180, 1, 232, 108, 218, 0],
       backpack: [0, 0, 0],
       neutralItem: 334,
-      wardEvents: [
-        { time: 60, type: 'OBSERVER', x: 120, y: 135, isRadiant: true },
-        { time: 380, type: 'OBSERVER', x: 142, y: 155, isRadiant: true },
-        { time: 720, type: 'SENTRY', x: 140, y: 150, isRadiant: true },
-        { time: 1100, type: 'OBSERVER', x: 110, y: 105, isRadiant: true },
-        { time: 1450, type: 'OBSERVER', x: 150, y: 88, isRadiant: true },
-        { time: 1800, type: 'SENTRY', x: 152, y: 85, isRadiant: true },
-      ],
     },
     {
       steamAccountId: '3104928',
@@ -347,14 +341,6 @@ export const MOCK_MATCH_KEZ: MatchDetails = {
       items: [214, 218, 254, 108, 1, 0],
       backpack: [40, 0, 0],
       neutralItem: 357,
-      wardEvents: [
-        { time: 0, type: 'OBSERVER', x: 82, y: 160, isRadiant: true },
-        { time: 300, type: 'SENTRY', x: 80, y: 165, isRadiant: true },
-        { time: 600, type: 'OBSERVER', x: 125, y: 118, isRadiant: true },
-        { time: 950, type: 'OBSERVER', x: 95, y: 105, isRadiant: true },
-        { time: 1300, type: 'SENTRY', x: 95, y: 105, isRadiant: true },
-        { time: 1600, type: 'OBSERVER', x: 160, y: 140, isRadiant: true },
-      ],
     },
 
     // DIRE (Losers)
@@ -491,7 +477,7 @@ export const MOCK_MATCH_KEZ: MatchDetails = {
   ]
 };
 
-export const MOCK_MATCH_RINGMASTER: MatchDetails = {
+const MOCK_RINGMASTER_BASE = {
   id: '7927391024',
   didRadiantWin: false,
   durationSeconds: 1980, // 33:00
@@ -572,7 +558,7 @@ export const MOCK_MATCH_RINGMASTER: MatchDetails = {
         denies10: 7,
         gold10: 2400,
         exp10: 3100,
-        laneEfficiencyPct: 75,
+        laneResult: 'LOST',
         firstCoreItemTimingSec: 720, // 12:00 Glimmer
         firstCoreItemId: 218,
         killsInLane: 3,
@@ -583,14 +569,6 @@ export const MOCK_MATCH_RINGMASTER: MatchDetails = {
         { itemId: 218, time: 720, isCoreItem: true },
         { itemId: 232, time: 1080, isCoreItem: true },
         { itemId: 1, time: 1420, isCoreItem: true },
-      ],
-      wardEvents: [
-        { time: 0, type: 'OBSERVER', x: 145, y: 90, isRadiant: false },
-        { time: 240, type: 'SENTRY', x: 140, y: 95, isRadiant: false },
-        { time: 600, type: 'OBSERVER', x: 115, y: 120, isRadiant: false },
-        { time: 900, type: 'OBSERVER', x: 80, y: 155, isRadiant: false },
-        { time: 1200, type: 'SENTRY', x: 85, y: 150, isRadiant: false },
-        { time: 1500, type: 'OBSERVER', x: 92, y: 135, isRadiant: false },
       ],
     },
     {
@@ -622,3 +600,231 @@ export const MOCK_MATCH_RINGMASTER: MatchDetails = {
     }
   ]
 };
+
+// ---------------------------------------------------------------------------
+// Dados de visao do modo demo
+//
+// Definidos na FORMA CRUA da STRATZ e passados pelo MESMO mapper da producao
+// (`buildVisionData`). Ou seja: o demo exercita o caminho real em vez de um
+// atalho proprio — se o mapper quebrar, o modo demo quebra junto e a gente ve.
+//
+// Os dois mocks cobrem de proposito as duas fontes reais:
+//   MOCK_MATCH_KEZ        -> playbackData (tempo de vida, deward e autor reais)
+//   MOCK_MATCH_RINGMASTER -> stats.wards (tempo de vida estimado, sem deward posicionado)
+// O caminho 'NONE' é coberto por teste unitario, nao por um terceiro mock.
+// ---------------------------------------------------------------------------
+
+interface RawWard {
+  indexId: number;
+  time: number;
+  positionX: number;
+  positionY: number;
+  fromPlayer: number;
+  wardType: 'OBSERVER' | 'SENTRY';
+  killedAt?: number;
+  killedBy?: number;
+}
+
+/** Coordenadas conferidas contra o terreno de public/minimap.png. */
+const KEZ_RAW_WARDS: RawWard[] = [
+  // Pre-horn: sentries de block nos camps, tempo negativo de proposito.
+  { indexId: 101, time: -52, positionX: 122, positionY: 130, fromPlayer: 4, wardType: 'SENTRY' },
+  { indexId: 102, time: -18, positionX: 124, positionY: 126, fromPlayer: 132, wardType: 'SENTRY' },
+  // Wards de lane iniciais.
+  { indexId: 110, time: 24, positionX: 108, positionY: 152, fromPlayer: 4, wardType: 'OBSERVER' },
+  { indexId: 111, time: 30, positionX: 148, positionY: 104, fromPlayer: 132, wardType: 'OBSERVER' },
+  { indexId: 112, time: 42, positionX: 96, positionY: 138, fromPlayer: 3, wardType: 'OBSERVER' },
+  // Contestacao de runa e rio.
+  { indexId: 120, time: 360, positionX: 114, positionY: 136, fromPlayer: 4, wardType: 'OBSERVER', killedAt: 520, killedBy: 131 },
+  { indexId: 121, time: 400, positionX: 136, positionY: 118, fromPlayer: 132, wardType: 'OBSERVER' },
+  { indexId: 122, time: 430, positionX: 118, positionY: 128, fromPlayer: 3, wardType: 'SENTRY' },
+  // Meio de jogo: pressao e visao de Roshan.
+  { indexId: 130, time: 700, positionX: 104, positionY: 144, fromPlayer: 4, wardType: 'OBSERVER' },
+  { indexId: 131, time: 760, positionX: 132, positionY: 112, fromPlayer: 131, wardType: 'OBSERVER', killedAt: 880, killedBy: 3 },
+  { indexId: 132, time: 790, positionX: 112, positionY: 142, fromPlayer: 3, wardType: 'SENTRY' },
+  { indexId: 133, time: 940, positionX: 128, positionY: 138, fromPlayer: 4, wardType: 'OBSERVER' },
+  { indexId: 134, time: 1010, positionX: 152, positionY: 96, fromPlayer: 132, wardType: 'OBSERVER', killedAt: 1120, killedBy: 4 },
+  // Ward perdida muito cedo (alimenta o KPI "perdidas cedo").
+  { indexId: 140, time: 1180, positionX: 140, positionY: 120, fromPlayer: 4, wardType: 'OBSERVER', killedAt: 1210, killedBy: 130 },
+  { indexId: 141, time: 1240, positionX: 90, positionY: 130, fromPlayer: 131, wardType: 'OBSERVER' },
+  { indexId: 142, time: 1300, positionX: 120, positionY: 148, fromPlayer: 3, wardType: 'SENTRY' },
+  // Alto: visao de highground e pit.
+  { indexId: 150, time: 1560, positionX: 156, positionY: 108, fromPlayer: 4, wardType: 'OBSERVER' },
+  { indexId: 151, time: 1620, positionX: 160, positionY: 116, fromPlayer: 3, wardType: 'SENTRY' },
+  { indexId: 152, time: 1700, positionX: 100, positionY: 120, fromPlayer: 132, wardType: 'OBSERVER', killedAt: 1810, killedBy: 4 },
+  { indexId: 153, time: 1880, positionX: 164, positionY: 112, fromPlayer: 4, wardType: 'OBSERVER' },
+  { indexId: 154, time: 1960, positionX: 168, positionY: 120, fromPlayer: 3, wardType: 'SENTRY' },
+  { indexId: 155, time: 2040, positionX: 172, positionY: 116, fromPlayer: 4, wardType: 'OBSERVER' },
+  // Ward que a engine nao conseguiu atribuir (existe de verdade nos dados da STRATZ).
+  { indexId: 160, time: 1400, positionX: 126, positionY: 124, fromPlayer: 250, wardType: 'OBSERVER' },
+];
+
+/** Expande cada ward em eventos SPAWN/DESPAWN no formato do playbackData. */
+function toPlaybackWardEvents(wards: RawWard[]) {
+  const events: any[] = [];
+  for (const w of wards) {
+    events.push({
+      indexId: w.indexId,
+      time: w.time,
+      positionX: w.positionX,
+      positionY: w.positionY,
+      fromPlayer: w.fromPlayer,
+      wardType: w.wardType,
+      action: 'SPAWN',
+      playerDestroyed: null,
+    });
+    if (w.killedAt !== undefined) {
+      events.push({
+        indexId: w.indexId,
+        time: w.killedAt,
+        positionX: w.positionX,
+        positionY: w.positionY,
+        fromPlayer: w.fromPlayer,
+        wardType: w.wardType,
+        action: 'DESPAWN',
+        playerDestroyed: w.killedBy ?? null,
+      });
+    }
+  }
+  return events;
+}
+
+/** Mortes do demo, para o heatmap ter o que mostrar. */
+const KEZ_RAW_DEATHS: Record<number, any[]> = {
+  0: [
+    { time: 980, positionX: 140, positionY: 118, timeDead: 22, goldLost: 180, isBurst: true, isEngagedOnDeath: true },
+    { time: 1720, positionX: 158, positionY: 110, timeDead: 44, goldLost: 320, isBurst: false, isEngagedOnDeath: true },
+  ],
+  3: [
+    { time: 610, positionX: 118, positionY: 132, timeDead: 20, goldLost: 90, isWardWalkThrough: true },
+    { time: 1150, positionX: 136, positionY: 122, timeDead: 30, goldLost: 140, isBurst: true },
+    { time: 1880, positionX: 162, positionY: 114, timeDead: 48, goldLost: 210, isDieBack: true },
+  ],
+  4: [
+    { time: 520, positionX: 114, positionY: 136, timeDead: 18, goldLost: 70, isWardWalkThrough: true },
+    { time: 1210, positionX: 140, positionY: 120, timeDead: 32, goldLost: 120, isBurst: true },
+  ],
+  128: [
+    { time: 880, positionX: 132, positionY: 112, timeDead: 26, goldLost: 200, isEngagedOnDeath: true },
+    { time: 1520, positionX: 120, positionY: 130, timeDead: 40, goldLost: 260, isBurst: true },
+    { time: 2100, positionX: 172, positionY: 118, timeDead: 55, goldLost: 340, isDieBack: true },
+  ],
+  132: [
+    { time: 1120, positionX: 152, positionY: 96, timeDead: 28, goldLost: 150, isWardWalkThrough: true },
+    { time: 1810, positionX: 100, positionY: 120, timeDead: 46, goldLost: 230, isBurst: true },
+  ],
+};
+
+/** Fonte PLAYER_STATS: so colocacoes, sem SPAWN/DESPAWN. */
+const RINGMASTER_RAW_WARDS: Record<number, any[]> = {
+  0: [
+    { time: 40, type: 0, positionX: 106, positionY: 150 },
+    { time: 480, type: 1, positionX: 118, positionY: 134 },
+    { time: 1020, type: 0, positionX: 98, positionY: 140 },
+  ],
+  128: [
+    { time: 55, type: 0, positionX: 150, positionY: 106 },
+    { time: 520, type: 1, positionX: 138, positionY: 120 },
+  ],
+  129: [
+    { time: 300, type: 0, positionX: 128, positionY: 132 },
+    { time: 900, type: 0, positionX: 144, positionY: 112 },
+    { time: 1400, type: 1, positionX: 134, positionY: 124 },
+  ],
+};
+
+/**
+ * Monta um MatchDetails de demo completo, passando a visao pelo mapper de producao
+ * e preenchendo os campos novos que o tipo exige.
+ */
+function finalizeMock(
+  base: any,
+  opts: {
+    source: 'PLAYBACK' | 'PLAYER_STATS';
+    laneOutcomes: MatchDetails['laneOutcomes'];
+    bracket: number;
+    actualRank: number;
+    analysisOutcome: MatchDetails['analysisOutcome'];
+    firstBloodTime: number;
+  },
+): MatchDetails {
+  const players: MatchPlayer[] = base.players;
+  const duration: number = base.durationSeconds;
+
+  const rawMatch: any = { parsedDateTime: Math.floor(Date.now() / 1000) };
+
+  if (opts.source === 'PLAYBACK') {
+    rawMatch.playbackData = { wardEvents: toPlaybackWardEvents(KEZ_RAW_WARDS) };
+    rawMatch.players = players.map((p) => ({
+      stats: { deathEvents: KEZ_RAW_DEATHS[p.playerSlot] ?? [] },
+    }));
+  } else {
+    rawMatch.players = players.map((p) => ({
+      stats: {
+        wards: RINGMASTER_RAW_WARDS[p.playerSlot] ?? [],
+        wardDestruction:
+          p.playerSlot === 129 ? [{ time: 760, gold: 120, experience: 60, isWard: true }] : [],
+        deathEvents: [],
+      },
+    }));
+  }
+
+  const vision = buildVisionData(rawMatch, players, duration);
+  const bySlot = wardsBySlot(vision);
+  const deathsBySlot = new Map<number, typeof vision.deaths>();
+  for (const d of vision.deaths) {
+    const list = deathsBySlot.get(d.slot);
+    if (list) list.push(d);
+    else deathsBySlot.set(d.slot, [d]);
+  }
+
+  for (const player of players) {
+    player.wardEvents = vision.source === 'NONE' ? undefined : bySlot.get(player.playerSlot) ?? [];
+    player.visionStats = computePlayerVisionStats(vision, player.playerSlot);
+    player.deathEvents = deathsBySlot.get(player.playerSlot) ?? null;
+  }
+
+  return {
+    ...base,
+    players,
+    parsedDateTime: rawMatch.parsedDateTime,
+    bracket: opts.bracket,
+    actualRank: opts.actualRank,
+    analysisOutcome: opts.analysisOutcome,
+    firstBloodTime: opts.firstBloodTime,
+    laneOutcomes: opts.laneOutcomes,
+    vision,
+    availability: {
+      parsed: true,
+      perMinuteStats: false,
+      networthSeries: false,
+      deathEvents: vision.deaths.length > 0,
+      damageReport: false,
+      wards: vision.source !== 'NONE',
+      heroAverage: false,
+      abilities: false,
+      laneOutcomes: true,
+    },
+  };
+}
+
+export const MOCK_MATCH_KEZ: MatchDetails = finalizeMock(MOCK_KEZ_BASE, {
+  source: 'PLAYBACK',
+  laneOutcomes: { top: 'RADIANT_VICTORY', mid: 'RADIANT_STOMP', bottom: 'DIRE_VICTORY' },
+  bracket: 7,
+  actualRank: 74,
+  analysisOutcome: 'STOMPED',
+  firstBloodTime: 132,
+});
+
+export const MOCK_MATCH_RINGMASTER: MatchDetails = finalizeMock(MOCK_RINGMASTER_BASE, {
+  source: 'PLAYER_STATS',
+  laneOutcomes: { top: 'DIRE_VICTORY', mid: 'DIRE_STOMP', bottom: 'TIE' },
+  bracket: 5,
+  actualRank: 53,
+  analysisOutcome: 'CLOSE_GAME',
+  firstBloodTime: 96,
+});
+
+/** Usado quando nem o modo demo tem visao — mantem o tipo satisfeito sem inventar ward. */
+export const EMPTY_VISION = emptyVisionData();

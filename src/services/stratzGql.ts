@@ -8,12 +8,23 @@ import {
   MatchDynamicType,
   PeerTeammate,
   ActivityDay,
+  AbilityBuildEntry,
+  DamageReport,
+  HeroAverageEntry,
+  ItemTimingEvent,
+  LaneOutcome,
+  LaningStats,
+  MatchDataAvailability,
+  PlayerLaneResult,
+  PlayerTimeSeries,
 } from '../types/dota';
 import { MOCK_MATCH_KEZ, MOCK_MATCH_RINGMASTER } from './mockData';
 import { calculateCustomImp } from '../utils/performance';
 import { getItem } from '../constants/items';
 import { formatGameMode, formatLobbyType } from '../utils/dotaFormatters';
 import { AVATAR_PLACEHOLDER_SVG } from '../utils/imageFallback';
+import { buildVisionData, computePlayerVisionStats, wardsBySlot } from './visionMapper';
+import { cumulativeAt, sumDeltas } from '../utils/insights/timeSeries';
 
 export const DEFAULT_STRATZ_TOKEN = '';
 
@@ -90,6 +101,26 @@ query GetMatchDetails($matchId: Long!) {
     direKills
     radiantNetworthLeads
     radiantExperienceLeads
+    parsedDateTime
+    bracket
+    actualRank
+    analysisOutcome
+    firstBloodTime
+    topLaneOutcome
+    midLaneOutcome
+    bottomLaneOutcome
+    playbackData {
+      wardEvents {
+        indexId
+        time
+        positionX
+        positionY
+        fromPlayer
+        wardType
+        action
+        playerDestroyed
+      }
+    }
     players {
       steamAccountId
       steamAccount {
@@ -113,6 +144,12 @@ query GetMatchDetails($matchId: Long!) {
       heroHealing
       role
       lane
+      position
+      variant
+      level
+      invisibleSeconds
+      behavior
+      intentionalFeeding
       award
       item0Id
       item1Id
@@ -126,16 +163,351 @@ query GetMatchDetails($matchId: Long!) {
       neutral0Id
       numLastHits
       numDenies
+      abilities {
+        abilityId
+        time
+        level
+        isTalent
+      }
+      heroAverage {
+        time
+        position
+        matchCount
+        winCount
+        cs
+        dn
+        networth
+        xp
+        kills
+        deaths
+        assists
+        heroDamage
+        towerDamage
+        campsStacked
+        level
+        killContributionAverage
+        kDAAverage
+        stunCount
+        stunDuration
+        disableCount
+        disableDuration
+      }
       stats {
         itemPurchases {
           itemId
           time
+        }
+        lastHitsPerMinute
+        deniesPerMinute
+        networthPerMinute
+        experiencePerMinute
+        goldPerMinute
+        heroDamagePerMinute
+        towerDamagePerMinute
+        healPerMinute
+        heroDamageReceivedPerMinute
+        campStack
+        level
+        wards {
+          time
+          type
+          positionX
+          positionY
+        }
+        wardDestruction {
+          time
+          gold
+          experience
+          isWard
+        }
+        deathEvents {
+          time
+          attacker
+          byAbility
+          byItem
+          goldFed
+          xpFed
+          goldLost
+          timeDead
+          positionX
+          positionY
+          isBurst
+          isEngagedOnDeath
+          isWardWalkThrough
+          isAttemptTpOut
+          isDieBack
+          hasHealAvailable
+        }
+        heroDamageReport {
+          receivedTotal {
+            physicalDamage
+            magicalDamage
+            pureDamage
+            heal
+            stunCount
+            stunDuration
+            disableCount
+            disableDuration
+            slowCount
+            slowDuration
+          }
+          receivedTargets {
+            target
+            amount
+          }
+          receivedSourceAbility {
+            abilityId
+            count
+            amount
+          }
+          receivedSourceItem {
+            itemId
+            count
+            amount
+          }
         }
       }
     }
   }
 }
 `;
+
+const VALID_POSITIONS: Role[] = [
+  'POSITION_1',
+  'POSITION_2',
+  'POSITION_3',
+  'POSITION_4',
+  'POSITION_5',
+];
+
+/** Enum `position` cru da STRATZ. Diferente de `role`, que é derivado. */
+function mapStratzPosition(raw: unknown): Role | undefined {
+  if (typeof raw === 'string' && (VALID_POSITIONS as string[]).includes(raw)) {
+    return raw as Role;
+  }
+  return undefined;
+}
+
+function numberArray(raw: unknown): number[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  return raw.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0));
+}
+
+function mapTimeSeries(stats: any): PlayerTimeSeries | null {
+  if (!stats) return null;
+  const series: PlayerTimeSeries = {
+    lastHitsPerMinute: numberArray(stats.lastHitsPerMinute),
+    deniesPerMinute: numberArray(stats.deniesPerMinute),
+    networthPerMinute: numberArray(stats.networthPerMinute),
+    experiencePerMinute: numberArray(stats.experiencePerMinute),
+    goldPerMinute: numberArray(stats.goldPerMinute),
+    heroDamagePerMinute: numberArray(stats.heroDamagePerMinute),
+    towerDamagePerMinute: numberArray(stats.towerDamagePerMinute),
+    healPerMinute: numberArray(stats.healPerMinute),
+    heroDamageReceivedPerMinute: numberArray(stats.heroDamageReceivedPerMinute),
+    campStack: numberArray(stats.campStack),
+    level: numberArray(stats.level),
+  };
+  const hasAny = Object.values(series).some((v) => v !== null);
+  return hasAny ? series : null;
+}
+
+/**
+ * `heroAverage` da STRATZ tem `time` em MINUTOS. Renomeamos para `timeMin` aqui,
+ * na unica fronteira de conversao, para nao confundir com `time` em segundos dos
+ * eventos de partida.
+ */
+function mapHeroAverage(raw: unknown): HeroAverageEntry[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const entries = raw
+    .filter((e: any) => e && typeof e.time === 'number')
+    .map((e: any) => ({
+      timeMin: e.time,
+      position: e.position || 'UNKNOWN',
+      matchCount: e.matchCount || 0,
+      winCount: e.winCount || 0,
+      cs: e.cs || 0,
+      dn: e.dn || 0,
+      networth: e.networth || 0,
+      xp: e.xp || 0,
+      kills: e.kills || 0,
+      deaths: e.deaths || 0,
+      assists: e.assists || 0,
+      heroDamage: e.heroDamage || 0,
+      towerDamage: e.towerDamage || 0,
+      campsStacked: e.campsStacked || 0,
+      level: e.level || 0,
+      killContributionAverage: e.killContributionAverage || 0,
+      kDAAverage: e.kDAAverage || 0,
+      stunCount: e.stunCount || 0,
+      stunDuration: e.stunDuration || 0,
+      disableCount: e.disableCount || 0,
+      disableDuration: e.disableDuration || 0,
+    }));
+  return entries.length > 0 ? entries : null;
+}
+
+/** `abilities[].time` vem em SEGUNDOS. */
+function mapAbilityBuild(raw: unknown): AbilityBuildEntry[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const entries = raw
+    .filter((a: any) => a && typeof a.abilityId === 'number')
+    .map((a: any) => ({
+      abilityId: a.abilityId,
+      timeSec: typeof a.time === 'number' ? a.time : 0,
+      level: typeof a.level === 'number' ? a.level : 0,
+      isTalent: !!a.isTalent,
+    }))
+    .sort((a, b) => a.timeSec - b.timeSec);
+  return entries.length > 0 ? entries : null;
+}
+
+function mapDamageReport(raw: any): DamageReport | null {
+  if (!raw) return null;
+  const rt = raw.receivedTotal;
+  const report: DamageReport = {
+    receivedTotal: rt
+      ? {
+          physicalDamage: rt.physicalDamage || 0,
+          magicalDamage: rt.magicalDamage || 0,
+          pureDamage: rt.pureDamage || 0,
+          heal: rt.heal || 0,
+          stunCount: rt.stunCount || 0,
+          stunDuration: rt.stunDuration || 0,
+          disableCount: rt.disableCount || 0,
+          disableDuration: rt.disableDuration || 0,
+          slowCount: rt.slowCount || 0,
+          slowDuration: rt.slowDuration || 0,
+        }
+      : null,
+    receivedTargets: Array.isArray(raw.receivedTargets)
+      ? raw.receivedTargets
+          .filter((t: any) => t && typeof t.target === 'number')
+          .map((t: any) => ({ heroId: t.target, amount: t.amount || 0 }))
+      : [],
+    receivedSourceAbility: Array.isArray(raw.receivedSourceAbility)
+      ? raw.receivedSourceAbility
+          .filter((a: any) => a && typeof a.abilityId === 'number')
+          .map((a: any) => ({ abilityId: a.abilityId, count: a.count || 0, amount: a.amount || 0 }))
+      : [],
+    receivedSourceItem: Array.isArray(raw.receivedSourceItem)
+      ? raw.receivedSourceItem
+          .filter((i: any) => i && typeof i.itemId === 'number')
+          .map((i: any) => ({ itemId: i.itemId, count: i.count || 0, amount: i.amount || 0 }))
+      : [],
+  };
+  const hasAny =
+    report.receivedTotal ||
+    report.receivedTargets.length > 0 ||
+    report.receivedSourceAbility.length > 0 ||
+    report.receivedSourceItem.length > 0;
+  return hasAny ? report : null;
+}
+
+function normalizeLaneOutcome(raw: unknown): LaneOutcome | null {
+  const valid: LaneOutcome[] = [
+    'TIE',
+    'RADIANT_VICTORY',
+    'RADIANT_STOMP',
+    'DIRE_VICTORY',
+    'DIRE_STOMP',
+  ];
+  return typeof raw === 'string' && (valid as string[]).includes(raw) ? (raw as LaneOutcome) : null;
+}
+
+/**
+ * Traduz o resultado de lane da STRATZ (que é por lane do mapa e por faccao) para o
+ * ponto de vista do jogador.
+ *
+ * Cuidado com a geometria: a safelane do Radiant é a bottom lane, e a safelane do
+ * Dire é a top lane. Trocar isso inverte o veredito de lane de metade dos jogadores.
+ */
+function resolvePlayerLaneResult(
+  lane: Lane,
+  isRadiant: boolean,
+  outcomes: { top: LaneOutcome | null; mid: LaneOutcome | null; bottom: LaneOutcome | null },
+): PlayerLaneResult {
+  let outcome: LaneOutcome | null = null;
+  if (lane === 'MID') {
+    outcome = outcomes.mid;
+  } else if (lane === 'SAFE') {
+    outcome = isRadiant ? outcomes.bottom : outcomes.top;
+  } else if (lane === 'OFF') {
+    outcome = isRadiant ? outcomes.top : outcomes.bottom;
+  }
+  if (!outcome) return 'UNKNOWN';
+  if (outcome === 'TIE') return 'TIE';
+  const radiantWonLane = outcome === 'RADIANT_VICTORY' || outcome === 'RADIANT_STOMP';
+  const wasStomp = outcome === 'RADIANT_STOMP' || outcome === 'DIRE_STOMP';
+  const playerWon = radiantWonLane === isRadiant;
+  if (playerWon) return wasStomp ? 'STOMP_WON' : 'WON';
+  return wasStomp ? 'STOMP_LOST' : 'LOST';
+}
+
+/**
+ * laningStats a partir das series REAIS por minuto.
+ * Retorna undefined quando nao ha series — ausencia de dado nao é zero.
+ */
+function buildLaningStats(
+  raw: any,
+  series: PlayerTimeSeries | null,
+  laneResult: PlayerLaneResult,
+  itemTimings: ItemTimingEvent[] | undefined,
+): LaningStats | undefined {
+  if (!series) return undefined;
+  const lastHits10 = sumDeltas(series.lastHitsPerMinute, 0, 10);
+  const denies10 = sumDeltas(series.deniesPerMinute, 0, 10);
+  if (lastHits10 === null && denies10 === null) return undefined;
+
+  const firstCore = itemTimings?.find((t) => t.isCoreItem);
+
+  return {
+    lastHits10: lastHits10 ?? 0,
+    denies10: denies10 ?? 0,
+    // networthPerMinute é CUMULATIVO: le a posicao 10, nao soma.
+    gold10: cumulativeAt(series.networthPerMinute, 10) ?? 0,
+    exp10: sumDeltas(series.experiencePerMinute, 0, 10) ?? 0,
+    laneResult,
+    firstCoreItemTimingSec: firstCore ? firstCore.time : null,
+    firstCoreItemId: firstCore ? firstCore.itemId : null,
+    killsInLane: 0,
+    deathsInLane: 0,
+  };
+}
+
+/** `stats.itemPurchases[].time` vem em SEGUNDOS. Sem compras, sem itemTimings. */
+function mapItemTimings(stats: any): ItemTimingEvent[] | undefined {
+  const purchases = stats?.itemPurchases;
+  if (!Array.isArray(purchases) || purchases.length === 0) return undefined;
+  return purchases
+    .filter((ip: any) => ip && typeof ip.itemId === 'number' && ip.itemId > 0)
+    .map((ip: any) => ({
+      itemId: ip.itemId,
+      time: typeof ip.time === 'number' ? ip.time : 0,
+      isCoreItem: getItem(ip.itemId).cost >= 1800,
+    }))
+    .sort((a, b) => a.time - b.time);
+}
+
+/** O que de fato voltou nesta resposta. Calculado uma vez, nunca adivinhado depois. */
+function computeAvailability(rawMatch: any, players: MatchPlayer[]): MatchDataAvailability {
+  const some = (fn: (p: MatchPlayer) => boolean) => players.some(fn);
+  const laneOutcomes =
+    !!normalizeLaneOutcome(rawMatch?.topLaneOutcome) ||
+    !!normalizeLaneOutcome(rawMatch?.midLaneOutcome) ||
+    !!normalizeLaneOutcome(rawMatch?.bottomLaneOutcome);
+  return {
+    parsed: !!rawMatch?.parsedDateTime,
+    perMinuteStats: some((p) => !!p.series?.lastHitsPerMinute?.length),
+    networthSeries: some((p) => !!p.series?.networthPerMinute?.length),
+    deathEvents: some((p) => !!p.deathEvents?.length),
+    damageReport: some((p) => !!p.damageReport?.receivedTotal),
+    wards: false, // preenchido depois de construir `vision`
+    heroAverage: some((p) => !!p.heroAverageCurve?.length),
+    abilities: some((p) => !!p.abilityBuild?.length),
+    laneOutcomes,
+  };
+}
 
 function mapStratzRole(rawRole: string, rawLane: string): Role {
   if (rawRole === 'HARD_SUPPORT') return 'POSITION_5';
@@ -413,12 +785,182 @@ export async function fetchPlayerProfile(steamAccountId: string, apiKey?: string
 }
 
 /**
- * Fetch match details from STRATZ GraphQL via Electron IPC or web fetch
+ * Mapeia a resposta crua de GetMatchDetails para MatchDetails.
+ *
+ * Exportada e pura de proposito: é o que os testes exercitam contra a fixture real.
+ * O bug das quatro wards hardcoded sobreviveu por 12 commits porque este caminho
+ * nao tinha como ser verificado sem subir o app inteiro.
+ */
+export function mapStratzMatch(m: any): MatchDetails {
+
+  // Calculate total radiant and dire kills
+  let radiantScore = 0;
+  let direScore = 0;
+  if (Array.isArray(m.radiantKills)) {
+    radiantScore = m.radiantKills.reduce((sum: number, k: number) => sum + k, 0);
+  }
+  if (Array.isArray(m.direKills)) {
+    direScore = m.direKills.reduce((sum: number, k: number) => sum + k, 0);
+  }
+
+  // Map players
+  const rawPlayers: any[] = m.players || [];
+  if (radiantScore === 0) {
+    radiantScore = rawPlayers.filter((p) => p.isRadiant).reduce((sum, p) => sum + (p.kills || 0), 0);
+  }
+  if (direScore === 0) {
+    direScore = rawPlayers.filter((p) => !p.isRadiant).reduce((sum, p) => sum + (p.kills || 0), 0);
+  }
+
+  const laneOutcomes = {
+    top: normalizeLaneOutcome(m.topLaneOutcome),
+    mid: normalizeLaneOutcome(m.midLaneOutcome),
+    bottom: normalizeLaneOutcome(m.bottomLaneOutcome),
+  };
+
+  const players: MatchPlayer[] = rawPlayers.map((p: any) => {
+    const isRad = !!p.isRadiant;
+    const role = mapStratzRole(p.role, p.lane);
+    const lane = mapStratzLane(p.lane);
+    const series = mapTimeSeries(p.stats);
+    const itemTimings = mapItemTimings(p.stats);
+    const laneResult = resolvePlayerLaneResult(lane, isRad, laneOutcomes);
+
+    const playerObj: MatchPlayer = {
+      steamAccountId: String(p.steamAccountId || p.steamAccount?.id || '0'),
+      name: p.steamAccount?.name || `Player ${p.playerSlot}`,
+      avatar: p.steamAccount?.avatar || '',
+      seasonRank: p.steamAccount?.seasonRank || 64,
+      isRadiant: isRad,
+      playerSlot: p.playerSlot || 0,
+      heroId: p.heroId || 0,
+      kills: p.kills || 0,
+      deaths: p.deaths || 0,
+      assists: p.assists || 0,
+      numLastHits: p.numLastHits || 0,
+      numDenies: p.numDenies || 0,
+      goldPerMinute: p.goldPerMinute || 0,
+      experiencePerMinute: p.experiencePerMinute || 0,
+      networth: p.networth || 0,
+      heroDamage: p.heroDamage || 0,
+      towerDamage: p.towerDamage || 0,
+      heroHealing: p.heroHealing || 0,
+      imp: p.imp !== null && p.imp !== undefined ? p.imp : 0,
+      role,
+      lane,
+      award: p.award,
+      items: [
+        p.item0Id || 0,
+        p.item1Id || 0,
+        p.item2Id || 0,
+        p.item3Id || 0,
+        p.item4Id || 0,
+        p.item5Id || 0,
+      ],
+      backpack: [p.backpack0Id || 0, p.backpack1Id || 0, p.backpack2Id || 0],
+      neutralItem: p.neutral0Id || 0,
+      position: mapStratzPosition(p.position),
+      variant: typeof p.variant === 'number' ? p.variant : null,
+      level: typeof p.level === 'number' ? p.level : null,
+      invisibleSeconds: typeof p.invisibleSeconds === 'number' ? p.invisibleSeconds : null,
+      behavior: typeof p.behavior === 'number' ? p.behavior : null,
+      intentionalFeeding:
+        typeof p.intentionalFeeding === 'boolean' ? p.intentionalFeeding : null,
+      series,
+      heroAverageCurve: mapHeroAverage(p.heroAverage),
+      abilityBuild: mapAbilityBuild(p.abilities),
+      damageReport: mapDamageReport(p.stats?.heroDamageReport),
+      deathEvents: null, // preenchido a partir de `vision.deaths`, ja normalizado
+      // laningStats agora vem das series REAIS por minuto. Antes era inventado a
+      // partir de totais da partida inteira (numLastHits * 0.22) com
+      // laneEfficiencyPct: 82 e firstCoreItemTimingSec: 840 literais.
+      // Sem series, fica `undefined` — nao zerado, nao estimado.
+      laningStats: buildLaningStats(p, series, laneResult, itemTimings),
+      // wardEvents e preenchido depois, a partir de `vision`, ja fatiado por slot.
+      // Aqui existiam quatro wards hardcoded identicas em todos os 10 jogadores.
+      itemTimings,
+    };
+
+    // If STRATZ didn't calculate IMP (e.g. on Kez / Ringmaster where imp === null), compute calibrated heuristic
+    if (p.imp === null || p.imp === undefined) {
+      playerObj.imp = calculateCustomImp(playerObj, isRad ? radiantScore : direScore, m.durationSeconds || 2100);
+    }
+
+    return playerObj;
+  });
+
+  // Advantage timeline from radiantNetworthLeads and radiantExperienceLeads
+  const nwLeads: number[] = m.radiantNetworthLeads || [];
+  const xpLeads: number[] = m.radiantExperienceLeads || [];
+  const len = Math.max(nwLeads.length, xpLeads.length);
+
+  const advantageTimeline = Array.from({ length: len }, (_, i) => ({
+    minute: i,
+    goldAdvantage: nwLeads[i] || 0,
+    experienceAdvantage: xpLeads[i] || 0,
+  }));
+
+  const totalRadiantNetworth = players.filter((p) => p.isRadiant).reduce((sum, p) => sum + p.networth, 0);
+  const totalDireNetworth = players.filter((p) => !p.isRadiant).reduce((sum, p) => sum + p.networth, 0);
+
+  const durationSeconds = m.durationSeconds || 0;
+
+  // Visao vem de uma fonte unica no nivel da partida (contem OS DOIS times) e é
+  // depois fatiada por slot em cada jogador. Sem dado, `source` é 'NONE' e nada
+  // é inventado — era exatamente aqui que nasciam as quatro wards falsas.
+  const vision = buildVisionData(m, players, durationSeconds);
+  const bySlot = wardsBySlot(vision);
+  const deathsBySlot = new Map<number, typeof vision.deaths>();
+  for (const d of vision.deaths) {
+    const list = deathsBySlot.get(d.slot);
+    if (list) list.push(d);
+    else deathsBySlot.set(d.slot, [d]);
+  }
+  for (const player of players) {
+    if (vision.source === 'NONE') {
+      // undefined = sem dado. Diferente de [] (tem dado, colocou zero ward).
+      player.wardEvents = undefined;
+    } else {
+      player.wardEvents = bySlot.get(player.playerSlot) ?? [];
+    }
+    player.visionStats = computePlayerVisionStats(vision, player.playerSlot);
+    player.deathEvents = deathsBySlot.get(player.playerSlot) ?? null;
+  }
+
+  const availability = computeAvailability(m, players);
+  availability.wards = vision.source !== 'NONE';
+
+  return {
+    id: String(m.id),
+    didRadiantWin: !!m.didRadiantWin,
+    durationSeconds,
+    startDateTime: m.startDateTime || 0,
+    gameMode: formatGameMode(m.gameMode, m.lobbyType),
+    lobbyType: formatLobbyType(m.lobbyType),
+    radiantScore,
+    direScore,
+    radiantNetworth: totalRadiantNetworth,
+    direNetworth: totalDireNetworth,
+    players,
+    advantageTimeline: advantageTimeline.length > 0 ? advantageTimeline : MOCK_MATCH_KEZ.advantageTimeline,
+    parsedDateTime: m.parsedDateTime ?? null,
+    bracket: typeof m.bracket === 'number' ? m.bracket : null,
+    actualRank: typeof m.actualRank === 'number' ? m.actualRank : null,
+    analysisOutcome: m.analysisOutcome ?? null,
+    firstBloodTime: typeof m.firstBloodTime === 'number' ? m.firstBloodTime : null,
+    laneOutcomes,
+    vision,
+    availability,
+  };
+}
+
+/**
+ * Busca detalhes da partida na STRATZ, via IPC do Electron ou fetch do navegador.
  */
 export async function fetchMatchDetails(matchId: string, apiKey?: string): Promise<MatchDetails> {
   const numericId = parseInt(matchId, 10);
   if (isNaN(numericId) || numericId <= 0) {
-    return MOCK_MATCH_KEZ;
+    return { ...MOCK_MATCH_KEZ, isMockData: true };
   }
 
   const token = apiKey || DEFAULT_STRATZ_TOKEN;
@@ -444,133 +986,14 @@ export async function fetchMatchDetails(matchId: string, apiKey?: string): Promi
       response = { success: res.ok && !json.errors, data: json.data, errors: json.errors };
     }
 
-    if (response?.success && response.data?.match) {
-      const m = response.data.match;
-
-      // Calculate total radiant and dire kills
-      let radiantScore = 0;
-      let direScore = 0;
-      if (Array.isArray(m.radiantKills)) {
-        radiantScore = m.radiantKills.reduce((sum: number, k: number) => sum + k, 0);
-      }
-      if (Array.isArray(m.direKills)) {
-        direScore = m.direKills.reduce((sum: number, k: number) => sum + k, 0);
-      }
-
-      // Map players
-      const rawPlayers: any[] = m.players || [];
-      if (radiantScore === 0) {
-        radiantScore = rawPlayers.filter((p) => p.isRadiant).reduce((sum, p) => sum + (p.kills || 0), 0);
-      }
-      if (direScore === 0) {
-        direScore = rawPlayers.filter((p) => !p.isRadiant).reduce((sum, p) => sum + (p.kills || 0), 0);
-      }
-
-      const players: MatchPlayer[] = rawPlayers.map((p: any) => {
-        const isRad = !!p.isRadiant;
-        const role = mapStratzRole(p.role, p.lane);
-        const lane = mapStratzLane(p.lane);
-
-        const playerObj: MatchPlayer = {
-          steamAccountId: String(p.steamAccountId || p.steamAccount?.id || '0'),
-          name: p.steamAccount?.name || `Player ${p.playerSlot}`,
-          avatar: p.steamAccount?.avatar || '',
-          seasonRank: p.steamAccount?.seasonRank || 64,
-          isRadiant: isRad,
-          playerSlot: p.playerSlot || 0,
-          heroId: p.heroId || 0,
-          kills: p.kills || 0,
-          deaths: p.deaths || 0,
-          assists: p.assists || 0,
-          numLastHits: p.numLastHits || 0,
-          numDenies: p.numDenies || 0,
-          goldPerMinute: p.goldPerMinute || 0,
-          experiencePerMinute: p.experiencePerMinute || 0,
-          networth: p.networth || 0,
-          heroDamage: p.heroDamage || 0,
-          towerDamage: p.towerDamage || 0,
-          heroHealing: p.heroHealing || 0,
-          imp: p.imp !== null && p.imp !== undefined ? p.imp : 0,
-          role,
-          lane,
-          award: p.award,
-          items: [
-            p.item0Id || 0,
-            p.item1Id || 0,
-            p.item2Id || 0,
-            p.item3Id || 0,
-            p.item4Id || 0,
-            p.item5Id || 0,
-          ],
-          backpack: [p.backpack0Id || 0, p.backpack1Id || 0, p.backpack2Id || 0],
-          neutralItem: p.neutral0Id || 0,
-          laningStats: {
-            lastHits10: Math.round((p.numLastHits || 0) * 0.22),
-            denies10: Math.round((p.numDenies || 0) * 0.4),
-            gold10: Math.round((p.networth || 0) * 0.18),
-            exp10: Math.round((p.experiencePerMinute || 0) * 8.5),
-            laneEfficiencyPct: 82,
-            firstCoreItemTimingSec: 840,
-            firstCoreItemId: p.item0Id || p.item1Id || 0,
-            killsInLane: Math.min(2, p.kills || 0),
-            deathsInLane: Math.min(1, p.deaths || 0),
-          },
-          wardEvents: [
-            { time: 60, type: 'OBSERVER', x: isRad ? 95 : 145, y: isRad ? 150 : 90, isRadiant: isRad },
-            { time: 480, type: 'OBSERVER', x: 120, y: 120, isRadiant: isRad },
-            { time: 720, type: 'SENTRY', x: 115, y: 125, isRadiant: isRad },
-            { time: 1100, type: 'OBSERVER', x: isRad ? 150 : 85, y: isRad ? 90 : 155, isRadiant: isRad },
-          ],
-          itemTimings: (p.stats?.itemPurchases && p.stats.itemPurchases.length > 0)
-            ? p.stats.itemPurchases.map((ip: any) => ({
-                itemId: ip.itemId,
-                time: ip.time,
-                isCoreItem: getItem(ip.itemId).cost >= 1800,
-              }))
-            : [
-                { itemId: p.item0Id || 0, time: 300, isCoreItem: false },
-                { itemId: p.item1Id || 0, time: 840, isCoreItem: true },
-                { itemId: p.item2Id || 0, time: 1260, isCoreItem: true },
-                { itemId: p.item3Id || 0, time: 1680, isCoreItem: true },
-              ].filter((t) => t.itemId > 0),
-        };
-
-        // If STRATZ didn't calculate IMP (e.g. on Kez / Ringmaster where imp === null), compute calibrated heuristic
-        if (p.imp === null || p.imp === undefined) {
-          playerObj.imp = calculateCustomImp(playerObj, isRad ? radiantScore : direScore, m.durationSeconds || 2100);
-        }
-
-        return playerObj;
-      });
-
-      // Advantage timeline from radiantNetworthLeads and radiantExperienceLeads
-      const nwLeads: number[] = m.radiantNetworthLeads || [];
-      const xpLeads: number[] = m.radiantExperienceLeads || [];
-      const len = Math.max(nwLeads.length, xpLeads.length);
-
-      const advantageTimeline = Array.from({ length: len }, (_, i) => ({
-        minute: i,
-        goldAdvantage: nwLeads[i] || 0,
-        experienceAdvantage: xpLeads[i] || 0,
-      }));
-
-      const totalRadiantNetworth = players.filter((p) => p.isRadiant).reduce((sum, p) => sum + p.networth, 0);
-      const totalDireNetworth = players.filter((p) => !p.isRadiant).reduce((sum, p) => sum + p.networth, 0);
-
-      return {
-        id: String(m.id),
-        didRadiantWin: !!m.didRadiantWin,
-        durationSeconds: m.durationSeconds || 0,
-        startDateTime: m.startDateTime || 0,
-        gameMode: formatGameMode(m.gameMode, m.lobbyType),
-        lobbyType: formatLobbyType(m.lobbyType),
-        radiantScore,
-        direScore,
-        radiantNetworth: totalRadiantNetworth,
-        direNetworth: totalDireNetworth,
-        players,
-        advantageTimeline: advantageTimeline.length > 0 ? advantageTimeline : MOCK_MATCH_KEZ.advantageTimeline,
-      };
+    // Tolerancia a erro parcial: se `match` veio, seguimos mesmo com `errors`
+    // preenchido. Um campo novo que a API rejeite tem de degradar para "sem aquele
+    // dado", nunca derrubar a tela de partida inteira para o mock.
+    if (response?.errors?.length) {
+      console.warn('[stratz] erros parciais em GetMatchDetails:', response.errors);
+    }
+    if (response?.data?.match) {
+      return mapStratzMatch(response.data.match);
     } else {
       console.warn('STRATZ API returned errors for match details:', response?.errors);
     }
@@ -578,6 +1001,8 @@ export async function fetchMatchDetails(matchId: string, apiKey?: string): Promi
     console.warn('STRATZ Match details fetch failed, falling back:', err);
   }
 
-  if (matchId === '7927391024') return MOCK_MATCH_RINGMASTER;
-  return MOCK_MATCH_KEZ;
+  // Fallback para o dataset de demonstracao. `isMockData` deixa isso explicito para a
+  // UI — a ausencia dessa flag foi o que permitiu dado falso passar por real.
+  if (matchId === '7927391024') return { ...MOCK_MATCH_RINGMASTER, isMockData: true };
+  return { ...MOCK_MATCH_KEZ, isMockData: true };
 }
