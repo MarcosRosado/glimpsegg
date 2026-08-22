@@ -117,7 +117,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         if (res.success && res.steamAccountId) {
           finalSteamId = res.steamAccountId;
         } else {
-          setResolveError(res.error || 'Could not resolve Steam ID.');
+          setResolveError(res.error || t('steamIdResolveError'));
           setIsSaving(false);
           return;
         }
@@ -130,7 +130,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         onClose();
       }, 1000);
     } catch (err) {
-      setResolveError('Error saving configuration.');
+      setResolveError(t('saveConfigError'));
     } finally {
       setIsSaving(false);
     }
@@ -151,7 +151,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-100">{t('settingsTitle')}</h3>
-              <p className="text-[11px] text-slate-400">STRATZ GraphQL API & Steam Profile</p>
+              <p className="text-[11px] text-slate-400">{t('settingsSubtitle')}</p>
             </div>
           </div>
 
@@ -204,9 +204,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                 <span>{t('stratzApiKey')}</span>
                 {apiKey ? (
-                  <span className="text-[10px] text-emerald-400 font-normal">Ativo</span>
+                  <span className="text-[10px] text-emerald-400 font-normal">{t('activeShort')}</span>
                 ) : (
-                  <span className="text-[10px] text-rose-400 font-normal">Chave necessária</span>
+                  <span className="text-[10px] text-rose-400 font-normal">{t('apiKeyRequired')}</span>
                 )}
               </label>
 
@@ -237,7 +237,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               type="password"
               value={apiKey}
               onChange={handleApiKeyChange}
-              placeholder="Paste your STRATZ Bearer Token..."
+              placeholder={t('stratzTokenPlaceholder')}
               className="w-full bg-[#141d2d] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono transition"
             />
             <p className="text-[10px] text-slate-400">
@@ -262,7 +262,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               type="text"
               value={steamInput}
               onChange={(e) => setSteamInput(e.target.value)}
-              placeholder="e.g. 123456789, 76561198083722517, or Steam Vanity URL"
+              placeholder={t('steamAccountPlaceholder')}
               className="w-full bg-[#141d2d] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono transition"
             />
 

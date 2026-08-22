@@ -19,10 +19,14 @@ describe('mapStratzMatch — campos de partida', () => {
     expect(match.direScore).toBeGreaterThan(0);
   });
 
-  it('marca a partida como parseada e NAO como mock', () => {
+  it('marca a partida como parseada', () => {
     expect(match.parsedDateTime).not.toBeNull();
     expect(match.availability.parsed).toBe(true);
-    expect(match.isMockData).toBeUndefined();
+  });
+
+  it('marca advantageTimeline como disponivel quando a curva veio', () => {
+    expect(match.advantageTimeline.length).toBeGreaterThan(0);
+    expect(match.availability.advantageTimeline).toBe(true);
   });
 
   it('traz bracket e rank reais', () => {
@@ -261,6 +265,14 @@ describe('degradacao para partida nao parseada', () => {
     expect(semNada.availability.wards).toBe(false);
     expect(semNada.availability.damageReport).toBe(false);
     expect(semNada.availability.heroAverage).toBe(false);
+    expect(semNada.availability.advantageTimeline).toBe(false);
+  });
+
+  it('advantageTimeline fica VAZIA em vez de herdar a curva do dataset de demo', () => {
+    // O mapper caía para `MOCK_MATCH_KEZ.advantageTimeline` quando a STRATZ nao
+    // devolvia a curva, e o grafico desenhava o ouro e o XP de OUTRA partida como
+    // se fossem desta. Esse dataset nao existe mais.
+    expect(semNada.advantageTimeline).toEqual([]);
   });
 
   it('visao é NONE e wardEvents é undefined — NUNCA ward inventada', () => {

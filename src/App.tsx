@@ -7,6 +7,9 @@ import { StratzTeammatesCard } from './components/dashboard/StratzTeammatesCard'
 import { RecentFormCard } from './components/dashboard/RecentFormCard';
 import { MostPlayedHeroes } from './components/dashboard/MostPlayedHeroes';
 import { MatchList } from './components/dashboard/MatchList';
+import { ProfileHeader } from './components/dashboard/ProfileHeader';
+import { ActivityHeatmap } from './components/dashboard/ActivityHeatmap';
+import { PerformanceTrendChart } from './components/dashboard/PerformanceTrendChart';
 import { MatchHeader } from './components/match/MatchHeader';
 import { ScoreboardTable } from './components/match/ScoreboardTable';
 import { AdvantageTimeline } from './components/match/AdvantageTimeline';
@@ -52,6 +55,9 @@ function MainAppContent() {
   const [downloadedUpdateVersion, setDownloadedUpdateVersion] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  // Clicar num heroi em "Mais Jogados" filtra a lista de partidas. Antes o
+  // handler era um no-op e o clique nao fazia nada.
+  const [heroFilterId, setHeroFilterId] = useState<number | null>(null);
 
   // Helper to persist profile history in store or localStorage
   const saveProfileHistory = useCallback(async (newHistory: ProfileHistoryItem[]) => {
@@ -221,6 +227,13 @@ function MainAppContent() {
     setIsLoading(true);
     try {
       const match = await fetchMatchDetails(matchId, apiKey);
+      // `fetchMatchDetails` devolvia o dataset de demonstracao quando a API falhava,
+      // entao este caminho nunca existia: a tela abria com a partida errada em vez de
+      // avisar. Agora a falha é `null` e fica visivel.
+      if (!match) {
+        showToast(t('matchLoadError'));
+        return;
+      }
       setSelectedMatch(match);
       // Auto select the primary user player slot if found
       const userPlayer = match.players.find(
@@ -230,6 +243,7 @@ function MainAppContent() {
       setActiveMatchTab('OVERVIEW');
     } catch (err) {
       console.error('Error loading match details:', err);
+      showToast(t('matchLoadError'));
     } finally {
       setIsLoading(false);
     }
@@ -243,12 +257,12 @@ function MainAppContent() {
         setCurrentSteamId(res.steamAccountId);
         await loadProfileData(res.steamAccountId, apiKey);
         setSelectedMatch(null);
-        showToast(`Perfil carregado: ${res.personaname || res.steamAccountId}`);
+        showToast(t('profileLoaded', { name: res.personaname || res.steamAccountId }));
       } else {
-        showToast(res.error || 'Could not find player with that ID.');
+        showToast(res.error || t('playerNotFound'));
       }
     } catch (err) {
-      showToast('Error searching player.');
+      showToast(t('playerSearchError'));
     } finally {
       setIsLoading(false);
     }
@@ -277,7 +291,7 @@ function MainAppContent() {
     // Keep favorites, clear the rest
     const favoritesOnly = profileHistory.filter((p) => p.isFavorite);
     saveProfileHistory(favoritesOnly);
-    showToast('Histórico recente limpo com sucesso.');
+    showToast(t('historyCleared'));
   };
 
   const handleReturnToConfigured = async () => {
@@ -285,7 +299,7 @@ function MainAppContent() {
     setCurrentSteamId(configuredSteamId);
     setSelectedMatch(null);
     await loadProfileData(configuredSteamId, apiKey);
-    showToast('Retornado para a conta principal.');
+    showToast(t('returnedToPrimary'));
   };
 
   const handleSaveSettings = async (newApiKey: string, newSteamId: string) => {
@@ -346,7 +360,7 @@ function MainAppContent() {
           </h1>
           <div className="flex items-center justify-center gap-2 text-xs text-cyan-400/90 font-mono">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            <span>Inicializando e autenticando STRATZ...</span>
+            <span>{t('appInitializing')}</span>
           </div>
         </div>
       </div>
@@ -411,10 +425,8 @@ function MainAppContent() {
                 <Sparkles className="w-8 h-8 text-cyan-400" />
               </div>
               <div className="space-y-1.5 max-w-md">
-                <h2 className="text-lg font-bold text-white">Nenhum Perfil Conectado</h2>
-                <p className="text-xs text-slate-400">
-                  Configure sua chave de API gratuita do STRATZ para carregar suas partidas, histórico tático e métricas de desempenho.
-                </p>
+                <h2 className="text-lg font-bold text-white">{t('noProfileTitle')}</h2>
+                <p className="text-xs text-slate-400">{t('noProfileDesc')}</p>
               </div>
               <button
                 onClick={() => {
@@ -423,7 +435,7 @@ function MainAppContent() {
                 }}
                 className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-xs transition shadow-lg shadow-cyan-950/50"
               >
-                Configurar Chave do STRATZ
+                {t('configureStratzKey')}
               </button>
             </div>
           ) : (
@@ -431,14 +443,37 @@ function MainAppContent() {
                DASHBOARD VIEW (FULL-SCREEN FLUID ASYMMETRIC GRID)
                ========================================================================= */
             <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Identidade, rank e KPIs de carreira */}
+              <ProfileHeader profile={profile} />
+
               {/* Top Grid: Main Stage (Match History) + Right Sidebar (Tendências & Heróis) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Left 7/8 cols: Main Stage - Detailed Recent Match History */}
                 <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+                  {/* `selectedMatchId` e sempre null aqui: a dashboard so
+                      existe quando nenhuma partida esta aberta. */}
                   {profile && (
                     <MatchList
                       matches={profile.recentMatches}
                       selectedMatchId={null}
+                      heroFilterId={heroFilterId}
+                      onClearHeroFilter={() => setHeroFilterId(null)}
+                      onSelectMatch={handleSelectMatch}
+                    />
+                  )}
+
+                  {/* Atividade dos ultimos 30 dias — o dado ja era calculado e
+                      nunca chegava a ser exibido. Fica na coluna larga porque
+                      precisa de 30 colunas. */}
+                  {profile && profile.activityDays && profile.activityDays.length > 0 && (
+                    <ActivityHeatmap activityDays={profile.activityDays} />
+                  )}
+
+                  {/* Leitura temporal que o sunburst nao da: evolucao ao longo
+                      da janela, nao composicao. */}
+                  {profile && profile.recentMatches.length > 1 && (
+                    <PerformanceTrendChart
+                      matches={profile.recentMatches}
                       onSelectMatch={handleSelectMatch}
                     />
                   )}
@@ -458,6 +493,8 @@ function MainAppContent() {
                   {profile && (
                     <StratzTrendsCard
                       matches={profile.recentMatches}
+                      seasonRank={profile.seasonRank}
+                      leaderboardRank={profile.leaderboardRank}
                       onSelectMatch={handleSelectMatch}
                     />
                   )}
@@ -466,7 +503,9 @@ function MainAppContent() {
                   {profile && (
                     <MostPlayedHeroes
                       heroes={profile.mostPlayedHeroes}
-                      onFilterHero={(heroId) => {}}
+                      onFilterHero={(heroId) =>
+                        setHeroFilterId((current) => (current === heroId ? null : heroId))
+                      }
                     />
                   )}
 

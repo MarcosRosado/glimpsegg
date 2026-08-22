@@ -32,7 +32,10 @@ export function useBuildAdvice(
 
   const heroId = player?.heroId ?? 0;
   const matchId = match?.id ?? '';
-  const isMock = !!match?.isMockData;
+  // A analise de build depende dos agregados do patch, que exigem chave da STRATZ.
+  // Antes o gate era `match.isMockData`; com o dataset de demonstracao removido, o
+  // que sobra — e o que sempre importou aqui — é ter chave.
+  const hasApiKey = !!apiKey;
 
   const bracketInfo = player && match ? resolveBracket(match, player) : null;
 
@@ -47,13 +50,13 @@ export function useBuildAdvice(
     }
 
     // O perfil de ameaca sai so da propria partida: nao depende de rede e pode ser
-    // calculado de imediato, inclusive no modo demo.
+    // calculado de imediato, mesmo sem chave.
     const localThreat = buildThreatProfile(player, match, null);
     setThreat(localThreat);
 
-    // Modo demo / sem chave: nao existe agregado do patch. Melhor dizer isso do que
-    // fabricar uma build.
-    if (isMock) {
+    // Sem chave: nao existe agregado do patch. Melhor dizer isso do que fabricar
+    // uma build.
+    if (!hasApiKey) {
       setStatus('unavailable');
       setAdvice(null);
       return;
@@ -103,7 +106,7 @@ export function useBuildAdvice(
     // do App, e usa-las aqui dispararia um request a cada render — o oposto do
     // orcamento de "1 request a frio, 0 morno" que o cache existe para garantir.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [heroId, matchId, player?.playerSlot, apiKey, isMock]);
+  }, [heroId, matchId, player?.playerSlot, apiKey, hasApiKey]);
 
   return {
     status,

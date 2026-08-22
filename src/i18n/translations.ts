@@ -3,16 +3,12 @@ export type Language = 'pt-BR' | 'en-US';
 export const translations = {
   'pt-BR': {
     // Navigation & Search
-    appTitle: 'GlimpseGG',
-    appSubtitle: 'Inteligência Tática Pós-Jogo de Dota 2',
     searchPlaceholder: 'Digite SteamID32 / 64, Vanity URL ou Nome...',
     searchBtn: 'Buscar',
     searchShortcut: 'Ctrl K',
-    stratzLive: 'STRATZ Ao Vivo',
     stratzDemo: 'Sem Chave',
     settings: 'Configurações',
     refresh: 'Atualizar Dados',
-    home: 'Início',
     returnToConfigured: 'Voltar para Minha Conta',
     viewingDifferentAccount: 'Visualizando outro jogador',
     myPrimaryAccount: 'Minha Conta Principal',
@@ -27,7 +23,6 @@ export const translations = {
     favoriteProfile: 'Favoritar perfil',
     unfavoriteProfile: 'Desfavoritar perfil',
     activeProfile: 'Perfil Ativo',
-    switchProfile: 'Carregar Perfil',
     quickProfiles: 'Perfis Rápidos & Favoritos',
     searching: 'Buscando...',
 
@@ -69,12 +64,10 @@ export const translations = {
     metricWinrate: 'Taxa de Vitória Acumulada',
     metricGpm: 'Farm (GPM & XPM)',
     rollingAvg: 'Média Móvel',
-    matchScore: 'Impacto por Jogo',
 
     // Daily Activity
     dailyActivityTitle: 'Frequência e Atividade Diária (30 Dias)',
     activitySubtitle: 'Partidas disputadas e proporção de vitórias por dia',
-    gamesToday: 'Jogos no Dia',
     noActivity: 'Sem partidas registradas nesta data',
 
     // Match Dynamics & Lane Outcomes
@@ -85,21 +78,11 @@ export const translations = {
     evenMatches: 'Partidas Equilibradas',
     badgeStomp: 'STOMP',
     badgeComeback: 'COMEBACK',
-    badgeStompLane: 'STOMP LANE',
-    badgeWinLane: 'WIN LANE',
-    badgeDrawLane: 'DRAW LANE',
-    badgeLostLane: 'LOST LANE',
-    badgeEvenMatch: 'EQUILIBRADA',
 
     // Teammates & Friends Matrix
     teammatesTitle: 'Companheiros e Amigos Frequentes',
     teammatesSubtitle: 'Estatísticas de sinergia e vitórias jogando juntos',
     searchFriend: 'Buscar amigo...',
-    gamesWith: 'Partidas Juntas',
-    winRateWith: 'Taxa de Vitória Juntos',
-    duoSynergyHigh: 'Alta Sinergia',
-    duoSynergyMid: 'Sinergia Estável',
-    duoSynergyLow: 'Baixa Sinergia',
     noFriendsFound: 'Nenhum companheiro encontrado.',
 
     // Match List Filters
@@ -116,6 +99,60 @@ export const translations = {
     showingMatches: 'Exibindo {count} de {total} partidas',
     noMatchesFound: 'Nenhuma partida encontrada com os filtros selecionados.',
 
+    // Contexto de partida (coluna da lista + KPIs do card de Tendências)
+    matchTypeRANKED: 'Ranqueada',
+    matchTypeUNRANKED: 'Casual',
+    matchTypeTURBO: 'Turbo',
+    matchTypeTOURNAMENT: 'Torneio',
+    matchTypeBATTLE_CUP: 'Battle Cup',
+    matchTypeBOTS: 'Bots',
+    matchTypeEVENT: 'Evento',
+    matchTypeShortRANKED: 'RANQ',
+    matchTypeShortUNRANKED: 'CASUAL',
+    matchTypeShortTURBO: 'TURBO',
+    matchTypeShortTOURNAMENT: 'TORNEIO',
+    matchTypeShortBATTLE_CUP: 'CUP',
+    matchTypeShortBOTS: 'BOTS',
+    matchTypeShortEVENT: 'EVENTO',
+    allMatchTypes: 'Todos os modos',
+    clearFilter: 'Limpar filtro',
+    trendsCardTitle: 'Tendências',
+    positionShareHint: 'Posições jogadas e heróis dentro de cada uma',
+    laneHistory: 'Histórico de rotas',
+    impPerMatch: 'IMP por partida',
+    oldestToNewest: 'mais antiga → mais recente',
+    hoverBarHint: 'Passe o mouse numa barra para ver a partida',
+    thirtyDaysAgo: 'Há 30 dias',
+    today: 'Hoje',
+    partySolo: 'Solo',
+    partyGroup: 'Em grupo',
+    partyOf: 'Grupo de {count}',
+    allQueues: 'Solo e grupo',
+    matchAvgRank: 'Rank médio da partida',
+    noData: 'Sem dado',
+    rankDistribution: 'Distribuição de rank das partidas',
+    rankDistributionEmpty: 'Rank das partidas indisponível',
+    soloQueueShare: 'Fila solo',
+    groupQueueShare: 'Em grupo',
+    unrankedShare: 'Não classificado',
+    matchesSampled: 'Últimas {count} partidas',
+    // Rótulos dos badges de partida que ainda não tinham chave
+    badgeSolidWin: 'Vitória Sólida',
+    badgeFastLoss: 'Derrota Rápida',
+    badgeContested: 'Partida Disputada',
+    badgeLoss: 'Derrota',
+    badgeLaneStomp: 'Dominou a Rota',
+    badgeLaneWon: 'Venceu a Rota',
+    badgeLaneHard: 'Rota Difícil',
+    badgeLaneEven: 'Rota Equilibrada',
+    badgeMvp: 'MVP',
+    badgeTopSupport: 'Top Sup',
+    badgeNoDeaths: 'Imortal (0 Mortes)',
+    badgeImpact: 'Impacto +{value}',
+    badgeFarm: '{value} GPM Farm',
+    badgeKda: 'KDA {value}',
+    recentMatchesTitle: 'Partidas Recentes & Performance Detalhada',
+
     // Match Header & Tabs
     backToDashboard: 'Voltar ao Painel',
     radiantVictory: 'Vitória dos Radiant',
@@ -129,17 +166,8 @@ export const translations = {
 
     // Team Awards & Badges
     awardsTitle: 'Destaques e Prêmios da Partida',
-    extremeMvp: 'EXTREME MVP',
     mvp: 'MVP',
-    topCore: 'TOP CORE',
     topSupport: 'TOP SUPPORTE',
-    extremeLvp: 'EXTREME LVP',
-    lvp: 'LVP',
-    extremeMvpDesc: 'Desempenho lendário com impacto decisivo na vitória.',
-    mvpDesc: 'Maior impacto individual positivo no jogo.',
-    topCoreDesc: 'Melhor eficiência de farm, combate e dano entre os cores.',
-    topSupportDesc: 'Maior presença em lutas, controle de visão e utilidade.',
-    extremeLvpDesc: 'Maior número de mortes críticas e menor impacto no resultado.',
     
     // Team Comparison
     teamComparison: 'Comparativo de Equipes',
@@ -154,8 +182,6 @@ export const translations = {
     // Match Scoreboard
     scoreboard: 'Tabela de Pontuação',
     playerHero: 'Herói / Jogador',
-    lvl: 'Nvl',
-    cs: 'CS / DN',
     networth: 'Patrimônio',
     gpmXpm: 'GPM / XPM',
     heroDamageShort: 'Dano Herói',
@@ -174,40 +200,16 @@ export const translations = {
     csAt10: 'Last Hits aos 10m',
     deniesAt10: 'Denies aos 10m',
     goldAt10: 'Gold Líquido aos 10m',
-    laneOutcomeWon: 'Rota Vencida',
-    laneOutcomeEven: 'Rota Equilibrada',
-    laneOutcomeLost: 'Rota Perdida',
-    firstCoreItemTiming: 'Tempo do 1º Item Core',
     targetBenchmark: 'Meta do Benchmark',
-    fasterThanAverage: '{min}m mais rápido que a média',
-    slowerThanAverage: '{min}m mais lento que a média',
 
     // Detailed Performance Sections
     buildTimersTitle: 'Evolução e Cronômetro de Itens (Build Timeline)',
     buildTimersSubtitle: 'Tempo exato de aquisição e comparação com benchmarks de alto nível',
     abilityProgressionTitle: 'Sequência de Habilidades & Talentos',
     combatDamageTitle: 'Perfil de Combate, Danos & Controle',
-    physicalDamage: 'Dano Físico',
-    magicalDamage: 'Dano Mágico',
-    pureDamage: 'Dano Puro',
     damageReceived: 'Dano Recebido',
-    damageMitigated: 'Dano Mitigado',
-    stunDuration: 'Duração de Stun & Controle',
-    soloKills: 'Abates Solo',
-    multiKills: 'Multi-Kills',
     economyMechanicsTitle: 'Mecânica Econômica & Fontes de Ouro',
-    laneCreepGold: 'Tropas da Rota',
-    neutralGold: 'Monstros Neutros / Selva',
-    heroKillGold: 'Abates & Bounties',
-    towerGold: 'Torres & Estruturas',
-    passiveGold: 'Ouro Passivo & Runas',
-    campsStacked: 'Campos Acumulados',
-    runesCollected: 'Runas Coletadas',
     objectivesTitle: 'Objetivos & Impacto Estratégico',
-    roshanKills: 'Participação em Roshan',
-    tormentorKills: 'Tormentor',
-    courierKills: 'Entregadores Abatidos',
-    buybacksUsed: 'Buybacks Utilizados',
     benchmarkAhead: 'Adiantado',
     benchmarkOnTime: 'No Tempo',
     benchmarkBehind: 'Atrasado',
@@ -222,10 +224,7 @@ export const translations = {
     // Vision Tab
     visionTitle: 'Linha do Tempo de Visão e Mapa Tático',
     visionScrubber: 'Minuto da Partida',
-    observerWards: 'Wards de Observação',
-    sentryWards: 'Sentries (Detecção)',
     activeVision: 'Visão Ativa no Momento',
-
 
     // --- Resultado real de lane (substituiu o "88%" inventado) ---
     laneResultStompWon: 'Rota Dominada',
@@ -239,9 +238,6 @@ export const translations = {
 
     // --- Chrome da aba de coaching ---
     coachBenchmarkLabel: 'Referência',
-    coachExceeded: 'Acima da referência',
-    coachTargetLabel: 'Alvo',
-    coachActionableFocus: 'Foco acionável',
     coachSampleSize: 'n={n}',
     coachSrcHeroAverage: 'Média do herói',
     coachSrcHeroStats: 'Dados do patch',
@@ -261,8 +257,6 @@ export const translations = {
     coachCatBuild: 'Build',
     coachCatMatchup: 'Confronto',
     coachCatDeaths: 'Mortes',
-    coachBuildTitle: 'Build e Itens',
-    coachBuildSubtitle: 'Win rate por item e por minuto de compra, para o seu herói, posição e ranque',
     coachBuildLoading: 'Consultando dados de build do patch...',
     coachBuildUnavailable: 'A análise de build precisa de uma chave da STRATZ configurada.',
     coachBuildEmpty: 'Sem desvios relevantes de build nesta partida.',
@@ -399,7 +393,6 @@ export const translations = {
     coachCompositeBurstNoDispelStat: '{burst} de {total} mortes',
     coachCompositeBurstNoDispelBench: '{bandStart}-{bandEnd} min: {winRate}%',
 
-
     // --- Aba de visão (reescrita) ---
     visionRangeToggle: 'Raio de visão',
     visionFilterAll: 'Todas',
@@ -429,7 +422,6 @@ export const translations = {
     visionKpiAvgLifetime: 'Duração média',
     visionKpiWardsLostEarly: 'Perdidas cedo',
     visionKpiMapCoverage: 'Área com visão',
-    visionDewardsLog: 'Dewards',
     visionPlacedAcrossGame: 'Na partida inteira',
     visionNoDataTitle: 'Sem dados de visão',
     visionNoDataUnparsed: 'O replay desta partida não foi processado pela STRATZ, então não existem eventos de ward para mostrar. Nenhum dado foi inventado para preencher o mapa.',
@@ -468,12 +460,9 @@ export const translations = {
     onboardingStep3Desc: 'Copie o Bearer Token gerado e cole no campo. Sua conta Steam será detectada automaticamente!',
     openStratzApi: 'Abrir stratz.com/api',
     pasteTokenPlaceholder: 'Cole aqui seu Bearer Token do STRATZ (ex: eyJhbGciOi...)',
-    validateAndConnect: 'Validar Chave',
     validatingToken: 'Validando Token...',
-    tokenValidWelcome: 'Chave validada com sucesso! Bem-vindo(a),',
     tokenDetectedId: 'Conta detectada automaticamente:',
     saveAndStart: 'Salvar e Iniciar GlimpseGG',
-    continueInDemoMode: 'Continuar no Modo Demonstração',
     manualSteamIdPrompt: 'SteamID da Conta:',
     stratzTokenError: 'Token inválido ou expirado. Verifique se copiou a chave completa.',
     privacyDisclaimerTitle: 'Privacidade & Armazenamento 100% Local',
@@ -481,7 +470,6 @@ export const translations = {
 
     // Auto Updater
     updateAvailable: 'Nova versão disponível ({version})',
-    updateDownloading: 'Baixando atualização...',
     updateDownloaded: 'Atualização pronta para instalação!',
     restartAndInstall: 'Reiniciar e Atualizar',
     checkForUpdates: 'Verificar Atualizações',
@@ -489,20 +477,136 @@ export const translations = {
     noUpdatesAvailable: 'O GlimpseGG está na versão mais recente.',
     updateError: 'Não foi possível verificar atualizações.',
     appVersion: 'Versão do Aplicativo',
+
+    // ==========================================================================
+    // Textos que estavam cravados no JSX e nunca passavam pelo dicionario.
+
+    // Curva de vantagem (Gold/XP)
+    advantageTimelineTitle: 'Linha do Tempo de Vantagem (Ouro e Experiência)',
+    goldLead: 'Vantagem de Ouro',
+    xpLead: 'Vantagem de XP',
+    advantageTimeLabel: 'Minuto',
+    advantageRadiantHint: '▲ Valores positivos: vantagem Radiant',
+    advantageDireHint: '▼ Valores negativos: vantagem Dire',
+    advantageTimelineUnavailable: 'A STRATZ não retornou a curva de ouro e experiência desta partida.',
+
+    // Placar detalhado
+    scoreboardExpandedCount: '({open} de {total} abertos)',
+    collapseAll: 'Colapsar Todos',
+    expandAll: 'Expandir Todos',
+    collapseAllTooltip: 'Colapsar todos os jogadores',
+    expandAllTooltip: 'Expandir todos os jogadores para inspeção simultânea',
+    posShort: 'Pos',
+    healingShort: 'Cura',
+    neutralItemAlt: 'Item neutro',
+    itemOrderTitle: 'Ordem e Tempo de Compra dos Itens',
+    coreItemsOnlyBadge: 'Equipamentos Principais',
+    toggleConsumablesTooltip: 'Alternar exibição de consumíveis como poções e sentries',
+    showAllItems: 'Mostrar Todos',
+    hideConsumables: 'Ocultar Consumíveis',
+    itemCount: '{count} itens',
+    noItemsForFilter: 'Nenhum equipamento registrado para este filtro.',
+    heroDamageFull: 'Dano em Heróis',
+    towerDamageFull: 'Dano em Torres',
+    healingToAllies: 'Cura em Aliados',
+    csLastHitsDenies: 'CS (Golpes / Negações)',
+    viewFullPerformance: 'Ver Análise Completa de Performance',
+    farmShort: 'Farm',
+
+    // Aba de performance do jogador
+    killParticipation: 'Participação em Abates',
+    damageShare: 'Fatia do Dano',
+    networthShare: 'Fatia do Patrimônio',
+    coreItemBadge: 'Core',
+    radarScoreRange: 'Escala 0 - 100',
+    laneKillsDeaths: 'Abates / Mortes na Rota',
+    csProgressionTitle: 'Progressão de Last Hits (Marcos de CS)',
+    csTotal: '{count} CS no total',
+    minuteShort: '{n} min',
+    finalShort: 'Final',
+    healingSupport: 'Cura / Suporte',
+    stacksCreated: 'Stacks Criados',
+    dmgTypePhysical: 'Físico',
+    dmgTypeMagical: 'Mágico',
+    dmgTypePure: 'Puro',
+    netWorthTotal: '{gold} de patrimônio',
+    laneKillsShort: 'V',
+    laneDeathsShort: 'D',
+
+    // Comparativo de equipes
+    healingDone: 'Cura Realizada',
+
+    // Card de forma recente
+    trendLabel: 'Tendência',
+    trendOnFire: '🔥 Embalado',
+    trendStable: '⚡ Estável',
+    trendStruggling: '❄️ Em queda',
+
+    // Card de companheiros
+    teammatesCardTitle: 'Companheiros de equipe',
+    gpmShort: 'GPM',
+
+    // Estados globais do app
+    appInitializing: 'Inicializando e autenticando STRATZ...',
+    noProfileTitle: 'Nenhum Perfil Conectado',
+    noProfileDesc: 'Configure sua chave de API gratuita do STRATZ para carregar suas partidas, histórico tático e métricas de desempenho.',
+    configureStratzKey: 'Configurar Chave do STRATZ',
+
+    // Onboarding
+    setupBadge: 'Setup',
+    changeLanguage: 'Trocar idioma',
+    steamIdFormatHint: 'SteamID32 ou ID64',
+    manualSteamIdPlaceholder: 'Ex: 123456789 ou 76561198083722517',
+    requiresFreeKey: 'Requer chave de API gratuita do STRATZ.',
+    tokenValidated: 'Validado',
+
+    // Busca de jogador
+    closeEsc: 'Fechar (Esc)',
+    searchExampleHint: 'Ex: 123456789, 76561198..., steamcommunity.com/id/arteezy',
+    activeShort: 'Ativo',
+    noHistoryHint: 'Pesquise uma conta acima para guardá-la no histórico.',
+    close: 'Fechar',
+    playerResolverFooter: 'GlimpseGG Player Resolver',
+
+    // Configurações
+    settingsSubtitle: 'API GraphQL do STRATZ e perfil Steam',
+    apiKeyRequired: 'Chave necessária',
+    stratzTokenPlaceholder: 'Cole aqui seu Bearer Token do STRATZ...',
+    steamAccountPlaceholder: 'Ex: 123456789, 76561198083722517 ou Vanity URL da Steam',
+
+    // Perfil
+    openSteamProfile: 'Abrir perfil na Steam',
+    damageTotal: '{damage} de dano total',
+    killsCount: '{count} abates',
+
+    // Toasts e erros
+    matchLoadError: 'Não foi possível carregar esta partida na STRATZ.',
+    profileLoaded: 'Perfil carregado: {name}',
+    playerNotFound: 'Nenhum jogador encontrado com esse ID.',
+    playerSearchError: 'Erro ao buscar o jogador.',
+    historyCleared: 'Histórico recente limpo com sucesso.',
+    returnedToPrimary: 'Retornado para a conta principal.',
+    steamIdResolveError: 'Não foi possível resolver esse SteamID.',
+    saveConfigError: 'Erro ao salvar as configurações.',
+    manualSteamIdRequired: 'Informe o SteamID da sua conta para carregar o histórico.',
+
+    // Estados de "sem dado" na aba de desempenho
+    damageReceivedSplitTitle: 'Composição do dano recebido',
+    damageSplitUnavailable: 'A STRATZ não retornou o relatório de dano desta partida.',
+    abilityBuildUnavailable: 'A ordem de skills precisa do replay processado pela STRATZ.',
+    itemTimingsUnavailable: 'A STRATZ não retornou os tempos de compra desta partida.',
+    csCurveUnavailable: 'Sem a série por minuto, não há curva de CS para esta partida.',
+    itemNoCost: 'Especial',
   },
 
   'en-US': {
     // Navigation & Search
-    appTitle: 'GlimpseGG',
-    appSubtitle: 'Tactical Dota 2 Post-Game Intelligence',
     searchPlaceholder: 'Enter SteamID32 / 64, Vanity URL, or Name...',
     searchBtn: 'Search',
     searchShortcut: 'Ctrl K',
-    stratzLive: 'STRATZ Live',
     stratzDemo: 'No Key',
     settings: 'Settings',
     refresh: 'Refresh Data',
-    home: 'Home',
     returnToConfigured: 'Return to My Account',
     viewingDifferentAccount: 'Viewing another player',
     myPrimaryAccount: 'My Primary Account',
@@ -517,7 +621,6 @@ export const translations = {
     favoriteProfile: 'Favorite profile',
     unfavoriteProfile: 'Unfavorite profile',
     activeProfile: 'Active Profile',
-    switchProfile: 'Load Profile',
     quickProfiles: 'Quick Profiles & Favorites',
     searching: 'Searching...',
 
@@ -559,12 +662,10 @@ export const translations = {
     metricWinrate: 'Cumulative Win Rate',
     metricGpm: 'Economy (GPM & XPM)',
     rollingAvg: 'Rolling Average',
-    matchScore: 'Per-Game Impact',
 
     // Daily Activity
     dailyActivityTitle: 'Daily Activity & Match Volume (30 Days)',
     activitySubtitle: 'Matches played and win/loss breakdown per day',
-    gamesToday: 'Matches on Date',
     noActivity: 'No recorded matches on this day',
 
     // Match Dynamics & Lane Outcomes
@@ -575,21 +676,11 @@ export const translations = {
     evenMatches: 'Close Games',
     badgeStomp: 'STOMP',
     badgeComeback: 'COMEBACK',
-    badgeStompLane: 'STOMP LANE',
-    badgeWinLane: 'WIN LANE',
-    badgeDrawLane: 'DRAW LANE',
-    badgeLostLane: 'LOST LANE',
-    badgeEvenMatch: 'CLOSE MATCH',
 
     // Teammates & Friends Matrix
     teammatesTitle: 'Teammates & Friends Synergy',
     teammatesSubtitle: 'Duo statistics and win rate when playing together',
     searchFriend: 'Search friend...',
-    gamesWith: 'Matches Together',
-    winRateWith: 'Win Rate Together',
-    duoSynergyHigh: 'High Synergy',
-    duoSynergyMid: 'Stable Synergy',
-    duoSynergyLow: 'Low Synergy',
     noFriendsFound: 'No teammates found.',
 
     // Match List Filters
@@ -606,6 +697,60 @@ export const translations = {
     showingMatches: 'Showing {count} of {total} matches',
     noMatchesFound: 'No matches found matching the selected filters.',
 
+    // Match context (list column + Trends card KPIs)
+    matchTypeRANKED: 'Ranked',
+    matchTypeUNRANKED: 'Unranked',
+    matchTypeTURBO: 'Turbo',
+    matchTypeTOURNAMENT: 'Tournament',
+    matchTypeBATTLE_CUP: 'Battle Cup',
+    matchTypeBOTS: 'Bots',
+    matchTypeEVENT: 'Event',
+    matchTypeShortRANKED: 'RANKED',
+    matchTypeShortUNRANKED: 'CASUAL',
+    matchTypeShortTURBO: 'TURBO',
+    matchTypeShortTOURNAMENT: 'TOURN',
+    matchTypeShortBATTLE_CUP: 'CUP',
+    matchTypeShortBOTS: 'BOTS',
+    matchTypeShortEVENT: 'EVENT',
+    allMatchTypes: 'All game modes',
+    clearFilter: 'Clear filter',
+    trendsCardTitle: 'Trends',
+    positionShareHint: 'Positions played and the heroes within each',
+    laneHistory: 'Lane history',
+    impPerMatch: 'IMP per match',
+    oldestToNewest: 'oldest → newest',
+    hoverBarHint: 'Hover a bar to inspect the match',
+    thirtyDaysAgo: '30 days ago',
+    today: 'Today',
+    partySolo: 'Solo',
+    partyGroup: 'Party',
+    partyOf: 'Party of {count}',
+    allQueues: 'Solo & party',
+    matchAvgRank: 'Match average rank',
+    noData: 'No data',
+    rankDistribution: 'Match rank distribution',
+    rankDistributionEmpty: 'Match rank unavailable',
+    soloQueueShare: 'Solo queue',
+    groupQueueShare: 'Party queue',
+    unrankedShare: 'Unranked',
+    matchesSampled: 'Last {count} matches',
+    // Match badge labels that had no key yet
+    badgeSolidWin: 'Solid Win',
+    badgeFastLoss: 'Fast Loss',
+    badgeContested: 'Contested Match',
+    badgeLoss: 'Defeat',
+    badgeLaneStomp: 'Stomped Lane',
+    badgeLaneWon: 'Won Lane',
+    badgeLaneHard: 'Hard Lane',
+    badgeLaneEven: 'Even Lane',
+    badgeMvp: 'MVP',
+    badgeTopSupport: 'Top Sup',
+    badgeNoDeaths: 'Deathless (0 Deaths)',
+    badgeImpact: 'Impact +{value}',
+    badgeFarm: '{value} GPM Farm',
+    badgeKda: 'KDA {value}',
+    recentMatchesTitle: 'Recent Matches & Detailed Performance',
+
     // Match Header & Tabs
     backToDashboard: 'Back to Dashboard',
     radiantVictory: 'Radiant Victory',
@@ -619,17 +764,8 @@ export const translations = {
 
     // Team Awards & Badges
     awardsTitle: 'Match Awards & Recognition',
-    extremeMvp: 'EXTREME MVP',
     mvp: 'MVP',
-    topCore: 'TOP CORE',
     topSupport: 'TOP SUPPORT',
-    extremeLvp: 'EXTREME LVP',
-    lvp: 'LVP',
-    extremeMvpDesc: 'Legendary performance with game-deciding impact.',
-    mvpDesc: 'Highest overall positive individual impact.',
-    topCoreDesc: 'Best farm efficiency, teamfight combat and structure damage among cores.',
-    topSupportDesc: 'Highest fight presence, vision dominance, and utility.',
-    extremeLvpDesc: 'Highest critical death burden and lowest net contribution.',
 
     // Team Comparison
     teamComparison: 'Team Comparison',
@@ -644,8 +780,6 @@ export const translations = {
     // Match Scoreboard
     scoreboard: 'Match Scoreboard',
     playerHero: 'Hero / Player',
-    lvl: 'Lvl',
-    cs: 'CS / DN',
     networth: 'Networth',
     gpmXpm: 'GPM / XPM',
     heroDamageShort: 'Hero Dmg',
@@ -664,40 +798,16 @@ export const translations = {
     csAt10: 'Last Hits @ 10m',
     deniesAt10: 'Denies @ 10m',
     goldAt10: 'Net Gold @ 10m',
-    laneOutcomeWon: 'Won Lane',
-    laneOutcomeEven: 'Even Lane',
-    laneOutcomeLost: 'Lost Lane',
-    firstCoreItemTiming: '1st Core Item Timing',
     targetBenchmark: 'Benchmark Target',
-    fasterThanAverage: '{min}m faster than avg',
-    slowerThanAverage: '{min}m slower than avg',
 
     // Detailed Performance Sections
     buildTimersTitle: 'Item Build Progression & Timers',
     buildTimersSubtitle: 'Exact purchase timings & comparison against high-bracket benchmarks',
     abilityProgressionTitle: 'Ability & Talent Upgrade Order',
     combatDamageTitle: 'Combat, Damage & Disable Profile',
-    physicalDamage: 'Physical Damage',
-    magicalDamage: 'Magical Damage',
-    pureDamage: 'Pure Damage',
     damageReceived: 'Damage Received',
-    damageMitigated: 'Damage Mitigated',
-    stunDuration: 'Stun & Disable Duration',
-    soloKills: 'Solo Kills',
-    multiKills: 'Multi-Kills',
     economyMechanicsTitle: 'Economy Mechanics & Gold Sources',
-    laneCreepGold: 'Lane Creeps',
-    neutralGold: 'Neutral Camps',
-    heroKillGold: 'Kills & Bounties',
-    towerGold: 'Towers & Buildings',
-    passiveGold: 'Passive & Runes',
-    campsStacked: 'Camps Stacked',
-    runesCollected: 'Runes Collected',
     objectivesTitle: 'Objectives & Strategic Map Control',
-    roshanKills: 'Roshan Kills',
-    tormentorKills: 'Tormentor',
-    courierKills: 'Couriers Killed',
-    buybacksUsed: 'Buybacks Used',
     benchmarkAhead: 'Ahead',
     benchmarkOnTime: 'On Time',
     benchmarkBehind: 'Behind',
@@ -712,10 +822,7 @@ export const translations = {
     // Vision Tab
     visionTitle: 'Vision Timeline & Tactical Minimap',
     visionScrubber: 'Match Minute',
-    observerWards: 'Observer Wards',
-    sentryWards: 'Sentry Wards',
     activeVision: 'Active Vision at Timestamp',
-
 
     // --- Real lane outcome (replaced the invented "88%") ---
     laneResultStompWon: 'Lane Stomped',
@@ -729,9 +836,6 @@ export const translations = {
 
     // --- Coaching tab chrome ---
     coachBenchmarkLabel: 'Benchmark',
-    coachExceeded: 'Above benchmark',
-    coachTargetLabel: 'Target',
-    coachActionableFocus: 'Actionable focus',
     coachSampleSize: 'n={n}',
     coachSrcHeroAverage: 'Hero average',
     coachSrcHeroStats: 'Patch data',
@@ -751,8 +855,6 @@ export const translations = {
     coachCatBuild: 'Build',
     coachCatMatchup: 'Matchup',
     coachCatDeaths: 'Deaths',
-    coachBuildTitle: 'Build & Items',
-    coachBuildSubtitle: 'Win rate per item and purchase minute, for your hero, role and bracket',
     coachBuildLoading: 'Loading patch build data...',
     coachBuildUnavailable: 'Build analysis needs a configured STRATZ key.',
     coachBuildEmpty: 'No meaningful build deviations in this match.',
@@ -889,7 +991,6 @@ export const translations = {
     coachCompositeBurstNoDispelStat: '{burst} of {total} deaths',
     coachCompositeBurstNoDispelBench: '{bandStart}-{bandEnd} min: {winRate}%',
 
-
     // --- Vision tab (rewritten) ---
     visionRangeToggle: 'Vision radius',
     visionFilterAll: 'All',
@@ -919,7 +1020,6 @@ export const translations = {
     visionKpiAvgLifetime: 'Avg lifetime',
     visionKpiWardsLostEarly: 'Lost early',
     visionKpiMapCoverage: 'Area warded',
-    visionDewardsLog: 'Dewards',
     visionPlacedAcrossGame: 'Across the whole game',
     visionNoDataTitle: 'No vision data',
     visionNoDataUnparsed: 'STRATZ did not parse this replay, so there are no ward events to show. Nothing was invented to fill the map.',
@@ -958,12 +1058,9 @@ export const translations = {
     onboardingStep3Desc: 'Copy the generated Bearer Token and paste it below. Your Steam account will be auto-detected!',
     openStratzApi: 'Open stratz.com/api',
     pasteTokenPlaceholder: 'Paste your STRATZ Bearer Token here (e.g. eyJhbGciOi...)',
-    validateAndConnect: 'Validate Token',
     validatingToken: 'Validating Token...',
-    tokenValidWelcome: 'Token validated successfully! Welcome,',
     tokenDetectedId: 'Auto-detected Account:',
     saveAndStart: 'Save & Launch GlimpseGG',
-    continueInDemoMode: 'Continue in Demo Mode',
     manualSteamIdPrompt: 'Steam Account ID:',
     stratzTokenError: 'Invalid or expired token. Please verify that you copied the full key.',
     privacyDisclaimerTitle: 'Privacy & 100% Local Storage',
@@ -971,7 +1068,6 @@ export const translations = {
 
     // Auto Updater
     updateAvailable: 'New version available ({version})',
-    updateDownloading: 'Downloading update...',
     updateDownloaded: 'Update ready to install!',
     restartAndInstall: 'Restart & Install',
     checkForUpdates: 'Check for Updates',
@@ -979,6 +1075,126 @@ export const translations = {
     noUpdatesAvailable: 'GlimpseGG is up to date.',
     updateError: 'Could not check for updates.',
     appVersion: 'App Version',
+
+    // ==========================================================================
+    // Strings that were hardcoded in JSX and never went through the dictionary.
+
+    // Advantage curve (Gold/XP)
+    advantageTimelineTitle: 'Gold & Experience Advantage Timeline',
+    goldLead: 'Gold Lead',
+    xpLead: 'XP Lead',
+    advantageTimeLabel: 'Minute',
+    advantageRadiantHint: '▲ Positive values: Radiant advantage',
+    advantageDireHint: '▼ Negative values: Dire advantage',
+    advantageTimelineUnavailable: 'STRATZ did not return the gold and experience curve for this match.',
+
+    // Detailed scoreboard
+    scoreboardExpandedCount: '({open} of {total} expanded)',
+    collapseAll: 'Collapse All',
+    expandAll: 'Expand All',
+    collapseAllTooltip: 'Collapse all players',
+    expandAllTooltip: 'Expand all players for side-by-side inspection',
+    posShort: 'Pos',
+    healingShort: 'Heal',
+    neutralItemAlt: 'Neutral item',
+    itemOrderTitle: 'Item Purchase Order & Timings',
+    coreItemsOnlyBadge: 'Core Items Only',
+    toggleConsumablesTooltip: 'Toggle consumables such as potions and sentries',
+    showAllItems: 'Show All',
+    hideConsumables: 'Hide Consumables',
+    itemCount: '{count} items',
+    noItemsForFilter: 'No items recorded for this filter.',
+    heroDamageFull: 'Hero Damage',
+    towerDamageFull: 'Tower Damage',
+    healingToAllies: 'Healing to Allies',
+    csLastHitsDenies: 'CS (Last Hits / Denies)',
+    viewFullPerformance: 'View Full Performance Analysis',
+    farmShort: 'Farm',
+
+    // Player performance tab
+    killParticipation: 'Kill Participation',
+    damageShare: 'Damage Share',
+    networthShare: 'Net Worth Share',
+    coreItemBadge: 'Core',
+    radarScoreRange: '0 - 100 scale',
+    laneKillsDeaths: 'Lane Kills / Deaths',
+    csProgressionTitle: 'Last Hit Progression (CS Milestones)',
+    csTotal: '{count} total CS',
+    minuteShort: '{n} min',
+    finalShort: 'Final',
+    healingSupport: 'Healing / Support',
+    stacksCreated: 'Stacks Created',
+    dmgTypePhysical: 'Physical',
+    dmgTypeMagical: 'Magical',
+    dmgTypePure: 'Pure',
+    netWorthTotal: '{gold} net worth',
+    laneKillsShort: 'K',
+    laneDeathsShort: 'D',
+
+    // Team comparison
+    healingDone: 'Healing Done',
+
+    // Recent form card
+    trendLabel: 'Trend',
+    trendOnFire: '🔥 On Fire',
+    trendStable: '⚡ Stable',
+    trendStruggling: '❄️ Struggling',
+
+    // Teammates card
+    teammatesCardTitle: 'Teammates',
+    gpmShort: 'GPM',
+
+    // Global app states
+    appInitializing: 'Initializing and authenticating with STRATZ...',
+    noProfileTitle: 'No Profile Connected',
+    noProfileDesc: 'Set up your free STRATZ API key to load your matches, tactical history and performance metrics.',
+    configureStratzKey: 'Set Up STRATZ Key',
+
+    // Onboarding
+    setupBadge: 'Setup',
+    changeLanguage: 'Change language',
+    steamIdFormatHint: 'SteamID32 or ID64',
+    manualSteamIdPlaceholder: 'e.g. 123456789 or 76561198083722517',
+    requiresFreeKey: 'Requires a free STRATZ API key.',
+    tokenValidated: 'Validated',
+
+    // Player search
+    closeEsc: 'Close (Esc)',
+    searchExampleHint: 'e.g. 123456789, 76561198..., steamcommunity.com/id/arteezy',
+    activeShort: 'Active',
+    noHistoryHint: 'Search for an account above to keep it in your history.',
+    close: 'Close',
+    playerResolverFooter: 'GlimpseGG Player Resolver',
+
+    // Settings
+    settingsSubtitle: 'STRATZ GraphQL API & Steam profile',
+    apiKeyRequired: 'Key required',
+    stratzTokenPlaceholder: 'Paste your STRATZ Bearer Token...',
+    steamAccountPlaceholder: 'e.g. 123456789, 76561198083722517, or Steam Vanity URL',
+
+    // Profile
+    openSteamProfile: 'Open Steam profile',
+    damageTotal: '{damage} total damage',
+    killsCount: '{count} kills',
+
+    // Toasts and errors
+    matchLoadError: 'Could not load this match from STRATZ.',
+    profileLoaded: 'Profile loaded: {name}',
+    playerNotFound: 'No player found with that ID.',
+    playerSearchError: 'Error searching for the player.',
+    historyCleared: 'Recent history cleared.',
+    returnedToPrimary: 'Returned to your primary account.',
+    steamIdResolveError: 'Could not resolve that SteamID.',
+    saveConfigError: 'Error saving configuration.',
+    manualSteamIdRequired: 'Enter your account SteamID to load the history.',
+
+    // "No data" states on the performance tab
+    damageReceivedSplitTitle: 'Damage taken composition',
+    damageSplitUnavailable: 'STRATZ did not return the damage report for this match.',
+    abilityBuildUnavailable: 'The skill order needs the replay parsed by STRATZ.',
+    itemTimingsUnavailable: 'STRATZ did not return the item purchase timings for this match.',
+    csCurveUnavailable: 'Without the per-minute series there is no CS curve for this match.',
+    itemNoCost: 'Special',
   },
 } as const;
 

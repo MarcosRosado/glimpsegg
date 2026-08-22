@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   RadarChart,
   PolarGrid,
@@ -27,35 +27,13 @@ import { calculateRadarStats } from '../../utils/performance';
 import {
   getEnrichedCombatStats,
   getEnrichedFarmStats,
-  getEnrichedObjectiveStats,
   getEnrichedAbilityUpgrades,
   getItemBenchmarkSeconds,
 } from '../../utils/performanceEnricher';
-import { formatDuration, formatGold, getImpBadgeStyle } from '../../utils/dotaFormatters';
+import { formatDuration, formatGold } from '../../utils/dotaFormatters';
 import { handleHeroImageError, handleItemImageError, handleAbilityImageError } from '../../utils/imageFallback';
 import { getHeroAbilities } from '../../constants/abilities';
-import {
-  Shield,
-  Swords,
-  Sparkles,
-  TrendingUp,
-  Target,
-  Clock,
-  Zap,
-  Flame,
-  Trophy,
-  Skull,
-  Crosshair,
-  Coins,
-  Activity,
-  Layers,
-  Award,
-  Crown,
-  Timer,
-  CheckCircle,
-  AlertCircle,
-  HelpCircle,
-} from 'lucide-react';
+import { Swords, Target, Clock, Zap, Trophy, Coins, Layers, Timer } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface PlayerPerformanceTabProps {
@@ -68,13 +46,11 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
   const hero = getHero(player.heroId);
   const heroAbilities = getHeroAbilities(player.heroId, hero.shortName);
   const baseline = getRoleBaseline(player.role);
-  const impStyle = getImpBadgeStyle(player.imp);
 
-  // Enriched Analytics
-  const combatStats = getEnrichedCombatStats(player, match.durationSeconds);
-  const farmStats = getEnrichedFarmStats(player, match.durationSeconds);
-  const objectiveStats = getEnrichedObjectiveStats(player, match.durationSeconds);
-  const abilityUpgrades = getEnrichedAbilityUpgrades(player, match.durationSeconds);
+  // Enriched Analytics — so dado real; o que a STRATZ nao devolveu vem null/vazio.
+  const combatStats = getEnrichedCombatStats(player);
+  const farmStats = getEnrichedFarmStats(player);
+  const abilityUpgrades = getEnrichedAbilityUpgrades(player);
 
   // Team totals for ratios
   const teamPlayers = match.players.filter((p) => p.isRadiant === player.isRadiant);
@@ -96,31 +72,23 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
     { subject: t('objectives'), value: radarStats.objectives, fullMark: 100 },
   ];
 
-  // Item Timings with baseline benchmarks
-  const itemTimings = player.itemTimings && player.itemTimings.length > 0
-    ? player.itemTimings
-    : [
-        { itemId: player.items[0] || 63, time: 240, isCoreItem: false },
-        { itemId: player.items[1] || 145, time: 810, isCoreItem: true },
-        { itemId: player.items[2] || 147, time: 1180, isCoreItem: true },
-        { itemId: player.items[3] || 116, time: 1470, isCoreItem: true },
-        { itemId: player.items[4] || 139, time: 1820, isCoreItem: true },
-        { itemId: player.items[5] || 208, time: 2110, isCoreItem: true },
-      ].filter((t) => t.itemId > 0);
+  // Marco de CS que a serie nao alcanca aparece como "sem dado", nunca interpolado.
+  const csCell = (v: number | null) => (v !== null ? String(v) : t('noData'));
 
-  // Damage distribution percentages
-  const totalDmgDealt = Math.max(1, combatStats.physicalDamage + combatStats.magicalDamage + combatStats.pureDamage);
-  const physPct = Math.round((combatStats.physicalDamage / totalDmgDealt) * 100);
-  const magicPct = Math.round((combatStats.magicalDamage / totalDmgDealt) * 100);
-  const purePct = Math.max(0, 100 - (physPct + magicPct));
+  // Compras reais. O fallback antigo montava uma escada fixa (240/810/1180/1470/
+  // 1820/2110 s) com itens default quando `itemTimings` nao vinha — uma build que
+  // nao aconteceu, com horarios que nao aconteceram.
+  const itemTimings = player.itemTimings ?? [];
 
-  // Gold distribution percentages
-  const totalGoldSources = Math.max(1, farmStats.laneCreepGold + farmStats.neutralGold + farmStats.heroKillGold + farmStats.towerGold + farmStats.passiveGold);
-  const laneGoldPct = Math.round((farmStats.laneCreepGold / totalGoldSources) * 100);
-  const neutralGoldPct = Math.round((farmStats.neutralGold / totalGoldSources) * 100);
-  const killGoldPct = Math.round((farmStats.heroKillGold / totalGoldSources) * 100);
-  const towerGoldPct = Math.round((farmStats.towerGold / totalGoldSources) * 100);
-  const passiveGoldPct = Math.max(0, 100 - (laneGoldPct + neutralGoldPct + killGoldPct + towerGoldPct));
+  // Split do dano RECEBIDO (`heroDamageReport.receivedTotal`). É o unico split que a
+  // STRATZ devolve; antes ele era exibido sob o rotulo de dano causado.
+  const split = combatStats.damageReceivedSplit;
+  const splitTotal = split
+    ? Math.max(1, split.physicalDamage + split.magicalDamage + split.pureDamage)
+    : 0;
+  const physPct = split ? Math.round((split.physicalDamage / splitTotal) * 100) : 0;
+  const magicPct = split ? Math.round((split.magicalDamage / splitTotal) * 100) : 0;
+  const purePct = split ? Math.max(0, 100 - (physPct + magicPct)) : 0;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -164,9 +132,9 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                 <span className="text-slate-500 ml-1">({((player.kills + player.assists) / Math.max(1, player.deaths)).toFixed(1)} KDA)</span>
               </span>
               <span>•</span>
-              <span className="text-amber-400 font-bold">{formatGold(player.networth)} Net Worth</span>
+              <span className="text-amber-400 font-bold">{t('netWorthTotal', { gold: formatGold(player.networth) })}</span>
               <span>•</span>
-              <span className="text-yellow-300 font-bold">{player.goldPerMinute} GPM</span>
+              <span className="text-yellow-300 font-bold">{player.goldPerMinute} {t('gpmShort')}</span>
               <span>•</span>
               <span className="text-blue-300 font-bold">{player.experiencePerMinute} XPM</span>
             </div>
@@ -186,19 +154,19 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
 
           {/* Kill Participation */}
           <div className="flex flex-col items-end px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800">
-            <span className="text-[10px] text-slate-400 font-mono">Kill Participation</span>
+            <span className="text-[10px] text-slate-400 font-mono">{t('killParticipation')}</span>
             <span className="text-base font-black text-cyan-300 font-mono mt-0.5">{playerKP}%</span>
           </div>
 
           {/* Damage Share */}
           <div className="flex flex-col items-end px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800">
-            <span className="text-[10px] text-slate-400 font-mono">Damage Share</span>
+            <span className="text-[10px] text-slate-400 font-mono">{t('damageShare')}</span>
             <span className="text-base font-black text-rose-400 font-mono mt-0.5">{playerDmgShare}%</span>
           </div>
 
           {/* Networth Share */}
           <div className="flex flex-col items-end px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800">
-            <span className="text-[10px] text-slate-400 font-mono">Networth Share</span>
+            <span className="text-[10px] text-slate-400 font-mono">{t('networthShare')}</span>
             <span className="text-base font-black text-amber-300 font-mono mt-0.5">{playerNwShare}%</span>
           </div>
         </div>
@@ -221,9 +189,13 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
             </div>
           </div>
           <span className="text-xs text-slate-400 font-mono">
-            {itemTimings.length} {t('items')} Registrados
+            {t('itemCount', { count: itemTimings.length })}
           </span>
         </div>
+
+        {itemTimings.length === 0 && (
+          <p className="text-[11px] text-slate-400 leading-relaxed">{t('itemTimingsUnavailable')}</p>
+        )}
 
         {/* Horizontal Timeline Scroll */}
         <div className="flex items-stretch gap-3 overflow-x-auto pb-3 pt-1">
@@ -249,7 +221,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                   
                   {it.isCoreItem && (
                     <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono">
-                      Core
+                      {t('coreItemBadge')}
                     </span>
                   )}
                 </div>
@@ -269,22 +241,23 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                       {item.displayName}
                     </div>
                     <div className="text-[10px] text-amber-400 font-mono font-semibold">
-                      {item.cost > 0 ? formatGold(item.cost) : 'Special'}
+                      {item.cost > 0 ? formatGold(item.cost) : t('itemNoCost')}
                     </div>
                   </div>
                 </div>
 
                 {/* Benchmark Timing Comparison */}
                 <div className="mt-2.5 pt-2 border-t border-slate-800/80 text-[10px] font-mono flex items-center justify-between">
-                  <span className="text-slate-500">Target: {formatDuration(benchSec)}</span>
+                  <span className="text-slate-500">{t('targetBenchmark')}: {formatDuration(benchSec)}</span>
                   <span
                     className={`font-black flex items-center gap-0.5 ${
                       isAhead ? 'text-emerald-400' : isBehind ? 'text-rose-400' : 'text-cyan-300'
                     }`}
+                    title={isAhead ? t('benchmarkAhead') : isBehind ? t('benchmarkBehind') : t('benchmarkOnTime')}
                   >
                     {isAhead && `-${formatDuration(Math.abs(deltaSec))}`}
                     {isBehind && `+${formatDuration(deltaSec)}`}
-                    {isOnTime && 'On-Time'}
+                    {isOnTime && t('benchmarkOnTime')}
                   </span>
                 </div>
               </div>
@@ -367,22 +340,6 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
             </div>
           </div>
 
-          {/* Consumables & Permanent Blessings */}
-          <div>
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 block font-mono">
-              Upgrades & Bênçãos Ativas
-            </span>
-            <div className="flex items-center gap-3 text-xs font-mono">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
-                <CheckCircle className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Aghanim's Shard (15:00+)</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Moon Shard Consumido</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -397,7 +354,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                 {t('radarTitle')}
               </h4>
             </div>
-            <span className="text-[10px] text-cyan-400 font-mono font-bold">0 - 100 Score</span>
+            <span className="text-[10px] text-cyan-400 font-mono font-bold">{t('radarScoreRange')}</span>
           </div>
 
           <div className="h-64 w-full">
@@ -462,30 +419,41 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
             <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
               <div className="text-[10px] text-slate-400">{t('csAt10')}</div>
               <div className="text-base font-black text-white mt-0.5">
-                {farmStats.cs10Min}
+                {csCell(farmStats.cs10Min)}
                 <span className="text-[10px] text-slate-500 font-normal ml-1">/ {baseline.cs10Min}</span>
               </div>
             </div>
 
             <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
               <div className="text-[10px] text-slate-400">{t('deniesAt10')}</div>
+              {/* `|| player.numDenies` trocava denies aos 10min pelo total da partida. */}
               <div className="text-base font-black text-white mt-0.5">
-                {player.laningStats?.denies10 || player.numDenies}
+                {player.laningStats ? player.laningStats.denies10 : t('noData')}
                 <span className="text-[10px] text-slate-500 font-normal ml-1">/ {baseline.denies10Min}</span>
               </div>
             </div>
 
             <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
               <div className="text-[10px] text-slate-400">{t('goldAt10')}</div>
+              {/* Sem `laningStats` nao existe ouro aos 10min. O antigo
+                  `networth * 0.22` inventava o numero a partir do patrimonio final. */}
               <div className="text-base font-black text-amber-400 mt-0.5">
-                {formatGold(player.laningStats?.gold10 || Math.round(player.networth * 0.22))}
+                {player.laningStats ? formatGold(player.laningStats.gold10) : t('noData')}
               </div>
             </div>
 
             <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-              <div className="text-[10px] text-slate-400">Abates/Mortes Rota</div>
+              <div className="text-[10px] text-slate-400">{t('laneKillsDeaths')}</div>
+              {/* `killsInLane || 2` mostrava 2 abates para quem nao tinha o dado. */}
               <div className="text-base font-black text-emerald-400 mt-0.5">
-                {player.laningStats?.killsInLane || 2}V / <span className="text-rose-400">{player.laningStats?.deathsInLane || 0}D</span>
+                {player.laningStats ? (
+                  <>
+                    {player.laningStats.killsInLane}{t('laneKillsShort')} /{' '}
+                    <span className="text-rose-400">{player.laningStats.deathsInLane}{t('laneDeathsShort')}</span>
+                  </>
+                ) : (
+                  t('noData')
+                )}
               </div>
             </div>
           </div>
@@ -493,29 +461,33 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
           {/* CS Milestones Progression (5m, 10m, 15m, 20m, Fim) */}
           <div className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800">
             <div className="text-xs font-bold text-slate-300 mb-2 font-mono flex items-center justify-between">
-              <span>Progressão de Last Hits (CS Milestones)</span>
-              <span className="text-cyan-400 font-bold">{player.numLastHits} Total CS</span>
+              <span>{t('csProgressionTitle')}</span>
+              <span className="text-cyan-400 font-bold">{t('csTotal', { count: player.numLastHits })}</span>
             </div>
+
+            {farmStats.cs5Min === null && farmStats.cs10Min === null && (
+              <p className="text-[11px] text-slate-400 leading-relaxed mb-2">{t('csCurveUnavailable')}</p>
+            )}
 
             <div className="grid grid-cols-5 gap-2 text-center font-mono text-xs">
               <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800/80">
-                <div className="text-[10px] text-slate-500">5 min</div>
-                <div className="font-black text-slate-200 mt-0.5">{farmStats.cs5Min}</div>
+                <div className="text-[10px] text-slate-500">{t('minuteShort', { n: 5 })}</div>
+                <div className="font-black text-slate-200 mt-0.5">{csCell(farmStats.cs5Min)}</div>
               </div>
               <div className="p-2 rounded-lg bg-slate-950/80 border border-cyan-500/30">
-                <div className="text-[10px] text-cyan-400">10 min</div>
-                <div className="font-black text-cyan-300 mt-0.5">{farmStats.cs10Min}</div>
+                <div className="text-[10px] text-cyan-400">{t('minuteShort', { n: 10 })}</div>
+                <div className="font-black text-cyan-300 mt-0.5">{csCell(farmStats.cs10Min)}</div>
               </div>
               <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800/80">
-                <div className="text-[10px] text-slate-500">15 min</div>
-                <div className="font-black text-slate-200 mt-0.5">{farmStats.cs15Min}</div>
+                <div className="text-[10px] text-slate-500">{t('minuteShort', { n: 15 })}</div>
+                <div className="font-black text-slate-200 mt-0.5">{csCell(farmStats.cs15Min)}</div>
               </div>
               <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800/80">
-                <div className="text-[10px] text-slate-500">20 min</div>
-                <div className="font-black text-slate-200 mt-0.5">{farmStats.cs20Min}</div>
+                <div className="text-[10px] text-slate-500">{t('minuteShort', { n: 20 })}</div>
+                <div className="font-black text-slate-200 mt-0.5">{csCell(farmStats.cs20Min)}</div>
               </div>
               <div className="p-2 rounded-lg bg-slate-950/80 border border-emerald-500/30">
-                <div className="text-[10px] text-emerald-400">Final</div>
+                <div className="text-[10px] text-emerald-400">{t('finalShort')}</div>
                 <div className="font-black text-emerald-300 mt-0.5">{player.numLastHits}</div>
               </div>
             </div>
@@ -535,53 +507,46 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               </h4>
             </div>
             <span className="text-xs font-black text-rose-400 font-mono">
-              {player.heroDamage.toLocaleString()} Dano Total
+              {t('damageTotal', { damage: player.heroDamage.toLocaleString() })}
             </span>
           </div>
 
-          {/* Tri-color Damage Bar (Physical, Magical, Pure) */}
+          {/* Composicao do dano RECEBIDO. Sem `damageReport`, nao ha split — o chute
+              por role (`isCaster ? 0.65 : 0.25`) foi removido. */}
           <div>
-            <div className="flex justify-between text-xs font-mono mb-1.5">
-              <span className="text-orange-400 font-bold">Físico: {combatStats.physicalDamage.toLocaleString()} ({physPct}%)</span>
-              <span className="text-cyan-400 font-bold">Mágico: {combatStats.magicalDamage.toLocaleString()} ({magicPct}%)</span>
-              <span className="text-purple-400 font-bold">Puro: {combatStats.pureDamage.toLocaleString()} ({purePct}%)</span>
-            </div>
-            <div className="w-full bg-slate-900 h-3 rounded-full overflow-hidden flex border border-slate-800">
-              <div className="bg-orange-500 h-full transition-all" style={{ width: `${physPct}%` }} title={`Físico: ${physPct}%`} />
-              <div className="bg-cyan-400 h-full transition-all" style={{ width: `${magicPct}%` }} title={`Mágico: ${magicPct}%`} />
-              <div className="bg-purple-500 h-full transition-all" style={{ width: `${purePct}%` }} title={`Puro: ${purePct}%`} />
-            </div>
+            <div className="text-[10px] text-slate-400 font-mono mb-1.5">{t('damageReceivedSplitTitle')}</div>
+            {split ? (
+              <>
+                <div className="flex justify-between text-xs font-mono mb-1.5">
+                  <span className="text-orange-400 font-bold">{t('dmgTypePhysical')}: {split.physicalDamage.toLocaleString()} ({physPct}%)</span>
+                  <span className="text-cyan-400 font-bold">{t('dmgTypeMagical')}: {split.magicalDamage.toLocaleString()} ({magicPct}%)</span>
+                  <span className="text-purple-400 font-bold">{t('dmgTypePure')}: {split.pureDamage.toLocaleString()} ({purePct}%)</span>
+                </div>
+                <div className="w-full bg-slate-900 h-3 rounded-full overflow-hidden flex border border-slate-800">
+                  <div className="bg-orange-500 h-full transition-all" style={{ width: `${physPct}%` }} title={`${t('dmgTypePhysical')}: ${physPct}%`} />
+                  <div className="bg-cyan-400 h-full transition-all" style={{ width: `${magicPct}%` }} title={`${t('dmgTypeMagical')}: ${magicPct}%`} />
+                  <div className="bg-purple-500 h-full transition-all" style={{ width: `${purePct}%` }} title={`${t('dmgTypePure')}: ${purePct}%`} />
+                </div>
+              </>
+            ) : (
+              <p className="text-[11px] text-slate-400 leading-relaxed">{t('damageSplitUnavailable')}</p>
+            )}
           </div>
 
-          {/* Combat Metrics Grid */}
-          <div className="grid grid-cols-3 gap-3 font-mono text-xs">
+          {/* Metricas reais. Sairam daqui: dano mitigado (= 42% do recebido) e "stun
+              aplicado" (= base por role + assists*1.8) — nenhum dos dois tem fonte. */}
+          <div className="grid grid-cols-2 gap-3 font-mono text-xs">
             <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-400">Dano Recebido</div>
-              <div className="text-sm font-black text-slate-200 mt-0.5">{combatStats.damageReceived.toLocaleString()}</div>
+              <div className="text-[10px] text-slate-400">{t('damageReceived')}</div>
+              <div className="text-sm font-black text-slate-200 mt-0.5">
+                {combatStats.damageReceived !== null ? combatStats.damageReceived.toLocaleString() : t('noData')}
+              </div>
             </div>
             <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-400">Dano Mitigado</div>
-              <div className="text-sm font-black text-emerald-400 mt-0.5">{combatStats.damageMitigated.toLocaleString()}</div>
-            </div>
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-400">Stun Aplicado</div>
-              <div className="text-sm font-black text-cyan-300 mt-0.5">{combatStats.stunDurationSec}s</div>
-            </div>
-          </div>
-
-          {/* Combat Feats (Solo kills, Multi-kills, Streaks) */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs font-mono">
-            <div>
-              <span className="text-slate-400">Abates Solo: </span>
-              <span className="font-bold text-white">{combatStats.soloKills}</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Maior Sequência: </span>
-              <span className="font-bold text-amber-400">{combatStats.killstreakMax} Kills</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Cura / Suporte: </span>
-              <span className="font-bold text-emerald-400">{player.heroHealing.toLocaleString()}</span>
+              <div className="text-[10px] text-slate-400">{t('healingSupport')}</div>
+              <div className="text-sm font-black text-emerald-400 mt-0.5">
+                {combatStats.healingProvided.toLocaleString()}
+              </div>
             </div>
           </div>
         </div>
@@ -596,57 +561,33 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               </h4>
             </div>
             <span className="text-xs font-black text-amber-400 font-mono">
-              {formatGold(player.networth)} Net Worth
+              {t('netWorthTotal', { gold: formatGold(player.networth) })}
             </span>
           </div>
 
-          {/* Multi-segment Gold Sources Bar */}
-          <div>
-            <div className="flex justify-between text-xs font-mono mb-1.5 flex-wrap gap-1">
-              <span className="text-emerald-400 font-bold">Rotas: {laneGoldPct}%</span>
-              <span className="text-teal-400 font-bold">Selva: {neutralGoldPct}%</span>
-              <span className="text-amber-400 font-bold">Abates: {killGoldPct}%</span>
-              <span className="text-rose-400 font-bold">Torres: {towerGoldPct}%</span>
-              <span className="text-slate-400 font-bold">Passivo: {passiveGoldPct}%</span>
-            </div>
-            <div className="w-full bg-slate-900 h-3 rounded-full overflow-hidden flex border border-slate-800">
-              <div className="bg-emerald-500 h-full" style={{ width: `${laneGoldPct}%` }} title={`Rotas: ${laneGoldPct}%`} />
-              <div className="bg-teal-400 h-full" style={{ width: `${neutralGoldPct}%` }} title={`Selva: ${neutralGoldPct}%`} />
-              <div className="bg-amber-400 h-full" style={{ width: `${killGoldPct}%` }} title={`Abates: ${killGoldPct}%`} />
-              <div className="bg-rose-500 h-full" style={{ width: `${towerGoldPct}%` }} title={`Torres: ${towerGoldPct}%`} />
-              <div className="bg-slate-600 h-full" style={{ width: `${passiveGoldPct}%` }} title={`Passivo: ${passiveGoldPct}%`} />
-            </div>
-          </div>
-
-          {/* Farm Mechanics Grid */}
+          {/* A reparticao de ouro por fonte saiu inteira: `networth * 0.48` para rota,
+              `* 0.28` para selva, `kills*280 + assists*135` para abates, `* 0.08` para
+              torres e o resto como passivo. A STRATZ nao expoe ouro por fonte. As tres
+              contagens de runa vinham de `duracao / constante`. O que sobra aqui é
+              medido. */}
           <div className="grid grid-cols-3 gap-3 font-mono text-xs">
             <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-400">Ouro de Rota</div>
-              <div className="text-sm font-black text-emerald-400 mt-0.5">{formatGold(farmStats.laneCreepGold)}</div>
+              <div className="text-[10px] text-slate-400">{t('stacksCreated')}</div>
+              <div className="text-sm font-black text-cyan-400 mt-0.5">
+                {farmStats.campsStacked !== null ? farmStats.campsStacked : t('noData')}
+              </div>
             </div>
             <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-400">Ouro de Selva</div>
-              <div className="text-sm font-black text-teal-400 mt-0.5">{formatGold(farmStats.neutralGold)}</div>
+              <div className="text-[10px] text-slate-400">{t('csLastHitsDenies')}</div>
+              <div className="text-sm font-black text-white mt-0.5">
+                {player.numLastHits} / <span className="text-slate-400">{player.numDenies}</span>
+              </div>
             </div>
             <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-400">Ouro de Abates</div>
-              <div className="text-sm font-black text-amber-400 mt-0.5">{formatGold(farmStats.heroKillGold)}</div>
-            </div>
-          </div>
-
-          {/* Stacking & Runes Control */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs font-mono">
-            <div>
-              <span className="text-slate-400">Stacks Criados: </span>
-              <span className="font-bold text-cyan-400">{farmStats.campsStacked}</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Runas de Bounty: </span>
-              <span className="font-bold text-yellow-400">{farmStats.runesBounty}</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Runas de Poder/Sabedoria: </span>
-              <span className="font-bold text-purple-400">{farmStats.runesPower + farmStats.runesWisdom}</span>
+              <div className="text-[10px] text-slate-400">{t('gpmXpm')}</div>
+              <div className="text-sm font-black text-amber-400 mt-0.5">
+                {player.goldPerMinute} / <span className="text-blue-300">{player.experiencePerMinute}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -685,6 +626,10 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
             ))}
           </div>
         </div>
+
+        {abilityUpgrades.length === 0 && (
+          <p className="text-[11px] text-slate-400 leading-relaxed">{t('abilityBuildUnavailable')}</p>
+        )}
 
         {/* Compact Level 1 to 25/30 Ribbon */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 scrollbar-thin">
@@ -760,22 +705,18 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
           </h4>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <div className="text-[10px] text-slate-400">{t('roshanKills')}</div>
-            <div className="text-base font-black text-amber-400 mt-0.5">{objectiveStats.roshanKills}x</div>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <div className="text-[10px] text-slate-400">{t('tormentorKills')}</div>
-            <div className="text-base font-black text-purple-400 mt-0.5">{objectiveStats.tormentorParticipation}x</div>
-          </div>
+        {/* Roshan, Tormentor e buyback sairam: vinham de `duracao / 900`,
+            `duracao >= 1200` e `mortes >= 4`. A GET_MATCH_DETAILS_QUERY nao pede
+            nenhum desses eventos, entao nao havia valor honesto a exibir. Dano em
+            estrutura é medido. */}
+        <div className="grid grid-cols-2 gap-3 font-mono text-xs">
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
             <div className="text-[10px] text-slate-400">{t('towerDamage')}</div>
             <div className="text-base font-black text-emerald-400 mt-0.5">{player.towerDamage.toLocaleString()}</div>
           </div>
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <div className="text-[10px] text-slate-400">{t('buybacksUsed')}</div>
-            <div className="text-base font-black text-slate-200 mt-0.5">{objectiveStats.buybackCount}</div>
+            <div className="text-[10px] text-slate-400">{t('heroDamageFull')}</div>
+            <div className="text-base font-black text-rose-400 mt-0.5">{player.heroDamage.toLocaleString()}</div>
           </div>
         </div>
       </div>

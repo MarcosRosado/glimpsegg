@@ -18,7 +18,6 @@ import {
   PlayerLaneResult,
   PlayerTimeSeries,
 } from '../types/dota';
-import { MOCK_MATCH_KEZ, MOCK_MATCH_RINGMASTER } from './mockData';
 import { calculateCustomImp } from '../utils/performance';
 import { getItem } from '../constants/items';
 import { formatGameMode, formatLobbyType } from '../utils/dotaFormatters';
@@ -57,7 +56,12 @@ query GetPlayerProfile($steamAccountId: Long!) {
       startDateTime
       gameMode
       lobbyType
+      bracket
+      allPlayers: players {
+        partyId
+      }
       players(steamAccountId: $steamAccountId) {
+        partyId
         heroId
         isRadiant
         kills
@@ -503,6 +507,7 @@ function computeAvailability(rawMatch: any, players: MatchPlayer[]): MatchDataAv
     deathEvents: some((p) => !!p.deathEvents?.length),
     damageReport: some((p) => !!p.damageReport?.receivedTotal),
     wards: false, // preenchido depois de construir `vision`
+    advantageTimeline: false, // preenchido depois de montar a curva
     heroAverage: some((p) => !!p.heroAverageCurve?.length),
     abilities: some((p) => !!p.abilityBuild?.length),
     laneOutcomes,
@@ -529,6 +534,23 @@ function mapStratzLane(rawLane: string): Lane {
   if (rawLane === 'OFF_LANE' || rawLane === 'OFF') return 'OFF';
   if (rawLane === 'JUNGLE') return 'JUNGLE';
   return 'SAFE';
+}
+
+/**
+ * Quantos jogadores entraram na fila junto com o nosso.
+ *
+ * A STRATZ so entrega `partyId` por jogador — o tamanho do grupo e a contagem
+ * de quantos compartilham o mesmo id. `partyId` nulo no proprio jogador ja e
+ * resposta: entrou sozinho. O que nao da para responder e quando o alias
+ * `allPlayers` nao veio (query recusada, campo removido); ai o retorno e `null`
+ * e a UI omite, em vez de fingir "solo".
+ */
+export function derivePartySize(allPlayers: any, partyId: any): number | null {
+  if (partyId === null || partyId === undefined) return 1;
+  if (!Array.isArray(allPlayers) || allPlayers.length === 0) return null;
+
+  const size = allPlayers.filter((p: any) => p && p.partyId === partyId).length;
+  return size > 0 ? size : null;
 }
 
 function classifyMatchDynamic(m: any, playerObj: any, isWin: boolean, imp: number): MatchDynamicType {
@@ -674,6 +696,12 @@ export async function fetchPlayerProfile(steamAccountId: string, apiKey?: string
         const dynamicType = classifyMatchDynamic(m, playerObj, isWin, imp);
 
         return {
+          // Cru, nao formatado: quem renderiza decide o idioma e a abreviacao.
+          gameMode: m.gameMode != null ? String(m.gameMode) : undefined,
+          lobbyType: m.lobbyType != null ? String(m.lobbyType) : undefined,
+          networth: playerObj.networth || 0,
+          partySize: derivePartySize(m.allPlayers, playerObj.partyId),
+          bracket: typeof m.bracket === 'number' ? m.bracket : null,
           matchId: String(m.id),
           heroId: playerObj.heroId || 0,
           isRadiant: isRad,
@@ -929,6 +957,7 @@ export function mapStratzMatch(m: any): MatchDetails {
 
   const availability = computeAvailability(m, players);
   availability.wards = vision.source !== 'NONE';
+  availability.advantageTimeline = advantageTimeline.length > 0;
 
   return {
     id: String(m.id),
@@ -942,7 +971,10 @@ export function mapStratzMatch(m: any): MatchDetails {
     radiantNetworth: totalRadiantNetworth,
     direNetworth: totalDireNetworth,
     players,
-    advantageTimeline: advantageTimeline.length > 0 ? advantageTimeline : MOCK_MATCH_KEZ.advantageTimeline,
+    // Curva vazia continua vazia. Cair para `MOCK_MATCH_KEZ.advantageTimeline` aqui
+    // pintava o grafico de OUTRA partida sem marcar `isMockData`, entao a tela
+    // mostrava ouro e XP inventados como se fossem desta partida.
+    advantageTimeline,
     parsedDateTime: m.parsedDateTime ?? null,
     bracket: typeof m.bracket === 'number' ? m.bracket : null,
     actualRank: typeof m.actualRank === 'number' ? m.actualRank : null,
@@ -957,10 +989,10 @@ export function mapStratzMatch(m: any): MatchDetails {
 /**
  * Busca detalhes da partida na STRATZ, via IPC do Electron ou fetch do navegador.
  */
-export async function fetchMatchDetails(matchId: string, apiKey?: string): Promise<MatchDetails> {
+export async function fetchMatchDetails(matchId: string, apiKey?: string): Promise<MatchDetails | null> {
   const numericId = parseInt(matchId, 10);
   if (isNaN(numericId) || numericId <= 0) {
-    return { ...MOCK_MATCH_KEZ, isMockData: true };
+    return null;
   }
 
   const token = apiKey || DEFAULT_STRATZ_TOKEN;
@@ -988,7 +1020,7 @@ export async function fetchMatchDetails(matchId: string, apiKey?: string): Promi
 
     // Tolerancia a erro parcial: se `match` veio, seguimos mesmo com `errors`
     // preenchido. Um campo novo que a API rejeite tem de degradar para "sem aquele
-    // dado", nunca derrubar a tela de partida inteira para o mock.
+    // dado", nunca derrubar a tela de partida inteira.
     if (response?.errors?.length) {
       console.warn('[stratz] erros parciais em GetMatchDetails:', response.errors);
     }
@@ -998,11 +1030,12 @@ export async function fetchMatchDetails(matchId: string, apiKey?: string): Promi
       console.warn('STRATZ API returned errors for match details:', response?.errors);
     }
   } catch (err) {
-    console.warn('STRATZ Match details fetch failed, falling back:', err);
+    console.warn('STRATZ Match details fetch failed:', err);
   }
 
-  // Fallback para o dataset de demonstracao. `isMockData` deixa isso explicito para a
-  // UI — a ausencia dessa flag foi o que permitiu dado falso passar por real.
-  if (matchId === '7927391024') return { ...MOCK_MATCH_RINGMASTER, isMockData: true };
-  return { ...MOCK_MATCH_KEZ, isMockData: true };
+  // Nao existe mais dataset de demonstracao para cair. Antes, uma falha de rede ou um
+  // matchId invalido devolvia a partida do Kez marcada com `isMockData`, e a tela
+  // abria normalmente com os numeros de OUTRA partida. `null` faz a chamada falhar de
+  // verdade, e quem chama mostra o erro.
+  return null;
 }

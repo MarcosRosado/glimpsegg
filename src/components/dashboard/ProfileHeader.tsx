@@ -5,6 +5,7 @@ import { getRankTierInfo } from '../../constants/ranks';
 import { formatPercent } from '../../utils/dotaFormatters';
 import { handleAvatarError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
+import { computeRecentFormStats } from '../../utils/recentFormStats';
 
 interface ProfileHeaderProps {
   profile: PlayerProfileSummary;
@@ -13,6 +14,8 @@ interface ProfileHeaderProps {
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
   const { t } = useLanguage();
   const rankInfo = getRankTierInfo(profile.seasonRank, profile.leaderboardRank);
+  // Mesmos agregados da stat rail e do card de Forma Recente.
+  const form = computeRecentFormStats(profile.recentMatches);
 
   return (
     <div className="glass-card rounded-2xl p-6 relative overflow-hidden border border-slate-800 shadow-xl bg-gradient-to-r from-[#101726] via-[#121c2e] to-[#151c2a]">
@@ -48,7 +51,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
                   target="_blank"
                   rel="noreferrer"
                   className="text-slate-400 hover:text-amber-400 transition"
-                  title="Open Steam Profile"
+                  title={t('openSteamProfile')}
                 >
                   <ExternalLink className="w-4 h-4" />
                 </a>
@@ -60,7 +63,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Season 2025/2026</span>
+                <span>{profile.totalMatches.toLocaleString()} {t('matches')}</span>
               </span>
             </div>
 
@@ -116,8 +119,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
               <Target className="w-3.5 h-3.5 text-cyan-400" />
               <span>{t('avgImp')}</span>
             </div>
-            <div className="text-xl font-black text-cyan-400">+22.4</div>
-            <div className="text-[10px] text-emerald-400/80 mt-0.5 font-medium">Ancient IV</div>
+            <div className={`text-xl font-black ${form.avgImp >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
+              {form.avgImp >= 0 ? `+${form.avgImp}` : form.avgImp}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
+              {t('matchesSampled', { count: form.count })}
+            </div>
           </div>
         </div>
       </div>

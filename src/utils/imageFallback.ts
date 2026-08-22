@@ -12,6 +12,16 @@ export const AVATAR_PLACEHOLDER_SVG = `data:image/svg+xml;utf8,<svg xmlns="http:
 // Sleek dark SVG placeholder for abilities
 export const ABILITY_PLACEHOLDER_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="%230f172a"/><polygon points="32,14 48,46 16,46" fill="%2306b6d4" opacity="0.6"/><circle cx="32" cy="34" r="5" fill="%2322d3ee"/></svg>`;
 
+// Medalha de rank. As imagens vem do CDN da OpenDota; sem este fallback um
+// erro de rede apaga a faixa inteira de medalhas e deixa so a linha divisoria.
+export const RANK_PLACEHOLDER_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="%230f172a" stroke="%23475569" stroke-width="3"/><polygon points="32,18 37,29 49,30 40,38 43,50 32,44 21,50 24,38 15,30 27,29" fill="%23475569"/></svg>`;
+
+export function handleRankImageError(e: React.SyntheticEvent<HTMLImageElement, Event>) {
+  const target = e.currentTarget;
+  target.onerror = null;
+  target.src = RANK_PLACEHOLDER_SVG;
+}
+
 export function handleHeroImageError(e: React.SyntheticEvent<HTMLImageElement, Event>) {
   const target = e.currentTarget;
   target.onerror = null; // Prevent infinite loop

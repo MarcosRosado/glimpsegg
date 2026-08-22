@@ -141,49 +141,46 @@ export interface AbilityUpgrade {
   type?: 'SKILL' | 'TALENT';
 }
 
+/**
+ * Combate: SO campos com origem real na resposta da STRATZ.
+ *
+ * O que saiu daqui por nao ter fonte nenhuma na API (era heuristica apresentada como
+ * numero medido): `damageMitigated` (= 42% do recebido), `stunDurationSec` /
+ * `disableDurationSec` (= base por role + assists*1.8), `soloKills` (= kills*0.35),
+ * `double/triple/ultraKills`, `rampages`, `killstreakMax` e `firstBloodClaimed`
+ * (= kills>=8 && isRadiant). Nenhum desses campos é pedido na
+ * `GET_MATCH_DETAILS_QUERY`, entao nao havia como derivar valor honesto.
+ *
+ * A divisao fisico/magico/puro é do dano RECEBIDO — é o unico split que a STRATZ
+ * devolve (`heroDamageReport.receivedTotal`). Antes ela era exibida sob o rotulo de
+ * dano causado.
+ */
 export interface DetailedCombatStats {
-  physicalDamage: number;
-  magicalDamage: number;
-  pureDamage: number;
-  damageReceived: number;
-  damageMitigated: number;
-  stunDurationSec: number;
-  disableDurationSec: number;
+  /** Composicao do dano recebido. null => partida sem `heroDamageReport`. */
+  damageReceivedSplit: DamageSplit | null;
+  /** Total de dano recebido, do relatorio ou da serie por minuto. null => sem dado. */
+  damageReceived: number | null;
+  /** Cura provida — `heroHealing`, campo direto da STRATZ. */
   healingProvided: number;
-  soloKills: number;
-  doubleKills: number;
-  tripleKills: number;
-  ultraKills: number;
-  rampages: number;
-  killstreakMax: number;
-  firstBloodClaimed?: boolean;
 }
 
+/**
+ * Farm: SO a curva de CS e os stacks, ambos derivados de series reais.
+ *
+ * A reparticao de ouro por fonte (`laneCreepGold`, `neutralGold`, `heroKillGold`,
+ * `towerGold`, `passiveGold`) saiu inteira: era `networth * 0.48`, `networth * 0.28`,
+ * `kills*280 + assists*135`, `networth * 0.08` e o resto. A STRATZ nao expoe ouro por
+ * fonte. `stacksCleared` e as tres contagens de runa tambem sairam — vinham de
+ * `duracao / constante`.
+ */
 export interface DetailedFarmStats {
-  cs5Min: number;
-  cs10Min: number;
-  cs15Min: number;
-  cs20Min: number;
-  laneCreepGold: number;
-  neutralGold: number;
-  heroKillGold: number;
-  towerGold: number;
-  passiveGold: number;
-  campsStacked: number;
-  stacksCleared: number;
-  runesBounty: number;
-  runesPower: number;
-  runesWisdom: number;
-}
-
-export interface DetailedObjectiveStats {
-  roshanKills: number;
-  tormentorParticipation: number;
-  courierKills: number;
-  towerKills: number;
-  barracksKills: number;
-  buybackCount: number;
-  outpostsCaptured?: number;
+  /** null em cada marco que a serie `lastHitsPerMinute` nao cobre. */
+  cs5Min: number | null;
+  cs10Min: number | null;
+  cs15Min: number | null;
+  cs20Min: number | null;
+  /** Soma da serie `campStack`. null => partida sem a serie. */
+  campsStacked: number | null;
 }
 
 export type LaneOutcome = 'TIE' | 'RADIANT_VICTORY' | 'RADIANT_STOMP' | 'DIRE_VICTORY' | 'DIRE_STOMP';
@@ -377,6 +374,7 @@ export interface MatchDataAvailability {
   deathEvents: boolean;
   damageReport: boolean;
   wards: boolean;
+  advantageTimeline: boolean;
   heroAverage: boolean;
   abilities: boolean;
   laneOutcomes: boolean;
@@ -431,10 +429,6 @@ export interface MatchPlayer {
   heroAverageCurve?: HeroAverageEntry[] | null;
   abilityBuild?: AbilityBuildEntry[] | null;
   itemTimings?: ItemTimingEvent[];
-  abilityUpgrades?: AbilityUpgrade[];
-  combatStats?: DetailedCombatStats;
-  farmStats?: DetailedFarmStats;
-  objectiveStats?: DetailedObjectiveStats;
   csOverTime?: number[];
   networthOverTime?: number[];
   heroDamageDealt?: number;
@@ -475,8 +469,6 @@ export interface MatchDetails {
   };
   vision: VisionData;
   availability: MatchDataAvailability;
-  /** true => os dados vieram de mockData, nao da API. Nunca apresentar como real. */
-  isMockData?: boolean;
 }
 
 export interface PeerTeammate {
@@ -555,5 +547,17 @@ export interface PlayerMatchSummary {
   dynamicType?: MatchDynamicType;
   items: number[];
   neutralItem?: number;
+  // Contexto da partida. Opcionais porque a STRATZ nem sempre devolve: ausente
+  // significa "sem dado" e a UI omite, nunca inventa um default.
+  // `gameMode`/`lobbyType` sao os valores CRUS da API (ex.: 'TURBO',
+  // 'UNRANKED'), nao os rotulos ja traduzidos que `MatchDetails` guarda — a
+  // formatacao acontece na renderizacao, para nao travar o idioma no mapper.
+  gameMode?: string;
+  lobbyType?: string;
+  networth?: number;
+  /** 1 = solo. `null` = a API nao devolveu o suficiente para contar o grupo. */
+  partySize?: number | null;
+  /** Tier 1-8 do rank medio da partida. `null` = sem dado. */
+  bracket?: number | null;
 }
 

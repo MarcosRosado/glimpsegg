@@ -33,6 +33,34 @@ export const RANK_COLORS: Record<number, string> = {
   8: '#f59e0b', // Gold Immortal
 };
 
+export interface BracketBadge {
+  tier: number;
+  name: string;
+  color: string;
+  badgeUrl: string;
+}
+
+/**
+ * Medalha do rank medio de uma partida (o `bracket` da STRATZ, tier 1-8).
+ *
+ * Diferente de `getRankTierInfo`, que sempre devolve algo (cai em
+ * 'Uncalibrated'), aqui `null` e resposta legitima: partida sem bracket
+ * conhecido nao deve virar uma medalha generica na lista.
+ */
+export function getBracketBadge(bracket?: number | null): BracketBadge | null {
+  if (bracket === null || bracket === undefined) return null;
+
+  const tier = Math.round(bracket);
+  if (tier < 1 || tier > 8) return null;
+
+  return {
+    tier,
+    name: RANK_NAMES[tier],
+    color: RANK_COLORS[tier],
+    badgeUrl: `${VALVE_RANK_IMG_BASE}/rank_icon_${tier}.png`,
+  };
+}
+
 export function getRankTierInfo(seasonRank?: number, leaderboardRank?: number): RankTierInfo {
   if (!seasonRank || seasonRank <= 0) {
     return {

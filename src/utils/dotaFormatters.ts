@@ -195,3 +195,41 @@ export function formatMatchClock(seconds: number): string {
   const secs = Math.floor(abs % 60);
   return `${sign}${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
+
+/**
+ * Codigo estavel do tipo de partida, para a lista da home.
+ *
+ * Nao devolve texto pronto de proposito: quem renderiza traduz via `t()`. E,
+ * ao contrario de `formatLobbyType`, que cai em 'Ranqueada' quando nao sabe,
+ * aqui a falta de dado devolve `null` — a lista precisa poder omitir a etiqueta
+ * em vez de rotular uma partida casual como ranqueada.
+ */
+export type MatchTypeCode = 'RANKED' | 'UNRANKED' | 'TURBO' | 'TOURNAMENT' | 'BATTLE_CUP' | 'BOTS' | 'EVENT';
+
+export function resolveMatchType(
+  rawMode?: string | number | null,
+  rawLobby?: string | number | null,
+): MatchTypeCode | null {
+  const mode = rawMode === null || rawMode === undefined ? '' : String(rawMode).toUpperCase().trim();
+  const lobby = rawLobby === null || rawLobby === undefined ? '' : String(rawLobby).toUpperCase().trim();
+
+  if (!mode && !lobby) return null;
+
+  // Turbo e um modo de jogo, nao um tipo de lobby, e ganha da fila: uma turbo
+  // em lobby ranqueado continua sendo turbo aos olhos de quem le a lista.
+  if (mode === 'TURBO' || mode === '23') return 'TURBO';
+  if (mode === 'MUTATION' || mode === '24' || mode === 'EVENT') return 'EVENT';
+
+  if (lobby === '2' || lobby.includes('TOURNAMENT')) return 'TOURNAMENT';
+  if (lobby === '9' || lobby.includes('BATTLE_CUP') || lobby.includes('BATTLE CUP')) return 'BATTLE_CUP';
+  if (lobby === '4' || lobby.includes('BOT') || lobby.includes('COOP')) return 'BOTS';
+  // UNRANKED antes de RANKED: 'UNRANKED'.includes('RANKED') e verdadeiro.
+  if (lobby === '0' || lobby.includes('UNRANKED') || lobby.includes('NORMAL')) return 'UNRANKED';
+  if (lobby === '7' || lobby.includes('RANKED')) return 'RANKED';
+
+  // Sem lobby util, so o modo pode denunciar a fila.
+  if (mode.includes('UNRANKED')) return 'UNRANKED';
+  if (mode.includes('RANKED')) return 'RANKED';
+
+  return null;
+}

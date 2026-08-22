@@ -80,10 +80,10 @@ export const RecentFormCard: React.FC<RecentFormCardProps> = ({ recentMatches, o
         <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <div className="flex items-center gap-2 text-slate-400">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Trend</span>
+            <span>{t('trendLabel')}</span>
           </div>
           <span className="font-semibold text-emerald-400">
-            {winrate >= 60 ? '🔥 On Fire' : winrate >= 50 ? '⚡ Stable' : '❄️ Struggling'}
+            {winrate >= 60 ? t('trendOnFire') : winrate >= 50 ? t('trendStable') : t('trendStruggling')}
           </span>
         </div>
       </div>

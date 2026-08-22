@@ -57,7 +57,7 @@ export const MatchHeader: React.FC<MatchHeaderProps> = ({ match, onBack }) => {
                 <button
                   onClick={copyMatchId}
                   className="hover:text-cyan-400 transition"
-                  title={copied ? t('copied') : 'Copy Match ID'}
+                  title={copied ? t('copied') : t('matchId')}
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>

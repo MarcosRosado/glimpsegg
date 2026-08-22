@@ -1,658 +1,851 @@
 import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
-import {
-  Trophy,
-  Crown,
-  Shield,
-  User,
-  Sparkles,
-  Zap,
-  Swords,
-  Crosshair,
-  Flame,
-  FlaskConical,
-} from 'lucide-react';
-import { PlayerMatchSummary } from '../../types/dota';
+import { Crosshair, FlaskConical, Flame, Shield, Sparkles, Swords, User, Users } from 'lucide-react';
+import { PlayerMatchSummary, Role } from '../../types/dota';
 import { getHero } from '../../constants/heroes';
-import { RANK_NAMES, RANK_COLORS } from '../../constants/ranks';
-import { handleHeroImageError } from '../../utils/imageFallback';
+import { RANK_NAMES, RANK_COLORS, getRankTierInfo, getBracketBadge } from '../../constants/ranks';
+import { resolveMatchType } from '../../utils/dotaFormatters';
+import { handleHeroImageError, handleRankImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
+import { TranslationKey } from '../../i18n/translations';
 
 interface StratzTrendsCardProps {
   matches: PlayerMatchSummary[];
   onSelectMatch?: (matchId: string) => void;
+  /** Rank do proprio jogador, para destacar o tier dele na distribuicao. */
+  seasonRank?: number;
+  leaderboardRank?: number;
 }
 
 const VALVE_RANK_IMG_BASE = 'https://www.opendota.com/assets/images/dota2/rank_icons';
 
-export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({ matches, onSelectMatch }) => {
+/** Cor da superficie do card. O "espaco" entre fatias e ela, nao uma borda. */
+const SURFACE = '#0b101a';
+
+const ROLE_ORDER: Role[] = ['POSITION_1', 'POSITION_2', 'POSITION_3', 'POSITION_4', 'POSITION_5'];
+
+/**
+ * Uma cor por posicao, nesta ordem.
+ *
+ * Nao sao escolhidas a olho: sao os cinco primeiros slots da paleta categorica
+ * de referencia, nesta ordem, validados contra a superficie #0b101a com
+ * `validate_palette.js --mode dark`. Passam banda de luminosidade, piso de
+ * croma, separacao sob daltonismo (pior par adjacente ΔE 8.4) e contraste — e
+ * passam tambem com a lista fechada em anel, porque num donut a Pos 5 volta a
+ * encostar na Pos 1. Reordenar sem revalidar quebra a garantia.
+ */
+const ROLE_COLORS: Record<string, string> = {
+  POSITION_1: '#3987e5',
+  POSITION_2: '#d95926',
+  POSITION_3: '#199e70',
+  POSITION_4: '#c98500',
+  POSITION_5: '#d55181',
+};
+
+const ROLE_LABEL: Record<string, TranslationKey> = {
+  POSITION_1: 'pos1',
+  POSITION_2: 'pos2',
+  POSITION_3: 'pos3',
+  POSITION_4: 'pos4',
+  POSITION_5: 'pos5',
+};
+
+const ROLE_ICON: Record<string, React.ReactNode> = {
+  POSITION_1: <Swords className="w-3.5 h-3.5" />,
+  POSITION_2: <Crosshair className="w-3.5 h-3.5" />,
+  POSITION_3: <Shield className="w-3.5 h-3.5" />,
+  POSITION_4: <Flame className="w-3.5 h-3.5" />,
+  POSITION_5: <FlaskConical className="w-3.5 h-3.5" />,
+};
+
+/** Mistura duas cores hex. Usado para derivar os degraus do anel de herois. */
+function mixHex(from: string, to: string, t: number): string {
+  const parse = (h: string) => [
+    parseInt(h.slice(1, 3), 16),
+    parseInt(h.slice(3, 5), 16),
+    parseInt(h.slice(5, 7), 16),
+  ];
+  const [r1, g1, b1] = parse(from);
+  const [r2, g2, b2] = parse(to);
+  const ch = (a: number, b: number) => Math.round(a + (b - a) * t).toString(16).padStart(2, '0');
+  return `#${ch(r1, r2)}${ch(g1, g2)}${ch(b1, b2)}`;
+}
+
+/** O que o painel central esta mostrando no momento. */
+type Focus =
+  | { kind: 'hero'; role: string; heroId: number; name: string; avatarUrl: string; count: number; wins: number; avgImp: number }
+  | { kind: 'role'; role: string; count: number; wins: number; avgImp: number }
+  | null;
+
+export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
+  matches,
+  onSelectMatch,
+  seasonRank,
+  leaderboardRank,
+}) => {
   const { t } = useLanguage();
   const [range, setRange] = useState<25 | 100>(25);
+  const [focus, setFocus] = useState<Focus>(null);
+  const [barFocus, setBarFocus] = useState<PlayerMatchSummary | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const [chartDimensions, setChartDimensions] = useState({ width: 340, height: 330 });
+  const [chartDimensions, setChartDimensions] = useState({ width: 320, height: 300 });
 
   useLayoutEffect(() => {
     if (!chartContainerRef.current) return;
+    const el = chartContainerRef.current;
     const updateDims = () => {
-      if (chartContainerRef.current) {
-        const rect = chartContainerRef.current.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          setChartDimensions({ width: rect.width, height: rect.height });
-        }
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setChartDimensions({ width: rect.width, height: rect.height });
       }
     };
     updateDims();
     const ro = new ResizeObserver(updateDims);
-    ro.observe(chartContainerRef.current);
+    ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  const displayedMatches = useMemo(() => {
-    return matches.slice(0, range);
-  }, [matches, range]);
+  const displayedMatches = useMemo(() => matches.slice(0, range), [matches, range]);
 
-  // Statistics calculation for the 25/100 matches
+  /** Agregados da janela, por posicao e por heroi dentro da posicao. */
   const stats = useMemo(() => {
-    const total = Math.max(1, displayedMatches.length);
+    const total = displayedMatches.length;
     const wins = displayedMatches.filter((m) => m.isVictory).length;
-    const winRate = Math.round((wins / total) * 100);
 
-    // Lane history: Won, Even, Lost, Inconclusive
+    const roleMap: Record<string, { count: number; wins: number; impSum: number; heroes: Record<number, { count: number; wins: number; impSum: number }> }> = {};
+    ROLE_ORDER.forEach((r) => {
+      roleMap[r] = { count: 0, wins: 0, impSum: 0, heroes: {} };
+    });
+
     let laneWon = 0;
     let laneEven = 0;
     let laneLost = 0;
     let laneOther = 0;
 
     displayedMatches.forEach((m) => {
-      if (m.dynamicType === 'STOMP_LANE' || m.dynamicType === 'WIN_LANE' || (m.imp >= 5 && m.isVictory)) {
-        laneWon++;
-      } else if (m.dynamicType === 'LOST_LANE' || (!m.isVictory && m.imp <= -8)) {
-        laneLost++;
-      } else if (m.dynamicType === 'EVEN_MATCH' || m.dynamicType === 'DRAW_LANE' || Math.abs(m.imp) < 5) {
-        laneEven++;
-      } else {
-        laneOther++;
-      }
-    });
+      const role = roleMap[m.role] ? m.role : 'POSITION_1';
+      const bucket = roleMap[role];
+      bucket.count++;
+      bucket.impSum += m.imp || 0;
+      if (m.isVictory) bucket.wins++;
 
-    // Group heroes played in this window
-    const heroMap: Record<number, { count: number; wins: number; impSum: number }> = {};
-    displayedMatches.forEach((m) => {
-      if (!heroMap[m.heroId]) {
-        heroMap[m.heroId] = { count: 0, wins: 0, impSum: 0 };
-      }
-      heroMap[m.heroId].count++;
-      if (m.isVictory) heroMap[m.heroId].wins++;
-      heroMap[m.heroId].impSum += m.imp || 0;
-    });
+      if (!bucket.heroes[m.heroId]) bucket.heroes[m.heroId] = { count: 0, wins: 0, impSum: 0 };
+      const hero = bucket.heroes[m.heroId];
+      hero.count++;
+      hero.impSum += m.imp || 0;
+      if (m.isVictory) hero.wins++;
 
-    // Roles breakdown in strict order
-    const roleMap: Record<string, { count: number; heroes: Record<number, number> }> = {
-      POSITION_1: { count: 0, heroes: {} },
-      POSITION_2: { count: 0, heroes: {} },
-      POSITION_3: { count: 0, heroes: {} },
-      POSITION_4: { count: 0, heroes: {} },
-      POSITION_5: { count: 0, heroes: {} },
-    };
-
-    displayedMatches.forEach((m) => {
-      const r = roleMap[m.role] ? m.role : 'POSITION_1';
-      roleMap[r].count++;
-      roleMap[r].heroes[m.heroId] = (roleMap[r].heroes[m.heroId] || 0) + 1;
+      if (m.dynamicType === 'STOMP_LANE' || m.dynamicType === 'WIN_LANE' || (m.imp >= 5 && m.isVictory)) laneWon++;
+      else if (m.dynamicType === 'LOST_LANE' || (!m.isVictory && m.imp <= -8)) laneLost++;
+      else if (m.dynamicType === 'EVEN_MATCH' || m.dynamicType === 'DRAW_LANE' || Math.abs(m.imp) < 5) laneEven++;
+      else laneOther++;
     });
 
     return {
       total,
       wins,
       losses: total - wins,
-      winRate,
+      winRate: total ? Math.round((wins / total) * 100) : 0,
+      roleMap,
+      playedRoles: ROLE_ORDER.filter((r) => roleMap[r].count > 0),
       laneWon,
       laneEven,
       laneLost,
-      laneOther: Math.max(1, laneOther),
-      heroMap,
-      roleMap,
+      laneOther,
     };
   }, [displayedMatches]);
 
-  // Dynamic radii calculated from measured container size
-  const { maxRadius, roleR0, roleR1, roleRadiusMid, heroR0, heroR1, heroRadiusMid } = useMemo(() => {
+  /**
+   * Raios do donut. O buraco central e grande de proposito: e ele que abriga o
+   * painel de detalhe que substituiu os tooltips flutuantes.
+   */
+  const geometry = useMemo(() => {
     const maxR = Math.min(chartDimensions.width, chartDimensions.height) / 2;
-    const rR0 = Math.round(maxR * 0.28);
-    const rR1 = Math.round(maxR * 0.56);
-    const rMid = (rR0 + rR1) / 2;
-
-    const gap = Math.max(6, Math.round(maxR * 0.05));
-    const hR0 = rR1 + gap;
-    const hR1 = Math.round(maxR * 0.94);
-    const hMid = (hR0 + hR1) / 2;
-
+    const roleR0 = maxR * 0.44;
+    const roleR1 = maxR * 0.6;
+    const heroR0 = maxR * 0.66;
+    const heroR1 = maxR * 0.92;
     return {
-      maxRadius: maxR,
-      roleR0: rR0,
-      roleR1: rR1,
-      roleRadiusMid: rMid,
-      heroR0: hR0,
-      heroR1: hR1,
-      heroRadiusMid: hMid,
+      maxR,
+      roleR0,
+      roleR1,
+      heroR0,
+      heroR1,
+      roleMid: (roleR0 + roleR1) / 2,
+      heroMid: (heroR0 + heroR1) / 2,
+      holeDiameter: roleR0 * 2,
     };
   }, [chartDimensions]);
 
-  // Strict role order
-  const roleOrder = ['POSITION_1', 'POSITION_2', 'POSITION_3', 'POSITION_4', 'POSITION_5'];
-
-  // Exact polar calculations synchronized with ECharts (startAngle: 90, clockwise: true, sort: null)
-  const { roleIconNodes, heroIconNodes } = useMemo(() => {
-    const rNodes: Array<{
+  /**
+   * Posicao polar dos icones sobrepostos ao SVG. Precisa espelhar exatamente a
+   * config do ECharts (startAngle 90, clockwise, sort null) ou os icones
+   * descolam das fatias.
+   *
+   * `fits` e a correcao do bug visivel: a corda do arco no raio do icone tem de
+   * comprimir o icone inteiro. Numa janela de 100 partidas um heroi de 1 jogo
+   * ocupa 3,6° — antes o avatar era desenhado assim mesmo e invadia os
+   * vizinhos.
+   */
+  const overlay = useMemo(() => {
+    const roleNodes: Array<{ role: string; x: number; y: number; fits: boolean }> = [];
+    const heroNodes: Array<{
       role: string;
-      iconX: number;
-      iconY: number;
-      count: number;
-      sweep: number;
-    }> = [];
-
-    const hNodes: Array<{
       heroId: number;
-      displayName: string;
+      name: string;
       avatarUrl: string;
       count: number;
-      winRate: number;
+      wins: number;
       avgImp: number;
-      iconX: number;
-      iconY: number;
+      x: number;
+      y: number;
       size: number;
-      sweep: number;
+      fits: boolean;
     }> = [];
 
-    const total = stats.total;
-    let accumulatedAngle = 0; // Starts at 0° (12 o'clock in ECharts)
+    const total = Math.max(1, stats.total);
+    const maxAvatar = Math.max(18, Math.min(28, Math.round(geometry.heroR1 - geometry.heroR0 - 10)));
+    let angle = 0;
 
-    roleOrder.forEach((role) => {
-      const data = stats.roleMap[role];
-      if (!data || data.count === 0) return;
+    const chordAt = (radius: number, sweepDeg: number) =>
+      2 * radius * Math.sin(((sweepDeg / 2) * Math.PI) / 180);
 
-      const roleSweep = (data.count / total) * 360;
-      const roleMidAngle = accumulatedAngle + roleSweep / 2;
-
-      // 12 o'clock clockwise: rad = (midAngle - 90) * PI / 180
+    stats.playedRoles.forEach((role) => {
+      const bucket = stats.roleMap[role];
+      const roleSweep = (bucket.count / total) * 360;
+      const roleMidAngle = angle + roleSweep / 2;
       const roleRad = ((roleMidAngle - 90) * Math.PI) / 180;
-      rNodes.push({
+
+      roleNodes.push({
         role,
-        iconX: roleRadiusMid * Math.cos(roleRad),
-        iconY: roleRadiusMid * Math.sin(roleRad),
-        count: data.count,
-        sweep: roleSweep,
+        x: geometry.roleMid * Math.cos(roleRad),
+        y: geometry.roleMid * Math.sin(roleRad),
+        fits: chordAt(geometry.roleMid, roleSweep) >= 20,
       });
 
-      // Heroes inside this role (preserve order exactly)
-      const heroesList = Object.entries(data.heroes).sort((a, b) => b[1] - a[1]);
+      Object.entries(bucket.heroes)
+        .sort((a, b) => b[1].count - a[1].count)
+        .forEach(([heroIdStr, h]) => {
+          const heroId = parseInt(heroIdStr, 10);
+          const hero = getHero(heroId);
+          const heroSweep = (h.count / total) * 360;
+          const heroMidAngle = angle + heroSweep / 2;
+          angle += heroSweep;
 
-      heroesList.forEach(([heroIdStr, count]) => {
-        const hId = parseInt(heroIdStr, 10);
-        const hero = getHero(hId);
-        const hStats = stats.heroMap[hId] || { count, wins: count, impSum: 0 };
-        const wr = Math.round((hStats.wins / hStats.count) * 100);
-        const avgImp = Math.round(hStats.impSum / hStats.count);
-
-        const heroSweep = (count / total) * 360;
-        const heroMidAngle = accumulatedAngle + heroSweep / 2;
-        accumulatedAngle += heroSweep;
-
-        const heroRad = ((heroMidAngle - 90) * Math.PI) / 180;
-        const iconX = heroRadiusMid * Math.cos(heroRad);
-        const iconY = heroRadiusMid * Math.sin(heroRad);
-
-        const baseHeroSize = Math.max(20, Math.min(34, Math.round(maxRadius * 0.18)));
-        const size = count >= 3 ? baseHeroSize + 4 : count >= 2 ? baseHeroSize : baseHeroSize - 4;
-
-        hNodes.push({
-          heroId: hId,
-          displayName: hero.displayName,
-          avatarUrl: hero.avatarUrl,
-          count,
-          winRate: wr,
-          avgImp,
-          iconX,
-          iconY,
-          size,
-          sweep: heroSweep,
+          const rad = ((heroMidAngle - 90) * Math.PI) / 180;
+          // Encolhe ate a corda do proprio arco, com folga de 3px de cada lado.
+          const avatarSize = Math.min(maxAvatar, Math.floor(chordAt(geometry.heroMid, heroSweep) - 3));
+          heroNodes.push({
+            role,
+            heroId,
+            name: hero.displayName,
+            avatarUrl: hero.avatarUrl,
+            count: h.count,
+            wins: h.wins,
+            avgImp: Math.round(h.impSum / h.count),
+            x: geometry.heroMid * Math.cos(rad),
+            y: geometry.heroMid * Math.sin(rad),
+            size: avatarSize,
+            fits: avatarSize >= 14,
+          });
         });
-      });
     });
 
-    return { roleIconNodes: rNodes, heroIconNodes: hNodes };
-  }, [stats, roleRadiusMid, heroRadiusMid, maxRadius]);
+    return { roleNodes, heroNodes };
+  }, [stats, geometry]);
 
-  // ECharts Sunburst Configuration with Spacing Gap Between Rings
+  /**
+   * Config do sunburst.
+   *
+   * Duas decisoes deliberadas:
+   * 1. `tooltip.show: false`. O ECharts tinha um tooltip proprio E os avatares
+   *    tinham outro em HTML; os dois disparavam juntos e se sobrepunham. Agora
+   *    existe um unico lugar onde o detalhe aparece: o centro do donut.
+   * 2. O anel externo nao ganha cores novas. Cada heroi e um degrau da cor da
+   *    propria posicao, entao o grafico nunca passa de cinco classes de cor.
+   */
   const sunburstOption = useMemo(() => {
-    const roleColors: Record<string, string> = {
-      POSITION_1: '#1e3a8a', // Deep Blue
-      POSITION_2: '#0f766e', // Teal
-      POSITION_3: '#854d0e', // Dark Amber
-      POSITION_4: '#831843', // Rose / Magenta
-      POSITION_5: '#14532d', // Forest Green
-    };
+    // O vao entre fatias e a propria superficie. Com 100 partidas ha fatias de
+    // 3,6°, e 2px de vao passam a competir com o dado — entao afina.
+    const gap = stats.total > 40 ? 1 : 2;
 
-    const sunburstData = roleOrder
-      .filter((role) => stats.roleMap[role] && stats.roleMap[role].count > 0)
-      .map((role) => {
-        const data = stats.roleMap[role];
-        const heroesList = Object.entries(data.heroes).sort((a, b) => b[1] - a[1]);
+    const data = stats.playedRoles.map((role) => {
+      const bucket = stats.roleMap[role];
+      const base = ROLE_COLORS[role];
+      const heroesList = Object.entries(bucket.heroes).sort((a, b) => b[1].count - a[1].count);
 
-        const heroChildren = heroesList.map(([heroIdStr, count]) => {
-          const hId = parseInt(heroIdStr, 10);
-          const hero = getHero(hId);
-          const hStats = stats.heroMap[hId] || { count, wins: count, impSum: 0 };
-          const wr = Math.round((hStats.wins / hStats.count) * 100);
-          const avgImp = Math.round(hStats.impSum / hStats.count);
-
-          return {
-            name: hero.displayName,
-            value: count,
-            heroId: hId,
-            avatarUrl: hero.avatarUrl,
-            winRate: wr,
-            avgImp,
-            label: {
-              show: false,
-            },
-            emphasis: {
-              label: {
-                show: false,
-              },
-            },
-            itemStyle: {
-              color: roleColors[role] || '#334155',
-              borderColor: '#0b0f17',
-              borderWidth: 2,
-              opacity: 0.85,
-            },
-          };
-        });
-
-        return {
-          name: role.replace('POSITION_', 'Pos '),
-          value: data.count,
-          label: {
-            show: false,
-          },
-          emphasis: {
-            label: {
-              show: false,
-            },
-          },
+      return {
+        name: role,
+        value: bucket.count,
+        itemStyle: { color: base, borderColor: SURFACE, borderWidth: 2 },
+        children: heroesList.map(([heroIdStr, h], i) => ({
+          name: heroIdStr,
+          value: h.count,
           itemStyle: {
-            color: roleColors[role] || '#1e293b',
-            borderColor: '#0b0f17',
-            borderWidth: 2.5,
+            // Degraus da mesma matiz, do mais claro ao mais escuro.
+            color: mixHex(base, SURFACE, 0.08 + (heroesList.length > 1 ? (i / (heroesList.length - 1)) * 0.3 : 0)),
+            borderColor: SURFACE,
+            borderWidth: gap,
           },
-          children: heroChildren,
-        };
-      });
+        })),
+      };
+    });
 
     return {
-      tooltip: {
-        trigger: 'item',
-        backgroundColor: '#0f172a',
-        borderColor: '#334155',
-        borderWidth: 1,
-        padding: [8, 12],
-        textStyle: { color: '#f8fafc', fontSize: 11, fontFamily: 'sans-serif' },
-        formatter: (params: any) => {
-          const data = params.data;
-          if (data.avatarUrl) {
-            return `
-              <div style="font-family: sans-serif; min-width: 140px;">
-                <div style="font-weight: 900; color: #fbbf24; font-size: 12px; margin-bottom: 4px;">${data.name}</div>
-                <div style="font-size: 11px; color: #94a3b8;">Partidas: <strong style="color: #fff;">${data.value}</strong> (${Math.round((data.value / stats.total) * 100)}%)</div>
-                <div style="font-size: 11px; color: #34d399;">Taxa de Vitória: <strong style="color: #34d399;">${data.winRate}%</strong></div>
-                <div style="font-size: 11px; color: #94a3b8;">Média IMP: <strong style="color: #fbbf24;">${data.avgImp >= 0 ? '+' + data.avgImp : data.avgImp}</strong></div>
-              </div>
-            `;
-          }
-          return `
-            <div style="font-family: sans-serif;">
-              <strong style="color: #60a5fa;">${data.name}</strong><br/>
-              Partidas: <strong>${data.value}</strong> (${Math.round((data.value / stats.total) * 100)}%)
-            </div>
-          `;
-        },
-      },
+      tooltip: { show: false },
       series: {
         type: 'sunburst',
-        nodeClick: false, // Disables click zoom/drilldown completely (pure hover only!)
-        selectedMode: false, // Disables selection toggle
-        data: sunburstData,
-        sort: null, // PRESERVE EXACT ARRAY ORDER - DO NOT AUTO-SORT!
-        radius: [roleR0, heroR1],
+        nodeClick: false,
+        selectedMode: false,
+        data,
+        sort: null,
+        radius: [geometry.roleR0, geometry.heroR1],
         center: ['50%', '50%'],
-        startAngle: 90, // Starts at 12 o'clock
-        clockwise: true, // Rotates clockwise
-        label: {
-          show: false,
-        },
-        emphasis: {
-          focus: 'descendant',
-          label: {
-            show: false,
-          },
-          itemStyle: {
-            shadowBlur: 14,
-            shadowColor: 'rgba(251, 191, 36, 0.45)',
-          },
-        },
+        startAngle: 90,
+        clockwise: true,
+        label: { show: false },
+        emphasis: { focus: 'none', itemStyle: { opacity: 1 } },
+        blur: { itemStyle: { opacity: 0.35 } },
         levels: [
           {},
-          {
-            // Level 1: Roles
-            r0: roleR0,
-            r: roleR1,
-            label: { show: false },
-            emphasis: { label: { show: false } },
-            itemStyle: {
-              borderWidth: 2.5,
-            },
-          },
-          {
-            // Level 2: Heroes (with visual gap from role ring!)
-            r0: heroR0,
-            r: heroR1,
-            label: { show: false },
-            emphasis: { label: { show: false } },
-            itemStyle: {
-              borderWidth: 2,
-            },
-          },
+          { r0: geometry.roleR0, r: geometry.roleR1, label: { show: false } },
+          { r0: geometry.heroR0, r: geometry.heroR1, label: { show: false } },
         ],
       },
     };
-  }, [stats, roleR0, roleR1, heroR0, heroR1]);
+  }, [stats, geometry]);
 
-  const rawMatches25 = useMemo(() => {
-    return displayedMatches.slice(0, 25);
-  }, [displayedMatches]);
+  // A janela toda no equalizador, do mais antigo (esquerda) ao mais recente
+  // (direita) — leitura temporal padrao.
+  const equalizer = useMemo(() => [...displayedMatches].reverse(), [displayedMatches]);
+  const dense = equalizer.length > 40;
 
   const ranksList = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  const renderRoleIcon = (role: string) => {
-    switch (role) {
-      case 'POSITION_1':
-        return <span title="Pos 1 (Carry)"><Swords className="w-4 h-4 text-blue-200" /></span>;
-      case 'POSITION_2':
-        return <span title="Pos 2 (Mid)"><Crosshair className="w-4 h-4 text-teal-200" /></span>;
-      case 'POSITION_3':
-        return <span title="Pos 3 (Offlane)"><Shield className="w-4 h-4 text-amber-200" /></span>;
-      case 'POSITION_4':
-        return <span title="Pos 4 (Soft Support)"><Flame className="w-4 h-4 text-pink-200" /></span>;
-      case 'POSITION_5':
-        return <span title="Pos 5 (Hard Support)"><FlaskConical className="w-4 h-4 text-emerald-200" /></span>;
-      default:
-        return <span title="Core"><Swords className="w-4 h-4 text-slate-300" /></span>;
-    }
-  };
+  /**
+   * KPIs do rodape, calculados da janela real. Cada metrica carrega a propria
+   * base: se nenhuma partida tem o dado, o valor e `null` e a UI escreve
+   * "sem dado" em vez de exibir 0%.
+   */
+  const context = useMemo(() => {
+    const withParty = displayedMatches.filter((m) => m.partySize !== null && m.partySize !== undefined);
+    const withLobby = displayedMatches.filter((m) => resolveMatchType(m.gameMode, m.lobbyType) !== null);
+    const withBracket = displayedMatches.filter((m) => typeof m.bracket === 'number');
+
+    const soloShare = withParty.length
+      ? Math.round((withParty.filter((m) => (m.partySize as number) === 1).length / withParty.length) * 100)
+      : null;
+
+    const unrankedShare = withLobby.length
+      ? Math.round(
+          (withLobby.filter((m) => resolveMatchType(m.gameMode, m.lobbyType) !== 'RANKED').length / withLobby.length) * 100,
+        )
+      : null;
+
+    const avgBracket = withBracket.length
+      ? Math.round(withBracket.reduce((sum, m) => sum + (m.bracket as number), 0) / withBracket.length)
+      : null;
+
+    const bracketCounts: Record<number, number> = {};
+    withBracket.forEach((m) => {
+      const tier = m.bracket as number;
+      bracketCounts[tier] = (bracketCounts[tier] || 0) + 1;
+    });
+
+    // Delta de win rate contra a janela anterior de mesmo tamanho. Sem historico
+    // suficiente nao ha delta — exibir "0%" afirmaria uma estabilidade que nao
+    // foi medida.
+    const size = displayedMatches.length;
+    const previous = matches.slice(size, size * 2);
+    const winRateDelta =
+      size > 0 && previous.length === size
+        ? Math.round((displayedMatches.filter((m) => m.isVictory).length / size) * 100) -
+          Math.round((previous.filter((m) => m.isVictory).length / previous.length) * 100)
+        : null;
+
+    return {
+      soloShare,
+      groupShare: soloShare === null ? null : 100 - soloShare,
+      unrankedShare,
+      avgBracket,
+      bracketCounts,
+      maxBracketCount: Math.max(1, ...Object.values(bracketCounts)),
+      hasBracketData: withBracket.length > 0,
+      winRateDelta,
+    };
+  }, [displayedMatches, matches]);
+
+  const playerTier = useMemo(
+    () => (seasonRank ? getRankTierInfo(seasonRank, leaderboardRank).tier : null),
+    [seasonRank, leaderboardRank],
+  );
+  const avgBracketBadge = useMemo(() => getBracketBadge(context.avgBracket), [context.avgBracket]);
+
+  const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 
   return (
-    <div className="glass-card rounded-2xl p-5 border border-slate-800/80 shadow-xl bg-[#0b101a] flex flex-col justify-between">
-      {/* Header with Title and Range Toggle */}
-      <div className="flex items-center justify-between mb-2">
+    <div className="glass-card rounded-2xl p-5 border border-slate-800/80 shadow-xl bg-[#0b101a]">
+      {/* ---------------------------------------------------------- cabecalho */}
+      <div className="flex items-center justify-between mb-1">
         <h3 className="text-base font-black text-slate-100 tracking-wide flex items-center gap-2">
-          <span>Tendências</span>
+          <span>{t('trendsCardTitle')}</span>
           <Sparkles className="w-4 h-4 text-cyan-400" />
         </h3>
 
         <div className="flex bg-slate-900/90 p-0.5 rounded-lg border border-slate-800 text-xs font-mono">
-          <button
-            onClick={() => setRange(25)}
-            className={`px-3 py-1 rounded transition ${
-              range === 25 ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            25 Partidas
-          </button>
-          <button
-            onClick={() => setRange(100)}
-            className={`px-3 py-1 rounded transition ${
-              range === 100 ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            100
-          </button>
+          {([25, 100] as const).map((r) => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              className={`px-3 py-1 rounded transition ${
+                range === r
+                  ? 'bg-cyan-500/15 text-cyan-300 font-bold border border-cyan-500/40'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              {r}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Enlarged Sunburst Chart Container (Height 340px with Distinct Ring Spacing) */}
+      <p className="text-[11px] text-slate-500 mb-1">{t('positionShareHint')}</p>
+
+      {/* ------------------------------------------------- donut + detalhe */}
       <div
         ref={chartContainerRef}
-        className="relative w-full h-[330px] my-2 flex items-center justify-center select-none"
+        className="relative w-full h-[300px] flex items-center justify-center select-none"
+        onMouseLeave={() => setFocus(null)}
       >
         <ReactECharts
           option={sunburstOption}
           style={{ height: '100%', width: '100%' }}
           opts={{ renderer: 'svg' }}
+          onEvents={{
+            mouseover: (params: any) => {
+              // Nivel 1 = posicao, nivel 2 = heroi. O `name` guarda a chave crua.
+              if (params.treePathInfo && params.treePathInfo.length === 3) {
+                const role = params.treePathInfo[1].name;
+                const heroId = parseInt(params.name, 10);
+                const h = stats.roleMap[role]?.heroes[heroId];
+                if (!h) return;
+                const hero = getHero(heroId);
+                setFocus({
+                  kind: 'hero',
+                  role,
+                  heroId,
+                  name: hero.displayName,
+                  avatarUrl: hero.avatarUrl,
+                  count: h.count,
+                  wins: h.wins,
+                  avgImp: Math.round(h.impSum / h.count),
+                });
+              } else {
+                const bucket = stats.roleMap[params.name];
+                if (!bucket) return;
+                setFocus({
+                  kind: 'role',
+                  role: params.name,
+                  count: bucket.count,
+                  wins: bucket.wins,
+                  avgImp: Math.round(bucket.impSum / bucket.count),
+                });
+              }
+            },
+            globalout: () => setFocus(null),
+          }}
         />
 
-        {/* 1. Role Icons on Inner Ring (Centered at r = 68px) */}
-        {roleIconNodes.map((rNode, i) => (
-          <div
-            key={`role-${i}`}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center drop-shadow-md z-10"
-            style={{
-              left: `calc(50% + ${rNode.iconX}px)`,
-              top: `calc(50% + ${rNode.iconY}px)`,
-            }}
-          >
-            {renderRoleIcon(rNode.role)}
-          </div>
-        ))}
-
-        {/* 2. Perfectly Circular Hero Avatar Badges on Outer Ring (Centered at r = 125px) */}
-        {heroIconNodes.map((node, i) => (
-          <div
-            key={`hero-${i}`}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto group cursor-pointer z-20"
-            style={{
-              left: `calc(50% + ${node.iconX}px)`,
-              top: `calc(50% + ${node.iconY}px)`,
-            }}
-          >
-            <img
-              src={node.avatarUrl}
-              alt={node.displayName}
-              style={{ width: `${node.size}px`, height: `${node.size}px` }}
-              className={`rounded-full object-cover border shadow-xl transition-all duration-200 group-hover:scale-135 ${
-                node.count >= 3
-                  ? 'border-amber-400 shadow-amber-950/80 ring-2 ring-amber-400/50'
-                  : 'border-slate-600/90 shadow-black/80'
-              }`}
-              onError={handleHeroImageError}
-            />
-
-            {/* Hover Tooltip */}
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-30 bg-[#0f172a] border border-slate-700 text-[11px] font-sans py-1 px-2.5 rounded-lg shadow-2xl whitespace-nowrap text-slate-200 pointer-events-none">
-              <div className="font-bold text-amber-400">{node.displayName}</div>
-              <div>{node.count} {t('matches')} • {node.winRate}% WR • {node.avgImp >= 0 ? `+${node.avgImp}` : node.avgImp} IMP</div>
+        {/* Icones de posicao no anel interno — omitidos onde o arco nao comporta */}
+        {overlay.roleNodes
+          .filter((n) => n.fits)
+          .map((n) => (
+            <div
+              key={`role-${n.role}`}
+              className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 text-white/90 drop-shadow"
+              style={{ left: `calc(50% + ${n.x}px)`, top: `calc(50% + ${n.y}px)` }}
+            >
+              {ROLE_ICON[n.role]}
             </div>
-          </div>
-        ))}
+          ))}
+
+        {/* Avatares no anel externo — idem. Sem tooltip proprio: alimentam o centro. */}
+        {overlay.heroNodes
+          .filter((n) => n.fits)
+          .map((n) => (
+            <div
+              key={`hero-${n.role}-${n.heroId}`}
+              className="absolute -translate-x-1/2 -translate-y-1/2 z-20 cursor-pointer"
+              style={{ left: `calc(50% + ${n.x}px)`, top: `calc(50% + ${n.y}px)` }}
+              onMouseEnter={() =>
+                setFocus({
+                  kind: 'hero',
+                  role: n.role,
+                  heroId: n.heroId,
+                  name: n.name,
+                  avatarUrl: n.avatarUrl,
+                  count: n.count,
+                  wins: n.wins,
+                  avgImp: n.avgImp,
+                })
+              }
+            >
+              <img
+                src={n.avatarUrl}
+                alt={n.name}
+                style={{ width: `${n.size}px`, height: `${n.size}px` }}
+                className={`rounded-full object-cover transition-transform duration-150 ${
+                  focus?.kind === 'hero' && focus.heroId === n.heroId ? 'scale-115' : ''
+                }`}
+                onError={handleHeroImageError}
+              />
+            </div>
+          ))}
+
+        {/* Painel central: um unico lugar para o detalhe, no vazio que ja existia */}
+        <div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex flex-col items-center justify-center text-center z-30"
+          style={{ width: geometry.holeDiameter * 0.86, height: geometry.holeDiameter * 0.86 }}
+        >
+          {focus === null ? (
+            <>
+              <div className="text-3xl font-black text-white leading-none">{stats.total}</div>
+              <div className="text-[11px] text-slate-400 mt-1">{t('matches')}</div>
+              <div className="mt-2 text-xs font-mono">
+                <span className="text-emerald-400 font-bold">{stats.wins}</span>
+                <span className="text-slate-600"> - </span>
+                <span className="text-rose-400 font-bold">{stats.losses}</span>
+              </div>
+              <div className="text-[11px] text-slate-500 font-mono">{stats.winRate}%</div>
+            </>
+          ) : (
+            <>
+              {focus.kind === 'hero' ? (
+                <img
+                  src={focus.avatarUrl}
+                  alt={focus.name}
+                  className="w-9 h-9 rounded-full object-cover mb-1.5"
+                  onError={handleHeroImageError}
+                />
+              ) : (
+                <div
+                  className="w-9 h-9 rounded-full mb-1.5 flex items-center justify-center text-white"
+                  style={{ backgroundColor: ROLE_COLORS[focus.role] }}
+                >
+                  {ROLE_ICON[focus.role]}
+                </div>
+              )}
+
+              <div className="text-[13px] font-bold text-white leading-tight px-1 truncate max-w-full">
+                {focus.kind === 'hero' ? focus.name : t(ROLE_LABEL[focus.role])}
+              </div>
+
+              {focus.kind === 'hero' && (
+                <div className="text-[10px] mt-0.5" style={{ color: ROLE_COLORS[focus.role] }}>
+                  {t(ROLE_LABEL[focus.role])}
+                </div>
+              )}
+
+              <div className="mt-1.5 text-xs font-mono">
+                <span className="text-emerald-400 font-bold">{focus.wins}</span>
+                <span className="text-slate-600"> - </span>
+                <span className="text-rose-400 font-bold">{focus.count - focus.wins}</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">
+                {Math.round((focus.wins / focus.count) * 100)}% · {signed(focus.avgImp)} IMP
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Taller Bipolar Equalizer (Height 80px / h-20 with slender w-1.5 bars) */}
+      {/* ------------------- legenda das posicoes, com os valores impressos ---
+          Nao e enfeite: e o que permite ler os numeros sem depender do hover. */}
+      <div className="space-y-1 mb-1">
+        {stats.playedRoles.map((role) => {
+          const bucket = stats.roleMap[role];
+          const isFocused = focus?.role === role;
+          const avgImp = Math.round(bucket.impSum / bucket.count);
+
+          return (
+            <div
+              key={role}
+              onMouseEnter={() =>
+                setFocus({ kind: 'role', role, count: bucket.count, wins: bucket.wins, avgImp })
+              }
+              onMouseLeave={() => setFocus(null)}
+              className={`flex items-center gap-2 px-1.5 py-1 rounded-md text-[11px] cursor-default transition ${
+                isFocused ? 'bg-slate-800/60' : ''
+              }`}
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-sm shrink-0"
+                style={{ backgroundColor: ROLE_COLORS[role] }}
+              />
+              <span className="text-slate-300 font-medium truncate flex-1">{t(ROLE_LABEL[role])}</span>
+              <span className="text-slate-500 font-mono">{bucket.count}</span>
+              <span className="font-mono w-12 text-right">
+                <span className="text-emerald-400">{bucket.wins}</span>
+                <span className="text-slate-600">-</span>
+                <span className="text-rose-400">{bucket.count - bucket.wins}</span>
+              </span>
+              <span
+                className={`font-mono w-9 text-right ${avgImp >= 0 ? 'text-slate-300' : 'text-slate-500'}`}
+              >
+                {signed(avgImp)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* --------------------------------------------------- equalizador IMP */}
       <div className="mt-3 pt-3 border-t border-slate-800/80">
-        <div className="relative h-20 mb-1 px-1">
-          {/* Zero baseline in the middle */}
-          <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-slate-700/80 z-10" />
+        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
+          <span>{t('impPerMatch')}</span>
+          <span className="font-mono text-slate-600">{t('oldestToNewest')}</span>
+        </div>
 
-          {/* 25 Matches Columns with Floating Performance Icons */}
-          <div className="grid grid-cols-25 gap-1 h-full items-center">
-            {rawMatches25.map((m, idx) => {
+        <div className="relative h-16 px-1">
+          <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-800 z-0" />
+
+          <div
+            className="grid h-full items-center relative z-10"
+            style={{
+              gridTemplateColumns: `repeat(${Math.max(1, equalizer.length)}, minmax(0, 1fr))`,
+              gap: dense ? '1px' : '3px',
+            }}
+          >
+            {equalizer.map((m, idx) => {
               const imp = m.imp || 0;
-              const isMVP = m.award === 'MVP' || imp >= 35;
-              const isTopSup = m.award === 'TOP_SUPPORT';
-              const isExtreme = imp >= 40;
               const isPositive = imp >= 0;
-
-              // Normalized bar height from baseline (0% to 100% of half-height)
-              const maxScale = 50;
-              const clampedImp = Math.min(maxScale, Math.abs(imp));
-              const heightPercent = Math.max(18, Math.round((clampedImp / maxScale) * 100));
+              const magnitude = Math.min(50, Math.abs(imp)) / 50;
+              const heightPercent = Math.max(6, Math.round(magnitude * 100)) * 0.46;
+              const isFocused = barFocus?.matchId === m.matchId;
 
               return (
                 <div
                   key={m.matchId || idx}
                   onClick={() => onSelectMatch && onSelectMatch(m.matchId)}
-                  className="relative h-full flex flex-col justify-center items-center group cursor-pointer"
+                  onMouseEnter={() => setBarFocus(m)}
+                  onMouseLeave={() => setBarFocus(null)}
+                  className="relative h-full flex items-center justify-center cursor-pointer"
                 >
-                  {/* Floating Performance Indicator Icon on top of bar */}
-                  <div className="absolute -top-1.5 transform -translate-y-1 z-20">
-                    {isExtreme && (
-                      <div className="w-3 h-3 rounded-full bg-purple-600 text-purple-100 flex items-center justify-center shadow-md shadow-purple-950 border border-purple-400">
-                        <Crown className="w-2 h-2" />
-                      </div>
-                    )}
-                    {isMVP && !isExtreme && (
-                      <div className="w-3 h-3 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-sm">
-                        <Trophy className="w-2 h-2" />
-                      </div>
-                    )}
-                    {isTopSup && (
-                      <div className="w-3 h-3 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-sm">
-                        <Shield className="w-2 h-2" />
-                      </div>
-                    )}
-                    {!isMVP && !isTopSup && isPositive && imp >= 20 && (
-                      <div className="w-2 h-2 rounded-full bg-emerald-500/80 text-black flex items-center justify-center">
-                        <Zap className="w-1.5 h-1.5" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Bipolar Bar Container with Slender Width */}
-                  <div className="w-full h-full relative flex items-center justify-center">
-                    {isPositive ? (
-                      /* Positive Bar Growing UP from Middle - Slender w-1.5 */
-                      <div
-                        className={`absolute w-1.5 bottom-1/2 rounded-t-[2px] transition-all ${
-                          isExtreme
-                            ? 'bg-purple-500 shadow-sm shadow-purple-900'
-                            : isMVP
-                            ? 'bg-amber-400'
-                            : 'bg-slate-300 group-hover:bg-amber-300'
-                        }`}
-                        style={{ height: `${heightPercent * 0.45}%` }}
-                      />
-                    ) : (
-                      /* Negative Bar Growing DOWN from Middle - Slender w-1.5 */
-                      <div
-                        className="absolute w-1.5 top-1/2 rounded-b-[2px] bg-slate-600 group-hover:bg-rose-500 transition-all"
-                        style={{ height: `${heightPercent * 0.45}%` }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-30 bg-[#0f172a] border border-slate-700 text-[10px] font-mono py-1 px-2 rounded-md shadow-2xl whitespace-nowrap text-slate-200">
-                    <div className="font-bold text-white">{getHero(m.heroId).displayName}</div>
-                    <div className={m.isVictory ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                      {m.isVictory ? 'Vitória' : 'Derrota'} ({imp >= 0 ? `+${imp}` : imp} IMP)
-                    </div>
-                    <div className="text-slate-400 text-[9px]">
-                      KDA: {m.kills}/{m.deaths}/{m.assists} • {m.goldPerMinute} GPM
-                    </div>
-                  </div>
+                  {/* Alvo de hover maior que a barra — a barra tem 1-6px */}
+                  <span className="absolute inset-y-0 -inset-x-0.5" />
+                  <div
+                    className={`absolute rounded-[1px] transition-colors ${
+                      dense ? 'w-1' : 'w-1.5'
+                    } ${isPositive ? 'bottom-1/2' : 'top-1/2'} ${
+                      isFocused
+                        ? 'bg-cyan-300'
+                        : isPositive
+                        ? 'bg-slate-300'
+                        : 'bg-slate-600'
+                    }`}
+                    style={{ height: `${heightPercent}%` }}
+                  />
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Bottom Discrete Win (Green) / Loss (Red) Slender Dots */}
-        <div className="grid grid-cols-25 gap-1 px-1 mt-0.5">
-          {rawMatches25.map((m, idx) => (
+        {/* Vitoria / derrota, alinhado coluna a coluna com as barras */}
+        <div
+          className="grid px-1 mt-1"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(1, equalizer.length)}, minmax(0, 1fr))`,
+            gap: dense ? '1px' : '3px',
+          }}
+        >
+          {equalizer.map((m, idx) => (
             <div
-              key={idx}
-              className={`h-1.5 w-1.5 mx-auto rounded-full cursor-pointer hover:scale-150 transition ${
-                m.isVictory ? 'bg-[#22c55e]' : 'bg-[#ef4444]'
-              }`}
+              key={m.matchId || idx}
               onClick={() => onSelectMatch && onSelectMatch(m.matchId)}
-              title={`${getHero(m.heroId).displayName} - ${m.isVictory ? 'Vitória' : 'Derrota'}`}
-            />
+              onMouseEnter={() => setBarFocus(m)}
+              onMouseLeave={() => setBarFocus(null)}
+              className="h-2 flex items-center justify-center cursor-pointer"
+            >
+              <span
+                className={`rounded-full ${dense ? 'h-1 w-1' : 'h-1.5 w-1.5'} ${
+                  m.isVictory ? 'bg-emerald-500' : 'bg-rose-500'
+                }`}
+              />
+            </div>
           ))}
+        </div>
+
+        {/* Linha de inspecao de altura fixa: substitui o tooltip flutuante e
+            nao empurra o layout ao aparecer. */}
+        <div className="h-8 mt-1.5 flex items-center text-[11px] font-mono">
+          {barFocus ? (
+            <div className="flex items-center gap-2 min-w-0">
+              <img
+                src={getHero(barFocus.heroId).avatarUrl}
+                alt=""
+                className="w-8 h-5 rounded object-cover shrink-0"
+                onError={handleHeroImageError}
+              />
+              <span className="text-slate-200 font-sans font-bold truncate">
+                {getHero(barFocus.heroId).displayName}
+              </span>
+              <span className={barFocus.isVictory ? 'text-emerald-400' : 'text-rose-400'}>
+                {barFocus.isVictory ? t('win') : t('loss')}
+              </span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-300">{signed(barFocus.imp || 0)} IMP</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-400">
+                {barFocus.kills}/{barFocus.deaths}/{barFocus.assists}
+              </span>
+            </div>
+          ) : (
+            <span className="text-slate-600">{t('hoverBarHint')}</span>
+          )}
         </div>
       </div>
 
-      {/* Summary 2x2 KPIs Grid */}
-      <div className="grid grid-cols-2 gap-3.5 my-3 pt-3 border-t border-slate-800 text-left font-sans text-xs">
-        {/* Win Rate with Delta */}
+      {/* --------------------------------------------------------------- KPIs */}
+      <div className="grid grid-cols-3 gap-x-3 gap-y-3 mt-3 pt-3 border-t border-slate-800/80 text-[11px]">
         <div>
-          <div className="text-[11px] text-slate-400">Taxa de vitória da partida</div>
-          <div className="text-sm font-black text-white flex items-center gap-1 mt-0.5 font-mono">
-            <span>{stats.winRate}%</span>
-            <span className="text-[10px] text-emerald-400 font-bold">↗ 8%</span>
+          <div className="text-slate-500">{t('winRate')}</div>
+          <div className="text-sm font-black text-white font-mono mt-0.5 flex items-baseline gap-1">
+            {stats.winRate}%
+            {context.winRateDelta !== null && context.winRateDelta !== 0 && (
+              <span
+                className={`text-[10px] font-bold ${
+                  context.winRateDelta > 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}
+              >
+                {context.winRateDelta > 0 ? '↗' : '↘'}
+                {Math.abs(context.winRateDelta)}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Histórico de Rotas */}
         <div>
-          <div className="text-[11px] text-slate-400">Histórico de Rotas</div>
-          <div className="text-sm font-black font-mono flex items-center gap-1 mt-0.5">
+          <div className="text-slate-500">{t('laneHistory')}</div>
+          <div className="text-sm font-black font-mono mt-0.5">
             <span className="text-emerald-400">{stats.laneWon}</span>
             <span className="text-slate-600">-</span>
             <span className="text-yellow-400">{stats.laneEven}</span>
             <span className="text-slate-600">-</span>
-            <span className="text-rose-500">{stats.laneLost}</span>
-            <span className="text-slate-600">-</span>
-            <span className="text-slate-500">{stats.laneOther}</span>
+            <span className="text-rose-400">{stats.laneLost}</span>
+            {stats.laneOther > 0 && (
+              <>
+                <span className="text-slate-600">-</span>
+                <span className="text-slate-500">{stats.laneOther}</span>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Fila Solo */}
         <div>
-          <div className="text-[11px] text-slate-400">Fila Solo</div>
-          <div className="text-xs font-black text-white flex items-center gap-1 mt-0.5 font-mono">
-            <User className="w-3.5 h-3.5 text-slate-400" />
-            <span>68%</span>
+          <div className="text-slate-500">{t('matchAvgRank')}</div>
+          <div className="text-xs font-bold font-mono mt-1 flex items-center gap-1.5">
+            {avgBracketBadge ? (
+              <>
+                <img
+                  src={avgBracketBadge.badgeUrl}
+                  alt=""
+                  className="w-4 h-4 object-contain"
+                  onError={handleRankImageError}
+                />
+                <span className="text-slate-200">{avgBracketBadge.name}</span>
+              </>
+            ) : (
+              <span className="text-slate-600 font-sans font-normal">{t('noData')}</span>
+            )}
           </div>
         </div>
 
-        {/* Não classificado */}
         <div>
-          <div className="text-[11px] text-slate-400">Não classificado</div>
-          <div className="text-xs font-black text-slate-300 font-mono mt-0.5">
-            — 80%
+          <div className="text-slate-500">{t('soloQueueShare')}</div>
+          <div className="text-sm font-black text-white font-mono mt-0.5 flex items-center gap-1">
+            <User className="w-3 h-3 text-slate-500" />
+            {context.soloShare === null ? (
+              <span className="text-slate-600 text-[11px] font-sans font-normal">{t('noData')}</span>
+            ) : (
+              `${context.soloShare}%`
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-slate-500">{t('groupQueueShare')}</div>
+          <div className="text-sm font-black text-white font-mono mt-0.5 flex items-center gap-1">
+            <Users className="w-3 h-3 text-slate-500" />
+            {context.groupShare === null ? (
+              <span className="text-slate-600 text-[11px] font-sans font-normal">{t('noData')}</span>
+            ) : (
+              `${context.groupShare}%`
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-slate-500">{t('unrankedShare')}</div>
+          <div className="text-sm font-black text-white font-mono mt-0.5">
+            {context.unrankedShare === null ? (
+              <span className="text-slate-600 text-[11px] font-sans font-normal">{t('noData')}</span>
+            ) : (
+              `${context.unrankedShare}%`
+            )}
           </div>
         </div>
       </div>
 
-      {/* Rank Medal Icons Distribution Bar */}
-      <div className="pt-2.5 border-t border-slate-800/80 flex items-center justify-between px-1">
-        <div className="flex items-center gap-2 w-full justify-between">
-          {ranksList.map((tier) => {
-            const isAncient = tier === 6; // User current bracket
-            const rankName = RANK_NAMES[tier];
+      {/* ------------------------------------------- distribuicao de rank */}
+      <div className="mt-3 pt-3 border-t border-slate-800/80">
+        <div className="text-[11px] text-slate-500 mb-1.5">{t('rankDistribution')}</div>
 
-            return (
-              <div
-                key={tier}
-                className={`relative flex flex-col items-center group cursor-pointer transition ${
-                  isAncient ? 'scale-110' : 'opacity-50 hover:opacity-100'
-                }`}
-                title={`${rankName} Tier`}
-              >
-                <img
-                  src={`${VALVE_RANK_IMG_BASE}/rank_icon_${tier}.png`}
-                  alt={rankName}
-                  className="w-6 h-6 object-contain"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-                {isAncient && (
-                  <div className="w-4 h-1 rounded-full bg-purple-500 shadow-sm shadow-purple-950 mt-0.5 animate-pulse" />
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {!context.hasBracketData ? (
+          <div className="text-[11px] text-slate-600 font-mono py-1.5">{t('rankDistributionEmpty')}</div>
+        ) : (
+          <div className="flex items-end justify-between gap-1 px-1">
+            {ranksList.map((tier) => {
+              const count = context.bracketCounts[tier] || 0;
+              const isPlayerTier = playerTier === tier;
+              const heightPercent = count > 0 ? Math.max(12, Math.round((count / context.maxBracketCount) * 100)) : 0;
+
+              return (
+                <div
+                  key={tier}
+                  className={`relative flex flex-col items-center gap-1 transition ${count > 0 ? '' : 'opacity-30'}`}
+                  title={`${RANK_NAMES[tier]} — ${count} ${t('matches')}`}
+                >
+                  <div className="h-6 w-full flex items-end justify-center">
+                    {count > 0 && (
+                      <div
+                        className="w-1.5 rounded-t-[2px]"
+                        style={{ height: `${heightPercent}%`, backgroundColor: RANK_COLORS[tier] }}
+                      />
+                    )}
+                  </div>
+
+                  <img
+                    src={`${VALVE_RANK_IMG_BASE}/rank_icon_${tier}.png`}
+                    alt={RANK_NAMES[tier]}
+                    className={`w-6 h-6 object-contain ${
+                      isPlayerTier ? 'scale-110 rounded-full ring-2 ring-offset-1 ring-offset-[#0b101a]' : ''
+                    }`}
+                    style={isPlayerTier ? { ['--tw-ring-color' as string]: RANK_COLORS[tier] } : undefined}
+                    onError={handleRankImageError}
+                  />
+
+                  <span
+                    className="text-[9px] font-mono leading-none"
+                    style={{ color: count > 0 ? RANK_COLORS[tier] : 'transparent' }}
+                  >
+                    {count > 0 ? count : '0'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

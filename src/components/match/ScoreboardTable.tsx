@@ -159,12 +159,12 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
             <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
               <tr>
                 <th className="py-2.5 px-3">{t('playerHero')}</th>
-                <th className="py-2.5 px-2 text-center">Pos</th>
+                <th className="py-2.5 px-2 text-center">{t('posShort')}</th>
                 <th className="py-2.5 px-2 text-center">K / D / A</th>
                 <th className="py-2.5 px-2 text-right">{t('networth')}</th>
                 <th className="py-2.5 px-2 text-right">{t('gpmXpm')}</th>
                 <th className="py-2.5 px-2 text-right">{t('heroDamageShort')}</th>
-                <th className="py-2.5 px-2 text-right">Cura</th>
+                <th className="py-2.5 px-2 text-right">{t('healingShort')}</th>
                 <th className="py-2.5 px-2 text-right">{t('towerDamageShort')}</th>
                 <th className="py-2.5 px-3 text-center">{t('items')}</th>
                 <th className="py-2.5 px-3 text-center">{t('impImpact')}</th>
@@ -212,12 +212,12 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                 {player.name}
                               </span>
                               {player.award === 'MVP' && (
-                                <span title="MVP">
+                                <span title={t('mvp')}>
                                   <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
                                 </span>
                               )}
                               {player.award === 'TOP_SUPPORT' && (
-                                <span title="Top Support">
+                                <span title={t('topSupport')}>
                                   <Shield className="w-3 h-3 text-purple-400 shrink-0" />
                                 </span>
                               )}
@@ -304,7 +304,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                             >
                               <img
                                 src={getItem(player.neutralItem).imageUrl}
-                                alt="Neutral"
+                                alt={t('neutralItemAlt')}
                                 className="w-full h-full object-cover"
                                 onError={handleItemImageError}
                               />
@@ -357,12 +357,12 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                   </div>
                                   <div className="text-xs text-slate-400 font-mono mt-0.5 flex items-center gap-2 flex-wrap">
                                     <span>
-                                      KDA: <strong className="text-emerald-400">{player.kills}</strong> / <strong className="text-rose-400">{player.deaths}</strong> / <strong className="text-cyan-400">{player.assists}</strong>
+                                      {t('kda')}: <strong className="text-emerald-400">{player.kills}</strong> / <strong className="text-rose-400">{player.deaths}</strong> / <strong className="text-cyan-400">{player.assists}</strong>
                                     </span>
                                     <span>•</span>
-                                    <span>Farm: <strong className="text-amber-300">{player.goldPerMinute} GPM</strong></span>
+                                    <span>{t('farmShort')}: <strong className="text-amber-300">{player.goldPerMinute} {t('gpmShort')}</strong></span>
                                     <span>•</span>
-                                    <span>IMP: <strong className={player.imp >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{player.imp >= 0 ? `+${player.imp}` : player.imp}</strong></span>
+                                    <span>{t('imp')}: <strong className={player.imp >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{player.imp >= 0 ? `+${player.imp}` : player.imp}</strong></span>
                                   </div>
                                 </div>
                               </div>
@@ -375,7 +375,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                 }}
                                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-cyan-950/40 border border-cyan-400/40 transition transform active:scale-95 shrink-0"
                               >
-                                <span>Ver Análise Completa de Performance</span>
+                                <span>{t('viewFullPerformance')}</span>
                                 <ArrowRight className="w-4 h-4" />
                               </button>
                             </div>
@@ -386,11 +386,11 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                 <div className="flex items-center gap-2">
                                   <Clock className="w-4 h-4 text-cyan-400" />
                                   <span className="text-xs font-black uppercase tracking-wider text-slate-200">
-                                    Ordem e Tempo de Compra dos Itens
+                                    {t('itemOrderTitle')}
                                   </span>
                                   {hideConsumables && (
                                     <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-mono">
-                                      Equipamentos Principais
+                                      {t('coreItemsOnlyBadge')}
                                     </span>
                                   )}
                                 </div>
@@ -399,13 +399,13 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                   <button
                                     onClick={() => setHideConsumables(!hideConsumables)}
                                     className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-200 transition font-mono"
-                                    title="Alternar exibição de consumíveis como poções e sentries"
+                                    title={t('toggleConsumablesTooltip')}
                                   >
                                     <Filter className="w-3 h-3 text-cyan-400" />
-                                    <span>{hideConsumables ? 'Mostrar Todos' : 'Ocultar Consumíveis'}</span>
+                                    <span>{hideConsumables ? t('showAllItems') : t('hideConsumables')}</span>
                                   </button>
                                   <span className="text-[11px] text-slate-500 font-mono">
-                                    {filteredTimings.length} itens
+                                    {t('itemCount', { count: filteredTimings.length })}
                                   </span>
                                 </div>
                               </div>
@@ -459,7 +459,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                 </div>
                               ) : (
                                 <div className="text-xs text-slate-500 font-mono py-2">
-                                  Nenhum equipamento registrado para este filtro.
+                                  {t('noItemsForFilter')}
                                 </div>
                               )}
                             </div>
@@ -468,7 +468,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-800/80">
                               {/* 1. Dano em Heróis */}
                               <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                                <div className="text-[10px] text-slate-400 uppercase font-mono">Dano em Heróis</div>
+                                <div className="text-[10px] text-slate-400 uppercase font-mono">{t('heroDamageFull')}</div>
                                 <div className="text-sm font-black text-emerald-400 font-mono mt-0.5">
                                   {player.heroDamage.toLocaleString()}
                                 </div>
@@ -476,7 +476,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
                               {/* 2. Dano em Torres */}
                               <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                                <div className="text-[10px] text-slate-400 uppercase font-mono">Dano em Torres</div>
+                                <div className="text-[10px] text-slate-400 uppercase font-mono">{t('towerDamageFull')}</div>
                                 <div className="text-sm font-black text-amber-400 font-mono mt-0.5">
                                   {player.towerDamage.toLocaleString()}
                                 </div>
@@ -484,7 +484,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
                               {/* 3. Cura Realizada */}
                               <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                                <div className="text-[10px] text-slate-400 uppercase font-mono">Cura em Aliados</div>
+                                <div className="text-[10px] text-slate-400 uppercase font-mono">{t('healingToAllies')}</div>
                                 <div className="text-sm font-black text-teal-400 font-mono mt-0.5">
                                   {player.heroHealing.toLocaleString()}
                                 </div>
@@ -492,7 +492,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
                               {/* 4. Last Hits & Denies */}
                               <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                                <div className="text-[10px] text-slate-400 uppercase font-mono">CS (Golpes / Negações)</div>
+                                <div className="text-[10px] text-slate-400 uppercase font-mono">{t('csLastHitsDenies')}</div>
                                 <div className="text-sm font-black text-white font-mono mt-0.5">
                                   {player.numLastHits} / <span className="text-slate-400">{player.numDenies}</span>
                                 </div>
@@ -518,10 +518,10 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <span className="text-xs font-black uppercase tracking-wider text-slate-300">
-            Placar Detalhado da Partida
+            {t('scoreboard')}
           </span>
           <span className="text-[11px] text-slate-500 font-mono">
-            ({expandedSlots.size} de {players.length} abertos)
+            {t('scoreboardExpandedCount', { open: expandedSlots.size, total: players.length })}
           </span>
         </div>
 
@@ -530,19 +530,19 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
             <button
               onClick={collapseAll}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition border border-slate-800 shadow-sm"
-              title="Colapsar todos os jogadores"
+              title={t('collapseAllTooltip')}
             >
               <ChevronsDownUp className="w-3.5 h-3.5 text-amber-400" />
-              <span>Colapsar Todos</span>
+              <span>{t('collapseAll')}</span>
             </button>
           ) : (
             <button
               onClick={expandAll}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition border border-slate-800 shadow-sm"
-              title="Expandir todos os jogadores para inspeção simultânea"
+              title={t('expandAllTooltip')}
             >
               <ChevronsUpDown className="w-3.5 h-3.5 text-amber-400" />
-              <span>Expandir Todos</span>
+              <span>{t('expandAll')}</span>
             </button>
           )}
         </div>

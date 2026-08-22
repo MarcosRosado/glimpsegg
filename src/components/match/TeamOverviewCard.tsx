@@ -161,11 +161,11 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
           {/* Kills Bar */}
           <div>
             <div className="flex items-center justify-between text-slate-300 mb-1.5 font-sans">
-              <span className="font-bold text-emerald-400">{aggregates.radiantKills} Kills</span>
+              <span className="font-bold text-emerald-400">{t('killsCount', { count: aggregates.radiantKills })}</span>
               <span className="text-slate-400 font-medium flex items-center gap-1">
                 <Swords className="w-3.5 h-3.5 text-indigo-400" /> {t('totalKills')}
               </span>
-              <span className="font-bold text-rose-400">{aggregates.direKills} Kills</span>
+              <span className="font-bold text-rose-400">{t('killsCount', { count: aggregates.direKills })}</span>
             </div>
             <div className="w-full h-3 rounded-full bg-slate-900 flex overflow-hidden border border-slate-800">
               <div
@@ -217,7 +217,7 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
             <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <HeartPulse className="w-4 h-4 text-teal-400" />
-                <span className="text-slate-300 font-sans font-medium">Cura Realizada</span>
+                <span className="text-slate-300 font-sans font-medium">{t('healingDone')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400 font-bold">{aggregates.radiantHealing.toLocaleString()}</span>

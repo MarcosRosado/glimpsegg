@@ -140,7 +140,7 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            title="Fechar (Esc)"
+            title={t('closeEsc')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -189,7 +189,7 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
             </button>
           </form>
           <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1 font-mono">
-            <span>Ex: 123456789, 76561198..., steamcommunity.com/id/arteezy</span>
+            <span>{t('searchExampleHint')}</span>
           </div>
         </div>
 
@@ -286,7 +286,7 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
                             </span>
                             {isActive && (
                               <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-bold">
-                                Ativo
+                                {t('activeShort')}
                               </span>
                             )}
                           </div>
@@ -378,7 +378,7 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
                 <Clock className="w-6 h-6 text-slate-600 mx-auto mb-2" />
                 <p className="text-xs text-slate-400">{t('noSearchHistory')}</p>
                 <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
-                  Pesquise uma conta acima para guardá-la no histórico.
+                  {t('noHistoryHint')}
                 </p>
               </div>
             ) : (
@@ -417,7 +417,7 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
                             </span>
                             {isActive && (
                               <span className="text-[9px] px-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono font-bold">
-                                Ativo
+                                {t('activeShort')}
                               </span>
                             )}
                           </div>
@@ -474,11 +474,11 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
               <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 text-[10px]">
                 Esc
               </kbd>{' '}
-              Fechar
+              {t('close')}
             </span>
           </div>
 
-          <span className="text-slate-400">GlimpseGG Player Resolver</span>
+          <span className="text-slate-400">{t('playerResolverFooter')}</span>
         </div>
       </div>
     </div>

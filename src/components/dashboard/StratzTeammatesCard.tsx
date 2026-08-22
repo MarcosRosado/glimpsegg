@@ -1,13 +1,16 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { PeerTeammate } from '../../types/dota';
 import { handleAvatarError } from '../../utils/imageFallback';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface StratzTeammatesCardProps {
   peers?: PeerTeammate[];
 }
 
 export const StratzTeammatesCard: React.FC<StratzTeammatesCardProps> = ({ peers = [] }) => {
+  const { t } = useLanguage();
+
   if (peers.length === 0) {
     return null;
   }
@@ -15,18 +18,23 @@ export const StratzTeammatesCard: React.FC<StratzTeammatesCardProps> = ({ peers 
   // Display top 6 peers like in the screenshot
   const displayPeers = peers.slice(0, 6);
   const maxMatches = Math.max(1, ...displayPeers.map((p) => p.withGames));
+  // O card exibia "1.000 Partidas" fixo, independente dos dados. Agora conta as
+  // partidas realmente somadas nas duplas mostradas.
+  const sampledMatches = displayPeers.reduce((sum, p) => sum + p.withGames, 0);
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-slate-800 shadow-xl bg-[#0e1219] flex flex-col justify-between">
-      {/* Header with Title and 1.000 Partidas Arrow */}
+      {/* Header: titulo + volume real da amostra */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-black text-slate-100 tracking-wide">
-          Companheiros de equipe
+          {t('teammatesCardTitle')}
         </h3>
 
-        <div className="flex items-center gap-1 text-xs text-slate-400 font-mono hover:text-amber-400 transition cursor-pointer">
-          <span className="text-[11px]">1.000 Partidas</span>
-          <ExternalLink className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-1 text-xs text-slate-400 font-mono">
+          <Users className="w-3.5 h-3.5" />
+          <span className="text-[11px]">
+            {sampledMatches.toLocaleString()} {t('matches')}
+          </span>
         </div>
       </div>
 

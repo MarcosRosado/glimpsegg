@@ -9,19 +9,35 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { AdvantagePoint } from '../../types/dota';
-import { Coins, Zap, Shield } from 'lucide-react';
+import { Coins, TrendingUp } from 'lucide-react';
 import { formatGold, formatSignedGold } from '../../utils/dotaFormatters';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface AdvantageTimelineProps {
   timeline: AdvantagePoint[];
 }
 
 export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }) => {
-  const [metric, setMetric] = useState<'GOLD' | 'XP' | 'BOTH'>('GOLD');
+  const { t } = useLanguage();
+  const [metric, setMetric] = useState<'GOLD' | 'XP'>('GOLD');
 
   // Compute max absolute value for balanced domain
   const maxGold = Math.max(...timeline.map((d) => Math.abs(d.goldAdvantage || 0)), 5000);
   const domainMax = Math.ceil(maxGold / 5000) * 5000;
+
+  // Estado vazio: sem curva, sem grafico. O fallback antigo desenhava a curva de
+  // OUTRA partida (o dataset de demonstracao) como se fosse desta.
+  if (timeline.length === 0) {
+    return (
+      <div className="glass-card rounded-2xl p-8 border border-slate-800 bg-[#111723] text-center">
+        <TrendingUp className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+        <h3 className="text-sm font-bold text-slate-200 mb-2">{t('advantageTimelineTitle')}</h3>
+        <p className="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+          {t('advantageTimelineUnavailable')}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-slate-800 shadow-xl bg-[#111723]">
@@ -29,7 +45,7 @@ export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }
         <div className="flex items-center gap-2">
           <Coins className="w-4 h-4 text-amber-400" />
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
-            Gold & Experience Advantage Timeline
+            {t('advantageTimelineTitle')}
           </h2>
         </div>
 
@@ -41,7 +57,7 @@ export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }
               metric === 'GOLD' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Gold Lead
+            {t('goldLead')}
           </button>
           <button
             onClick={() => setMetric('XP')}
@@ -49,7 +65,7 @@ export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }
               metric === 'XP' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            XP Lead
+            {t('xpLead')}
           </button>
         </div>
       </div>
@@ -92,28 +108,28 @@ export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }
                   return (
                     <div className="bg-[#0f172a] border border-slate-700 p-3 rounded-xl shadow-2xl text-xs font-mono">
                       <div className="text-slate-400 font-sans font-bold border-b border-slate-800 pb-1 mb-2">
-                        Time: {data.minute}:00
+                        {t('advantageTimeLabel')}: {data.minute}:00
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center justify-between gap-4">
-                          <span className="text-slate-400 font-sans">Gold Lead:</span>
+                          <span className="text-slate-400 font-sans">{t('goldLead')}:</span>
                           <span
                             className={`font-black ${
                               isRadiantLead ? 'text-emerald-400' : 'text-rose-400'
                             }`}
                           >
-                            {isRadiantLead ? 'Radiant ' : 'Dire '}
+                            {isRadiantLead ? `${t('radiant')} ` : `${t('dire')} `}
                             {formatSignedGold(goldLead)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
-                          <span className="text-slate-400 font-sans">XP Lead:</span>
+                          <span className="text-slate-400 font-sans">{t('xpLead')}:</span>
                           <span
                             className={`font-bold ${
                               xpLead >= 0 ? 'text-emerald-400' : 'text-rose-400'
                             }`}
                           >
-                            {xpLead >= 0 ? 'Radiant ' : 'Dire '}
+                            {xpLead >= 0 ? `${t('radiant')} ` : `${t('dire')} `}
                             {formatSignedGold(xpLead)}
                           </span>
                         </div>
@@ -137,10 +153,10 @@ export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }
 
       <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 px-2">
         <span className="text-emerald-400/80 font-bold flex items-center gap-1">
-          ▲ Positive values: Radiant Advantage
+          {t('advantageRadiantHint')}
         </span>
         <span className="text-rose-400/80 font-bold flex items-center gap-1">
-          ▼ Negative values: Dire Advantage
+          {t('advantageDireHint')}
         </span>
       </div>
     </div>

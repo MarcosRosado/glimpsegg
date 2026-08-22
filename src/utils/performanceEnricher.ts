@@ -1,5 +1,4 @@
-import { MatchPlayer, MatchDetails, DetailedCombatStats, DetailedFarmStats, DetailedObjectiveStats, AbilityUpgrade } from '../types/dota';
-import { getItem } from '../constants/items';
+import { MatchPlayer, DamageSplit, DetailedCombatStats, DetailedFarmStats, AbilityUpgrade } from '../types/dota';
 import { getHero } from '../constants/heroes';
 import { getHeroAbilities } from '../constants/abilities';
 import { sumAll, sumDeltas } from './insights/timeSeries';
@@ -50,284 +49,98 @@ export function getItemBenchmarkSeconds(itemId: number, cost: number): number {
 }
 
 /**
- * Enriches a player with detailed combat stats if missing
+ * Combate a partir do que a STRATZ realmente devolve.
+ *
+ * `heroDamageReport.receivedTotal` traz o split do dano RECEBIDO. Quando o relatorio
+ * nao veio, a serie `heroDamageReceivedPerMinute` ainda da o total (sem split).
+ * Nada aqui é estimado: o que nao tem fonte volta `null` e a UI mostra "sem dado".
  */
-export function getEnrichedCombatStats(player: MatchPlayer, durationSec: number): DetailedCombatStats {
-  if (player.combatStats) return player.combatStats;
+export function getEnrichedCombatStats(player: MatchPlayer): DetailedCombatStats {
+  const received = player.damageReport?.receivedTotal ?? null;
 
-  const totalDmg = Math.max(1000, player.heroDamage);
+  const damageReceivedSplit: DamageSplit | null = received
+    ? {
+        physicalDamage: received.physicalDamage,
+        magicalDamage: received.magicalDamage,
+        pureDamage: received.pureDamage,
+      }
+    : null;
 
-  // Se a partida trouxe o relatorio de dano real, ele MANDA. O chute por role
-  // (`isCaster ? 0.65 : 0.25`) abaixo só sobrevive como fallback para partida nao
-  // parseada, e nesse caso `isEstimated` fica true para a UI poder rotular.
-  const real = player.damageReport?.receivedTotal ?? null;
-  const isCaster = ['POSITION_2', 'POSITION_4', 'POSITION_5'].includes(player.role);
-
-  const magicPct = isCaster ? 0.65 : 0.25;
-  const physPct = isCaster ? 0.25 : 0.68;
-  const purePct = Math.max(0.05, 1 - (magicPct + physPct));
-
-  const physicalDamage = real ? real.physicalDamage : Math.round(totalDmg * physPct);
-  const magicalDamage = real ? real.magicalDamage : Math.round(totalDmg * magicPct);
-  const pureDamage = real ? real.pureDamage : Math.round(totalDmg * purePct);
-
-  const damageReceived = real
-    ? real.physicalDamage + real.magicalDamage + real.pureDamage
-    : player.heroDamageReceived || Math.round(player.deaths * 2400 + totalDmg * 0.45);
-  const damageMitigated = Math.round(damageReceived * 0.42);
-
-  // As unidades de stunDuration/disableDuration da API sao ambiguas, entao aqui
-  // seguimos com a heuristica em segundos para nao afirmar um numero errado com cara
-  // de exato. A comparacao confiavel desses campos vive em threatProfile.ts, e é
-  // sempre RAZAO contra a media do heroi, nunca valor absoluto.
-  const baseStun = player.role === 'POSITION_4' || player.role === 'POSITION_5' ? 38.5 : 16.2;
-  const stunDurationSec = parseFloat((baseStun + (player.assists * 1.8)).toFixed(1));
-  const disableDurationSec = parseFloat((stunDurationSec * 1.45).toFixed(1));
-
-  const healingProvided = player.heroHealing || (player.role === 'POSITION_5' ? 4850 : player.role === 'POSITION_4' ? 2200 : 450);
-
-  const kills = player.kills;
-  const doubleKills = Math.floor(kills / 3);
-  const tripleKills = Math.floor(kills / 6);
-  const ultraKills = kills >= 10 ? 1 : 0;
-  const rampages = kills >= 14 ? 1 : 0;
-  const soloKills = Math.max(0, Math.floor(kills * 0.35));
-  const killstreakMax = Math.min(kills, Math.max(3, kills - player.deaths + 2));
+  // Preferencia pelo relatorio; a serie por minuto é a segunda fonte real.
+  const damageReceived = damageReceivedSplit
+    ? damageReceivedSplit.physicalDamage + damageReceivedSplit.magicalDamage + damageReceivedSplit.pureDamage
+    : sumAll(player.series?.heroDamageReceivedPerMinute);
 
   return {
-    physicalDamage,
-    magicalDamage,
-    pureDamage,
+    damageReceivedSplit,
     damageReceived,
-    damageMitigated,
-    stunDurationSec,
-    disableDurationSec,
-    healingProvided,
-    soloKills,
-    doubleKills,
-    tripleKills,
-    ultraKills,
-    rampages,
-    killstreakMax,
-    firstBloodClaimed: kills >= 8 && player.isRadiant,
+    healingProvided: player.heroHealing,
   };
 }
 
 /**
- * Enriches a player with detailed farming and economy stats
+ * Farm a partir das series reais por minuto.
+ *
+ * `lastHitsPerMinute` é DELTA, entao CS@N é a soma dos N primeiros minutos; um marco
+ * que a serie nao alcanca volta `null` em vez de ser interpolado a partir do CS final.
+ * `campStack` tambem é delta.
  */
-export function getEnrichedFarmStats(player: MatchPlayer, durationSec: number): DetailedFarmStats {
-  if (player.farmStats) return player.farmStats;
-
-  const totalCS = Math.max(1, player.numLastHits);
-
-  // Curva de CS REAL quando as series por minuto existem. `lastHitsPerMinute` é DELTA,
-  // entao CS@N é a soma dos N primeiros minutos.
+export function getEnrichedFarmStats(player: MatchPlayer): DetailedFarmStats {
   const lh = player.series?.lastHitsPerMinute ?? null;
-  const cs5 = sumDeltas(lh, 0, 5) ?? Math.round((player.laningStats?.lastHits10 ?? totalCS * 0.22) * 0.45);
-  const cs10 = sumDeltas(lh, 0, 10) ?? player.laningStats?.lastHits10 ?? Math.round(totalCS * 0.22);
-  const cs15 = sumDeltas(lh, 0, 15) ?? Math.round(cs10 + (totalCS - cs10) * 0.35);
-  const cs20 = sumDeltas(lh, 0, 20) ?? Math.round(cs10 + (totalCS - cs10) * 0.6);
-
-  const networth = Math.max(1000, player.networth);
-  const isCore = ['POSITION_1', 'POSITION_2', 'POSITION_3'].includes(player.role);
-
-  const laneCreepGold = Math.round(networth * (isCore ? 0.48 : 0.32));
-  const neutralGold = Math.round(networth * (isCore ? 0.28 : 0.12));
-  const heroKillGold = Math.round(player.kills * 280 + player.assists * 135);
-  const towerGold = Math.round(networth * 0.08);
-  const passiveGold = Math.max(500, networth - (laneCreepGold + neutralGold + heroKillGold + towerGold));
-
-  const isSupport = ['POSITION_4', 'POSITION_5'].includes(player.role);
-  // campStack real quando existe (DELTA por minuto), senao a heuristica por duracao.
-  const realStacks = sumAll(player.series?.campStack);
-  const campsStacked =
-    realStacks !== null
-      ? realStacks
-      : isSupport
-        ? Math.floor(durationSec / 320)
-        : Math.floor(durationSec / 900);
-  const stacksCleared = isCore ? Math.floor(durationSec / 450) : 1;
-
-  const runesBounty = Math.floor(durationSec / 360);
-  const runesPower = player.role === 'POSITION_2' ? Math.floor(durationSec / 240) : Math.floor(durationSec / 600);
-  const runesWisdom = Math.floor(durationSec / 420);
 
   return {
-    cs5Min: cs5,
-    cs10Min: cs10,
-    cs15Min: cs15,
-    cs20Min: cs20,
-    laneCreepGold,
-    neutralGold,
-    heroKillGold,
-    towerGold,
-    passiveGold,
-    campsStacked,
-    stacksCleared,
-    runesBounty,
-    runesPower,
-    runesWisdom,
+    cs5Min: sumDeltas(lh, 0, 5),
+    cs10Min: sumDeltas(lh, 0, 10),
+    cs15Min: sumDeltas(lh, 0, 15),
+    cs20Min: sumDeltas(lh, 0, 20),
+    campsStacked: sumAll(player.series?.campStack),
   };
 }
 
 /**
- * Enriches objective participation stats
+ * Ordem de skills REAL, de `player.abilities` (abilityId + time da STRATZ).
+ *
+ * Nao existe mais fallback. O antigo template fixo Q/W/E/R montava 25 niveis com
+ * `timeSec = (lvl / maxLevel) * duracao * 0.9 + 50` — uma build que o jogador nunca
+ * escolheu, com horarios que nunca aconteceram, indistinguivel da real na tela.
+ * Sem `abilityBuild`, isto volta vazio e a UI diz que nao ha dado.
  */
-export function getEnrichedObjectiveStats(player: MatchPlayer, durationSec: number): DetailedObjectiveStats {
-  if (player.objectiveStats) return player.objectiveStats;
-
-  const roshanKills = Math.min(3, Math.floor(durationSec / 900));
-  const tormentorParticipation = durationSec >= 1200 ? 1 : 0;
-  const courierKills = player.role === 'POSITION_4' ? 1 : 0;
-  const towerKills = Math.max(1, Math.floor(player.towerDamage / 2200));
-  const barracksKills = Math.floor(player.towerDamage / 4500);
-  const buybackCount = player.deaths >= 4 ? 1 : 0;
-
-  return {
-    roshanKills,
-    tormentorParticipation,
-    courierKills,
-    towerKills,
-    barracksKills,
-    buybackCount,
-    outpostsCaptured: Math.floor(durationSec / 720),
-  };
-}
-
-/**
- * Returns realistic ability level upgrade sequence for the hero with real names and icons
- */
-export function getEnrichedAbilityUpgrades(player: MatchPlayer, durationSec: number): AbilityUpgrade[] {
-  if (player.abilityUpgrades && player.abilityUpgrades.length > 0) return player.abilityUpgrades;
+export function getEnrichedAbilityUpgrades(player: MatchPlayer): AbilityUpgrade[] {
+  if (!player.abilityBuild || player.abilityBuild.length === 0) return [];
 
   const hero = getHero(player.heroId);
+  const known = getHeroAbilities(player.heroId, hero.shortName);
 
-  // Build de skill REAL, quando a partida foi parseada. Só cai no template fixo
-  // Q/W/E/R abaixo quando `abilities` nao veio — e nesse caso é uma aproximacao,
-  // nao a ordem que o jogador de fato escolheu.
-  if (player.abilityBuild && player.abilityBuild.length > 0) {
-    const known = getHeroAbilities(player.heroId, hero.shortName);
-    // `AbilityInfo` nao guarda abilityId (e HERO_ABILITIES_MAP so cobre alguns herois),
-    // entao casamos por ORDEM DE PRIMEIRA APARICAO: a primeira skill aprendida ocupa o
-    // primeiro slot conhecido, e assim por diante. É aproximado no ROTULO, mas a ordem
-    // e os TEMPOS sao reais — antes tudo aqui vinha de um template fixo Q/W/E/R.
-    const slotByAbilityId = new Map<number, number>();
-    let nextSlot = 0;
-    for (const a of player.abilityBuild) {
-      if (a.isTalent || a.abilityId <= 0) continue;
-      if (!slotByAbilityId.has(a.abilityId)) {
-        slotByAbilityId.set(a.abilityId, nextSlot);
-        nextSlot += 1;
-      }
-    }
-
-    return player.abilityBuild
-      .filter((a) => a.abilityId > 0)
-      .map((a, idx) => {
-        const slotIdx = slotByAbilityId.get(a.abilityId);
-        const meta = a.isTalent || slotIdx === undefined ? undefined : known[slotIdx];
-        return {
-          abilityId: a.abilityId,
-          name: meta?.name || String(a.abilityId),
-          displayName: meta?.displayName || (a.isTalent ? 'Talent' : `#${a.abilityId}`),
-          slot: a.isTalent ? 'TALENT' : meta?.slot,
-          imageUrl: meta?.imageUrl || '',
-          level: idx + 1,
-          timeSec: a.timeSec,
-          isTalent: a.isTalent,
-          isUltimate: meta?.isUltimate,
-          type: a.isTalent ? 'TALENT' : 'SKILL',
-        } as AbilityUpgrade;
-      });
-  }
-  const heroAbilities = getHeroAbilities(player.heroId, hero.shortName);
-  const qSkill = heroAbilities.find((a) => a.slot === 'Q') || heroAbilities[0];
-  const wSkill = heroAbilities.find((a) => a.slot === 'W') || heroAbilities[1] || heroAbilities[0];
-  const eSkill = heroAbilities.find((a) => a.slot === 'E') || heroAbilities[2] || heroAbilities[0];
-  const rSkill = heroAbilities.find((a) => a.slot === 'R' || a.isUltimate) || heroAbilities[3] || heroAbilities[0];
-
-  const upgrades: AbilityUpgrade[] = [];
-  const maxLevel = Math.min(30, Math.max(16, Math.floor(player.experiencePerMinute * (durationSec / 60) / 820)));
-
-  // Standard build order pattern (Q/W/E prioritization, Ultimates at 6, 12, 18, Talents at 10, 15, 20, 25)
-  // Level 1: Q (or W)
-  // Level 2: E
-  // Level 3: Q
-  // Level 4: W
-  // Level 5: Q
-  // Level 6: R
-  // Level 7: Q (Max Q)
-  // Level 8: E
-  // Level 9: E
-  // Level 10: Talent
-  // Level 11: E (Max E)
-  // Level 12: R
-  // Level 13: W
-  // Level 14: W (Max W)
-  // Level 15: Talent
-  // Level 16: Stat/Skill
-  // Level 18: R
-  // Level 20: Talent
-  // Level 25: Talent
-
-  const levelSkillMap: Record<number, { skill: typeof qSkill; slot: 'Q'|'W'|'E'|'R'|'TALENT'; isTalent?: boolean; isUlt?: boolean }> = {
-    1: { skill: qSkill, slot: 'Q' },
-    2: { skill: eSkill, slot: 'E' },
-    3: { skill: qSkill, slot: 'Q' },
-    4: { skill: wSkill, slot: 'W' },
-    5: { skill: qSkill, slot: 'Q' },
-    6: { skill: rSkill, slot: 'R', isUlt: true },
-    7: { skill: qSkill, slot: 'Q' },
-    8: { skill: eSkill, slot: 'E' },
-    9: { skill: eSkill, slot: 'E' },
-    10: { skill: { name: 'talent_10', displayName: 'Talento Nvl 10', slot: 'TALENT', imageUrl: '' }, slot: 'TALENT', isTalent: true },
-    11: { skill: eSkill, slot: 'E' },
-    12: { skill: rSkill, slot: 'R', isUlt: true },
-    13: { skill: wSkill, slot: 'W' },
-    14: { skill: wSkill, slot: 'W' },
-    15: { skill: { name: 'talent_15', displayName: 'Talento Nvl 15', slot: 'TALENT', imageUrl: '' }, slot: 'TALENT', isTalent: true },
-    16: { skill: wSkill, slot: 'W' },
-    17: { skill: qSkill, slot: 'Q' },
-    18: { skill: rSkill, slot: 'R', isUlt: true },
-    19: { skill: eSkill, slot: 'E' },
-    20: { skill: { name: 'talent_20', displayName: 'Talento Nvl 20', slot: 'TALENT', imageUrl: '' }, slot: 'TALENT', isTalent: true },
-    21: { skill: qSkill, slot: 'Q' },
-    22: { skill: wSkill, slot: 'W' },
-    23: { skill: eSkill, slot: 'E' },
-    24: { skill: qSkill, slot: 'Q' },
-    25: { skill: { name: 'talent_25', displayName: 'Talento Nvl 25', slot: 'TALENT', imageUrl: '' }, slot: 'TALENT', isTalent: true },
-  };
-
-  for (let lvl = 1; lvl <= maxLevel; lvl++) {
-    const timeSec = Math.round((lvl / maxLevel) * durationSec * 0.9 + 50);
-    const mapped = levelSkillMap[lvl];
-
-    if (mapped) {
-      upgrades.push({
-        name: mapped.skill.name,
-        displayName: mapped.skill.displayName,
-        slot: mapped.slot,
-        imageUrl: mapped.skill.imageUrl,
-        level: lvl,
-        timeSec,
-        isTalent: mapped.isTalent || false,
-        isUltimate: mapped.isUlt || false,
-        type: mapped.isTalent ? 'TALENT' : 'SKILL',
-      });
-    } else {
-      upgrades.push({
-        name: `attr_bonus_${lvl}`,
-        displayName: `Atributos +2`,
-        slot: 'TALENT',
-        imageUrl: '',
-        level: lvl,
-        timeSec,
-        isTalent: true,
-        type: 'TALENT',
-      });
+  // `AbilityInfo` nao guarda abilityId (e HERO_ABILITIES_MAP so cobre alguns herois),
+  // entao casamos por ORDEM DE PRIMEIRA APARICAO: a primeira skill aprendida ocupa o
+  // primeiro slot conhecido, e assim por diante. É aproximado no ROTULO, mas a ordem
+  // e os TEMPOS sao reais.
+  const slotByAbilityId = new Map<number, number>();
+  let nextSlot = 0;
+  for (const a of player.abilityBuild) {
+    if (a.isTalent || a.abilityId <= 0) continue;
+    if (!slotByAbilityId.has(a.abilityId)) {
+      slotByAbilityId.set(a.abilityId, nextSlot);
+      nextSlot += 1;
     }
   }
 
-  return upgrades;
+  return player.abilityBuild
+    .filter((a) => a.abilityId > 0)
+    .map((a, idx) => {
+      const slotIdx = slotByAbilityId.get(a.abilityId);
+      const meta = a.isTalent || slotIdx === undefined ? undefined : known[slotIdx];
+      return {
+        abilityId: a.abilityId,
+        name: meta?.name || String(a.abilityId),
+        displayName: meta?.displayName || (a.isTalent ? 'Talent' : `#${a.abilityId}`),
+        slot: a.isTalent ? 'TALENT' : meta?.slot,
+        imageUrl: meta?.imageUrl || '',
+        level: idx + 1,
+        timeSec: a.timeSec,
+        isTalent: a.isTalent,
+        isUltimate: meta?.isUltimate,
+        type: a.isTalent ? 'TALENT' : 'SKILL',
+      } as AbilityUpgrade;
+    });
 }

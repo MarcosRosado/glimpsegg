@@ -145,7 +145,8 @@ describe('REGRESSAO: fim do filler', () => {
         ...match,
         availability: {
           parsed: false, perMinuteStats: false, networthSeries: false, deathEvents: false,
-          damageReport: false, wards: false, heroAverage: false, abilities: false, laneOutcomes: false,
+          damageReport: false, wards: false, advantageTimeline: false, heroAverage: false,
+          abilities: false, laneOutcomes: false,
         },
       },
     );
@@ -161,7 +162,8 @@ describe('partida NAO parseada', () => {
     parsedDateTime: null,
     availability: {
       parsed: false, perMinuteStats: false, networthSeries: false, deathEvents: false,
-      damageReport: false, wards: false, heroAverage: false, abilities: false, laneOutcomes: false,
+      damageReport: false, wards: false, advantageTimeline: false, heroAverage: false,
+      abilities: false, laneOutcomes: false,
     },
   };
 

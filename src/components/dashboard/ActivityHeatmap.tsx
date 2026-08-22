@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Flame, Trophy } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { ActivityDay } from '../../types/dota';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -20,9 +20,12 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityDays =
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-amber-400" />
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200">
-            {t('dailyActivityTitle')}
-          </h3>
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+              {t('dailyActivityTitle')}
+            </h3>
+            <p className="text-[10px] text-slate-400">{t('activitySubtitle')}</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-4 text-xs font-mono">
@@ -41,7 +44,6 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityDays =
         {activityDays.map((day, idx) => {
           const heightPercent = day.count > 0 ? Math.max(15, Math.round((day.count / maxInDay) * 100)) : 6;
           const winPercent = day.count > 0 ? Math.round((day.wins / day.count) * 100) : 0;
-          const formattedDate = day.date.slice(5); // MM-DD
 
           return (
             <div
@@ -63,8 +65,14 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityDays =
               {/* Hover Tooltip */}
               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-30 bg-[#0f172a] border border-slate-700 text-[10px] font-mono py-1 px-2 rounded-md shadow-2xl whitespace-nowrap text-slate-200">
                 <div className="font-bold text-amber-400">{day.date}</div>
-                <div>{day.count} {t('matches')} ({day.wins}{t('wins')} - {day.losses}{t('losses')})</div>
-                {day.count > 0 && <div className="text-emerald-400 font-bold">{winPercent}% Winrate</div>}
+                {day.count > 0 ? (
+                  <>
+                    <div>{day.count} {t('matches')} ({day.wins}{t('wins')} - {day.losses}{t('losses')})</div>
+                    <div className="text-emerald-400 font-bold">{winPercent}% {t('winRate')}</div>
+                  </>
+                ) : (
+                  <div className="text-slate-400">{t('noActivity')}</div>
+                )}
               </div>
             </div>
           );
@@ -73,16 +81,16 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityDays =
 
       {/* Timeline Footnote */}
       <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono mt-2">
-        <span>30 days ago</span>
+        <span>{t('thirtyDaysAgo')}</span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded bg-emerald-500" /> &gt;50% Win
+            <span className="w-2 h-2 rounded bg-emerald-500" /> &gt;50% {t('winRate')}
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded bg-rose-500" /> &lt;50% Win
+            <span className="w-2 h-2 rounded bg-rose-500" /> &lt;50% {t('winRate')}
           </span>
         </div>
-        <span>Today</span>
+        <span>{t('today')}</span>
       </div>
     </div>
   );
