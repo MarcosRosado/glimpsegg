@@ -35,6 +35,42 @@ patch atual, com heróis e itens novos devidamente reconhecidos, exibidos e anal
 - `COACHING` — diagnóstico determinístico: comparação com a média do próprio herói na
   própria posição, recomendação de build por win rate do patch, e forense de morte
 
+## Telas
+
+As capturas abaixo saem do app em execução, com dados vindos da STRATZ e da OpenDota. O perfil
+exibido é uma conta pública de alto ranque (`86745912`), usada apenas para ilustrar as telas —
+nenhum dado do mantenedor aparece aqui.
+
+**Dashboard do jogador** — perfil e rank, forma recente, lista de partidas com resumo por jogo,
+heróis principais e as tendências vindas da STRATZ.
+
+![Dashboard do jogador](docs/screenshots/dashboard.png)
+
+**`OVERVIEW`** — prêmios da partida, comparativo entre as equipes, linha do tempo de vantagem de
+ouro/XP e o scoreboard, com a ordem e o tempo de compra de cada item do jogador aberto.
+
+![Aba Overview da análise de partida](docs/screenshots/match-overview.png)
+
+**`PERFORMANCE`** — cronômetro de itens contra a meta do benchmark, radar de competências, métricas
+dos primeiros 10 minutos, composição do dano e sequência de habilidades.
+
+![Aba Performance da análise de partida](docs/screenshots/match-performance.png)
+
+**`VISION`** — wards reais sobre o minimapa, com raio de visão, tempo de vida, autor, dewards e
+cobertura, navegáveis pela linha do tempo da partida.
+
+![Aba Vision da análise de partida](docs/screenshots/match-vision.png)
+
+**`COACHING`** — diagnóstico determinístico. Cada card traz o número, a procedência (média do herói,
+dados do patch, esta partida) e o tamanho da amostra.
+
+![Aba Coaching da análise de partida](docs/screenshots/match-coaching.png)
+
+**Onboarding** — a primeira execução pede o token da STRATZ. O Steam Account ID é detectado
+automaticamente a partir do próprio token.
+
+![Tela de onboarding](docs/screenshots/onboarding.png)
+
 ## Requisitos
 
 - Node.js 24+
