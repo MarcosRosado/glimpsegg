@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Search, ShieldAlert, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Settings, Search, ShieldAlert, RefreshCw, ArrowLeft, LayoutGrid } from 'lucide-react';
 import { PlayerProfileSummary } from '../../types/dota';
 import { getRankTierInfo } from '../../constants/ranks';
 import { handleAvatarError } from '../../utils/imageFallback';
@@ -21,6 +21,10 @@ interface NavbarProps {
   onOpenSearch: () => void;
   onReturnToConfiguredAccount?: () => void;
   onRefresh: () => void;
+  /** T036: o acesso a aba do layout espelho existe SO com a feature ativa. */
+  heroGridEnabled?: boolean;
+  isHeroGridOpen?: boolean;
+  onToggleHeroGrid?: () => void;
 }
 
 /**
@@ -43,6 +47,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSearch,
   onReturnToConfiguredAccount,
   onRefresh,
+  heroGridEnabled = false,
+  isHeroGridOpen = false,
+  onToggleHeroGrid,
 }) => {
   const { t } = useLanguage();
   const rankInfo = profile ? getRankTierInfo(profile.seasonRank, profile.leaderboardRank) : null;
@@ -133,6 +140,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               <ShieldAlert className="w-2.5 h-2.5" />
               <span className="hidden sm:inline">{t('stratzDemo')}</span>
             </button>
+          )}
+
+          {/* Layout espelho de heróis. Renderizado só com a feature ativa: um botão
+              permanente para algo desligado por padrão só ensinaria a ignorá-lo. */}
+          {heroGridEnabled && onToggleHeroGrid && (
+            <IconButton
+              icon={LayoutGrid}
+              label={t('heroGridTabTitle')}
+              onClick={onToggleHeroGrid}
+              variant={isHeroGridOpen ? 'accent' : undefined}
+              className="p-1.5"
+              iconClassName={`w-3.5 h-3.5 ${isHeroGridOpen ? 'text-cyan-300' : 'text-slate-400'}`}
+            />
           )}
 
           {/* O atalho global já existe (App.tsx); mostrá-lo ensina, o label não. */}

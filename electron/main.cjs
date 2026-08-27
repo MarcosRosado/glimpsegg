@@ -387,6 +387,125 @@ ipcMain.handle('app:getVersion', () => {
   return app.getVersion();
 });
 
+/* ==================================================================== *
+ * IPC Handlers: hero grid (specs/001-meta-hero-grid)
+ *
+ * Principio de fronteira: o main NAO decide nada aqui. Ele nao sabe o que é winrate,
+ * espelho nem ranking — recebe o texto ja serializado por `src/utils/heroGrid/valveJson.ts`
+ * e grava. Toda decisao mora em funcao pura sob `src/`, onde o vitest alcanca. Os modulos
+ * de `electron/heroGrid/` sao I/O e nada mais, e cada um tem teste proprio.
+ * ==================================================================== */
+
+const { listSteamAccounts } = require('./heroGrid/steamPaths.cjs');
+const { assertAllowedGridPath } = require('./heroGrid/pathGuard.cjs');
+const {
+  readGridFile,
+  writeGridFile,
+  restoreGridFile,
+  listGridBackups,
+} = require('./heroGrid/gridFile.cjs');
+const { isDotaRunning } = require('./heroGrid/dotaProcess.cjs');
+
+/**
+ * S-1: todo handler que recebe `path` do renderer passa por aqui ANTES de tocar no disco.
+ *
+ * O renderer nao é a fronteira de confianca: ele roda o codigo que pode estar errado, e um
+ * `path` nao validado faria o processo privilegiado gravar em qualquer arquivo do usuario —
+ * com backup e escrita atomica, o que so tornaria o estrago mais convincente. O caminho manual
+ * do jogador (FR-006) é lido do config aqui, no lado privilegiado, e nao aceito do renderer:
+ * senao a excecao viraria o proprio buraco.
+ */
+function guardGridPath(filePath) {
+  const verdict = assertAllowedGridPath(filePath, {
+    manualPath: appConfig.heroGridFilePath || null,
+  });
+  if (verdict.allowed) return null;
+  return {
+    success: false,
+    error: `Caminho de arquivo de grids nao autorizado (${verdict.reason}).`,
+    code: 'UNSUPPORTED_PLATFORM',
+  };
+}
+
+ipcMain.handle('grid:list-accounts', () => {
+  try {
+    const accounts = listSteamAccounts({
+      configuredSteamAccountId: appConfig.steamAccountId || null,
+    });
+    return { success: true, data: accounts };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
+ipcMain.handle('grid:read', (event, { path: filePath }) => {
+  const blocked = guardGridPath(filePath);
+  if (blocked) return blocked;
+
+  try {
+    const result = readGridFile(filePath);
+    // L-2/L-3: arquivo invalido é falha explicita, nunca "arquivo vazio" — quem le como vazio
+    // acaba gravando por cima do que nao conseguiu entender.
+    if (result.code) {
+      return { success: false, error: result.error, code: result.code };
+    }
+    return {
+      success: true,
+      data: { exists: result.exists, file: result.file, raw: result.raw },
+    };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
+ipcMain.handle('grid:write', async (event, request) => {
+  if (!request || typeof request !== 'object') {
+    return { success: false, error: 'Requisicao de escrita invalida.' };
+  }
+  const blocked = guardGridPath(request.path);
+  if (blocked) return blocked;
+
+  try {
+    // A guarda de imutabilidade (E-3/E-4) mora dentro de `writeGridFile`, de proposito: é a
+    // ultima linha antes do disco e tem de validar os bytes que vao ser gravados.
+    return await writeGridFile(request);
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
+ipcMain.handle('grid:restore', (event, { path: filePath, backupPath }) => {
+  const blocked = guardGridPath(filePath);
+  if (blocked) return blocked;
+
+  try {
+    return restoreGridFile(filePath, backupPath);
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
+ipcMain.handle('grid:list-backups', (event, { path: filePath }) => {
+  const blocked = guardGridPath(filePath);
+  if (blocked) return blocked;
+
+  try {
+    return { success: true, data: listGridBackups(filePath) };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
+ipcMain.handle('grid:is-dota-running', async () => {
+  try {
+    return { success: true, data: await isDotaRunning() };
+  } catch {
+    // Degradacao de `dotaProcess.cjs`: falso positivo permanente mataria a feature, entao a
+    // falha de consulta responde "nao esta rodando" em vez de virar erro na tela.
+    return { success: true, data: { running: false, method: 'unsupported' } };
+  }
+});
+
 // IPC Handler: Window controls
 ipcMain.handle('window:minimize', () => mainWindow?.minimize());
 ipcMain.handle('window:maximize', () => {
