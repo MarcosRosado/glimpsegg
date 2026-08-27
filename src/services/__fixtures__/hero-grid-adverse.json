@@ -1,0 +1,85 @@
+{
+  "version": 4,
+  "configs": [
+    {
+      "config_name": "Meta Espelho",
+      "categories": [
+        {
+          "category_name": "Best with",
+          "x_position": 43.478260,
+          "y_position": 0.869565,
+          "width": 290.434784,
+          "height": 128.695648,
+          "hero_ids": [
+            1,
+            8,
+            20
+          ]
+        },
+        {
+          "category_name": "Best with",
+          "x_position": 43.478260,
+          "y_position": 130.434784,
+          "width": 290.434784,
+          "height": 128.695648,
+          "future_valve_field": 7,
+          "hero_ids": [
+            20,
+            41
+          ]
+        },
+        {
+          "category_name": "grupo Vazio",
+          "x_position": 340.869568,
+          "y_position": 0.869565,
+          "width": 145.217392,
+          "height": 64.347824,
+          "hero_ids": []
+        }
+      ]
+    },
+    {
+      "config_name": "Meta Espelho",
+      "future_valve_config_field": "reservado",
+      "categories": [
+        {
+          "category_name": "Só um grupo",
+          "x_position": 0.000000,
+          "y_position": 12.173913,
+          "width": 435.652176,
+          "height": 71.304352,
+          "hero_ids": [
+            20,
+            9999
+          ]
+        }
+      ]
+    },
+    {
+      "config_name": "Outro layout",
+      "categories": [
+        {
+          "category_name": "grupo a",
+          "x_position": 7.826087,
+          "y_position": 3.478261,
+          "width": 217.826096,
+          "height": 96.521744,
+          "hero_ids": [
+            12,
+            67
+          ]
+        },
+        {
+          "category_name": "Grupo B",
+          "x_position": 232.173920,
+          "y_position": 3.478261,
+          "width": 217.826096,
+          "height": 96.521744,
+          "hero_ids": [
+            32
+          ]
+        }
+      ]
+    }
+  ]
+}

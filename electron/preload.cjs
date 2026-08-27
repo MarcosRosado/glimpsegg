@@ -44,6 +44,20 @@ contextBridge.exposeInMainWorld('api', {
     },
   },
 
+  // Hero grid: ponte de arquivo (specs/001-meta-hero-grid).
+  // Nenhuma decisao passa por aqui — os handlers do main recebem o texto ja serializado
+  // por `src/utils/heroGrid/valveJson.ts` e a guarda de imutabilidade roda la, na ultima
+  // linha antes do disco. `path` é sempre validado no main (S-1): o renderer nao é a
+  // fronteira de confianca.
+  heroGrid: {
+    listAccounts: () => ipcRenderer.invoke('grid:list-accounts'),
+    readFile: (args) => ipcRenderer.invoke('grid:read', args),
+    writeFile: (args) => ipcRenderer.invoke('grid:write', args),
+    restoreBackup: (args) => ipcRenderer.invoke('grid:restore', args),
+    listBackups: (args) => ipcRenderer.invoke('grid:list-backups', args),
+    isDotaRunning: () => ipcRenderer.invoke('grid:is-dota-running'),
+  },
+
   // App Info
   getPlatform: () => process.platform,
   getVersion: () => ipcRenderer.invoke('app:getVersion'),

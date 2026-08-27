@@ -18,6 +18,7 @@ import { PlayerPerformanceTab } from './components/performance/PlayerPerformance
 import { WardMinimapTab } from './components/vision/WardMinimapTab';
 import { CoachingInsightsTab } from './components/coaching/CoachingInsightsTab';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { HeroGridTab } from './components/heroGrid/HeroGridTab';
 import { SearchPlayerModal } from './components/search/SearchPlayerModal';
 import { OnboardingModal } from './components/auth/OnboardingModal';
 import { MatchDetails, PlayerProfileSummary, ProfileHistoryItem } from './types/dota';
@@ -34,6 +35,7 @@ import {
 } from 'lucide-react';
 
 import { extractSteamIdFromStratzToken } from './utils/stratzToken';
+import { useHeroGridSync } from './hooks/useHeroGridSync';
 
 type MatchTab = 'OVERVIEW' | 'PERFORMANCE' | 'VISION' | 'COACHING';
 
@@ -48,6 +50,11 @@ function MainAppContent() {
   const [selectedMatch, setSelectedMatch] = useState<MatchDetails | null>(null);
   const [selectedPlayerSlot, setSelectedPlayerSlot] = useState<number>(0);
   const [activeMatchTab, setActiveMatchTab] = useState<MatchTab>('OVERVIEW');
+  /**
+   * A aba do layout espelho é uma view de nivel de painel, nao uma aba de partida: ela nao
+   * depende de partida selecionada nenhuma. Fica visivel so com a feature ativa (T036).
+   */
+  const [isHeroGridOpen, setIsHeroGridOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
@@ -58,6 +65,22 @@ function MainAppContent() {
   // Clicar num heroi em "Mais Jogados" filtra a lista de partidas. Antes o
   // handler era um no-op e o clique nao fazia nada.
   const [heroFilterId, setHeroFilterId] = useState<number | null>(null);
+
+  /**
+   * UMA instancia de `useHeroGridSync` para todo o app.
+   *
+   * O hook arma o timer de 5 min e guarda a trava de escrita do renderer, entao duas
+   * instancias seriam dois agendadores disputando a mesma sincronizacao. Ela é passada para
+   * a aba (que exibe) e para o modal de configuracoes (que dispara) — nenhum dos dois chama
+   * o hook por conta propria.
+   */
+  const heroGridSync = useHeroGridSync(
+    apiKey,
+    configuredSteamId,
+    // `seasonRank` é medalha*10+estrelas; o bracket vem de floor(rank/10).
+    profile?.seasonRank ? Math.floor(profile.seasonRank / 10) : null,
+  );
+  const heroGridEnabled = !!heroGridSync.preferences?.enabled;
 
   // Helper to persist profile history in store or localStorage
   const saveProfileHistory = useCallback(async (newHistory: ProfileHistoryItem[]) => {
@@ -397,9 +420,13 @@ function MainAppContent() {
         configuredProfileName={currentSteamId === configuredSteamId ? profile?.name : undefined}
         onGoHome={() => {
           setSelectedMatch(null);
+          setIsHeroGridOpen(false);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenSearch={() => setIsSearchOpen(true)}
+        heroGridEnabled={heroGridEnabled}
+        isHeroGridOpen={isHeroGridOpen}
+        onToggleHeroGrid={() => setIsHeroGridOpen((open) => !open)}
         onReturnToConfiguredAccount={handleReturnToConfigured}
         onRefresh={() => {
           if (selectedMatch) handleSelectMatch(selectedMatch.id);
@@ -417,7 +444,14 @@ function MainAppContent() {
           </div>
         )}
 
-        {!selectedMatch ? (
+        {isHeroGridOpen && heroGridEnabled ? (
+          /* =========================================================================
+             HERO GRID VIEW — layout espelho ordenado por winrate do meta
+             ========================================================================= */
+          <div className="animate-in fade-in duration-200">
+            <HeroGridTab sync={heroGridSync} />
+          </div>
+        ) : !selectedMatch ? (
           !profile ? (
             /* Empty Setup State when no profile is loaded yet */
             <div className="flex flex-col items-center justify-center py-28 text-center space-y-5 animate-in fade-in duration-300">
@@ -695,6 +729,14 @@ function MainAppContent() {
         profileHistory={profileHistory}
         onSave={handleSaveSettings}
         onOpenGuide={handleOpenGuide}
+        onHeroGridEnabledChange={(enabled) => {
+          void heroGridSync.reloadPreferences();
+          // Desmarcar fecha a aba: deixa-la aberta mostraria o estado DISABLED sem que o
+          // jogador tenha pedido para ver isso.
+          if (!enabled) setIsHeroGridOpen(false);
+        }}
+        onHeroGridSyncRequest={(request) => heroGridSync.syncNow({ mirrorName: request.mirrorName })}
+        onHeroGridRemoveMirror={() => heroGridSync.removeMirrorNow()}
       />
     </div>
   );

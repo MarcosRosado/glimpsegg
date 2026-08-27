@@ -208,6 +208,79 @@ regenera o catálogo de itens a partir das constantes da OpenDota. Herói ou ite
 `constants/mapGeometry.ts`, `counterItems.ts`, `baselines.ts` e `ranks.ts` são constantes de domínio
 com justificativa no comentário de topo; `gameVersion.ts` guarda o patch de fallback.
 
+## Layout espelho de heróis (`hero_grid_config.json`)
+
+A feature escreve no `hero_grid_config.json` da conta Steam local — **arquivo do jogador, trabalho
+manual, sem cópia em nenhum outro lugar**, e que o cliente do Dota também reescreve ao sair. Todo o
+desenho abaixo existe por causa disso, e não por gosto de arquitetura.
+
+**A estratégia de espelho.** O app **nunca altera** o layout que o jogador escolheu. `configs` é um
+array, então o espelho é um **elemento novo** ao lado do dele, com os mesmos grupos, nomes e
+coordenadas, e a ordem interna de cada grupo definida pela nota. Origem intocada é invariante
+verificada, não intenção: `electron/heroGrid/gridFile.cjs` faz `JSON.parse` do texto que vai ao disco
+e compara **por igualdade profunda** o config de origem e **todos** os outros configs com o que leu,
+abortando com `SOURCE_MUTATED` antes de gravar. O espelho novo vai para o **fim** do array — a
+posição dos layouts do jogador nunca muda.
+
+**Identidade é POSIÇÃO, nunca nome.** O Dota permite dois layouts com o mesmo `config_name`, permite
+duas categorias com o mesmo `category_name` (o grid publicado pelo D2PT repete `Best with` sete vezes
+num layout só — caso real) e permite renomear a qualquer momento. Preferência guarda `{ index, name }`
+com `index` como identidade e `name` como último rótulo visto. Identidade por nome perde o rastro do
+espelho num rename e cria um segundo na sincronização seguinte. Se for "simplificar" para buscar por
+nome, esse é o bug que volta.
+
+**A fronteira: o main é I/O burro.** `electron/heroGrid/` não sabe o que é winrate, espelho nem
+ranking. Ele recebe o **texto já serializado** e grava — backup byte a byte, escrita atômica
+(tmp + `fsync` + `rename`), poda de 5 backups, trava de escrita única. A decisão de *o que* escrever
+mora em função pura sob `src/utils/heroGrid/` (`mirrorBuilder`, `ranking`, `sourcePrecedence`,
+`syncScheduler`, `valveJson`), que o vitest alcança. A exceção deliberada é a **guarda de
+imutabilidade**, que roda no main porque é a última linha antes do disco e precisa validar
+exatamente os bytes que vão ser gravados, não um objeto que alguém prometeu ter serializado direito.
+Foi por causa dela que `vitest.config.ts` ganhou `electron/**/*.test.cjs` — e `globals: true`, porque
+o Vitest 4 recusa `require('vitest')` e um `import` num `.cjs` quebra o parse do oxlint.
+
+**A validação de caminho (`pathGuard.cjs`) é do main, não da ponte.** O renderer manda um `path`; sem
+validar, o processo privilegiado gravaria em qualquer arquivo do usuário, com backup e atomicidade e
+tudo, o que só deixaria o estrago mais convincente. A ponte em `src/services/heroGrid/` roda do lado
+que pode estar errado — ela não é fronteira de confiança.
+
+**Serializador próprio (`valveJson.ts`).** A Valve usa tabs, `[` em linha própria e floats de 6
+decimais, e a geometria é float **mesmo valendo inteiro** (`0.000000`). `JSON.stringify` reescreveria
+a formatação inteira: passaria na igualdade profunda, mas produziria um arquivo visualmente
+"reescrito", corroendo a confiança justamente na feature que promete não tocar no layout do jogador.
+O round-trip byte a byte contra uma cópia do arquivo real é teste.
+
+**Duas fixtures, de propósito.** `hero-grid-real.json` é o grid real anonimizado (1 layout, 8 grupos,
+catálogo inteiro) e `hero-grid-adverse.json` é o **oposto** dele (3 layouts, dois de nome igual,
+categorias de nome repetido, grupo vazio, poucos heróis, `version: 4`, campo desconhecido da Valve).
+A segunda é a que importa mais: com um layout só, a invariante "não altere nenhum outro layout" passa
+**vazia**.
+
+**O que ficou fora, e por quê** — as três decisões foram tomadas na clarificação de 2026-08-26, e
+estão registradas aqui para não voltarem como "melhoria":
+
+- **Recorte por posição.** Não há como inferir a função de um grupo pelo nome (`"Supps principais"`,
+  `"offs secundários"`), então o winrate usado é o **geral do herói**, e a tela **tem** de dizer isso
+  — a ordem do grupo de suportes não é "melhores suportes".
+- **Dota 2 Pro Tracker como fonte.** O que ele publica de forma consumível é *ordem* de meta, sem
+  winrate e sem amostra. Não satisfaz a exigência de procedência, então não entra: número que
+  influencia a ordem sem trazer fonte e tamanho de amostra é exatamente o que a doutrina proíbe.
+- **Autostart, bandeja e modo headless.** "Sincronização em background" significa **dentro do app
+  aberto**. Com o app fechado não sincroniza, e a aba mostra **quantos dias** se passaram em vez de
+  deixar o espelho envelhecer em silêncio.
+
+**Fontes de meta.** Precedência **OpenDota → STRATZ**: a que não exige token vem primeiro, e a
+feature fecha inteira sem token nenhum. Nenhum host novo, nenhuma mudança de CSP, nenhum handler IPC
+de rede novo — reaproveita `api:opendota-fetch` e o `api:stratz-graphql` genérico. Uma fonte fora ⇒
+`PARTIAL`, **escreve**, rotulado; as duas fora ⇒ `FAILURE`, **não escreve**, marcador de sucesso
+intacto.
+
+**`heroStats.winWeek` da STRATZ usa `bracketIds: [RankBracket]`** — enum **por medalha**, não o
+`RankBracketBasicEnum` que `itemFullPurchase` aceita e que o resto do projeto usa. Verificado por
+introspecção e 6 requisições reais; as quatro faixas somam exatamente o `ALL`. O mapper expande
+`RankBracketBasic` numa tabela de medalhas. Não trocar por palpite — é a terceira vez que o projeto
+evita pagar por semântica de campo assumida sem resposta real.
+
 ## Segredos
 
 `.gitignore` cobre `.env*` inteiro (exceto `.env.example`), deliberadamente amplo para pegar
