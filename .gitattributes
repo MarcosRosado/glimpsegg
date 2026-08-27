@@ -3,6 +3,12 @@
 # quebrando o gate no runner (e só nele).
 *.svg -text
 
+# A fixture do hero_grid_config.json real é comparada BYTE A BYTE pelo
+# `valveJson.test.ts` (é a prova de FR-007c: o diff no arquivo do jogador tem de ser
+# mínimo). O serializador emite LF; sem esta linha o checkout do Windows converte as 219
+# LFs em CRLF e o teste falha só no runner do Windows, quebrando a release.
+*.raw.txt -text
+
 # Binários: nunca converter fim de linha nem tentar diff textual.
 *.png binary
 *.ico binary

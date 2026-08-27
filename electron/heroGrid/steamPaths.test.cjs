@@ -19,9 +19,20 @@ const {
  * teste que le `~/.steam` passa na minha maquina e falha no CI. Todo I/O vai por `fsImpl`.
  */
 
-const HOME = '/home/tester';
-const REAL_ROOT = '/home/tester/.local/share/Steam';
-const FLATPAK_ROOT = '/home/tester/.var/app/com.valvesoftware.Steam/.local/share/Steam';
+/**
+ * Caminhos montados com `path.resolve`/`path.join`, nunca com literal POSIX.
+ *
+ * `steamRootCandidates` monta as raizes com `path.join`, que no Windows usa `\`. Um literal
+ * com `/` no fake de `fs` nunca casa com o que o modulo gera, entao a raiz "nao existe", é
+ * descartada em silencio, e o teste de dedupe (I-25) via duas instalacoes distintas virarem
+ * uma — falha que aparecia SO no runner do Windows, e que passa despercebida porque o
+ * sintoma (uma conta a menos) parece ser exatamente o que o dedupe deveria fazer.
+ */
+const HOME = path.resolve('/home/tester');
+const REAL_ROOT = path.join(HOME, '.local', 'share', 'Steam');
+const FLATPAK_ROOT = path.join(HOME, '.var', 'app', 'com.valvesoftware.Steam', '.local', 'share', 'Steam');
+/** Raiz que existe mas cujo `userdata/` nao pode ser lido — usada no teste de degradacao. */
+const SEM_USERDATA = path.resolve('/opt/steam-sem-userdata');
 
 /**
  * `fs` falso.
@@ -282,9 +293,9 @@ describe('listSteamAccounts', () => {
     const fsImpl = makeFakeFs({
       exists: [broken, noUserdata, good],
       realpathFails: [broken],
-      realpath: { [noUserdata]: '/opt/steam-sem-userdata', [good]: REAL_ROOT },
+      realpath: { [noUserdata]: SEM_USERDATA, [good]: REAL_ROOT },
       readdir: {
-        '/opt/steam-sem-userdata/userdata': new Error('EACCES: permission denied'),
+        [path.join(SEM_USERDATA, 'userdata')]: new Error('EACCES: permission denied'),
         [path.join(REAL_ROOT, 'userdata')]: ['123456'],
       },
     });

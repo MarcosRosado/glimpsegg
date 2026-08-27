@@ -53,8 +53,22 @@ const ADVERSE_BYTES = fs.readFileSync(FIXTURE_PATH);
 const dotaClosed = async () => ({ running: false, method: 'ps' });
 const dotaOpen = async () => ({ running: true, method: 'ps' });
 
-// E-8 depende de permissao de diretorio, e o root ignora permissao de diretorio.
-const itUnlessRoot = typeof process.getuid === 'function' && process.getuid() === 0 ? it.skip : it;
+/**
+ * Dois testes dependem de permissao de filesystem: leitura de ARQUIVO (`NO_PERMISSION` no
+ * read) e escrita em DIRETORIO (E-8). Ha dois ambientes onde `chmod` nao produz o efeito
+ * que a asserção espera:
+ *
+ *   - root ignora permissao, de arquivo e de diretorio;
+ *   - no Windows o `fs.chmodSync` do Node so mexe no atributo read-only. Em arquivo isso
+ *     NAO impede leitura, e em diretorio nao impede criar arquivo dentro — medido no runner
+ *     do CI, onde os dois testes passavam a operacao e falhavam a asserção.
+ *
+ * Nos dois ambientes a operacao teria sucesso e o teste acusaria uma falha que nao existe.
+ * A garantia continua verificada em Linux e macOS, que é onde a asserção significa algo.
+ */
+const canTestPermissions =
+  process.platform !== 'win32' && !(typeof process.getuid === 'function' && process.getuid() === 0);
+const itUnlessRoot = canTestPermissions ? it : it.skip;
 
 let dir;
 let gridPath;
