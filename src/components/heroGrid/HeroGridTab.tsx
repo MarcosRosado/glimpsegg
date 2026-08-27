@@ -19,15 +19,14 @@ import { useLanguage } from '../../context/LanguageContext';
 import { HeroGridBlocker, UseHeroGridSyncResult } from '../../hooks/useHeroGridSync';
 import type { TranslationKey } from '../../i18n/translations';
 import type {
-  ConfigRef,
   HeroScore,
-  NoDataReason,
-  RankingCriterion,
   SyncOutcome,
   SyncPhase,
   SyncRecord,
 } from '../../types/heroGrid';
 import { handleHeroImageError } from '../../utils/imageFallback';
+import { CRITERION_LABEL, DAYS_SINCE_LABEL, metaSourceKey, NO_DATA_LABEL } from './labels';
+import { Chip, LayoutRef, Notice } from './primitives';
 import {
   describeDaysSince,
   formatRatioPercent,
@@ -72,6 +71,8 @@ export interface HeroGridTabProps {
    * as regras de hook nao permitem "chamar so se ninguem passou".
    */
   sync: UseHeroGridSyncResult;
+  /** Leva à tela de replica, que mostra o espelho gravado com os grupos nas posicoes do jogo. */
+  onOpenMirror?: () => void;
 }
 
 /* ------------------------------------------------------------------ *
@@ -81,18 +82,6 @@ export interface HeroGridTabProps {
  * proibe montar chave em runtime (`t(`prefixo${x}`)`) — o teste de chave orfa de
  * `i18n/translations.test.ts` só enxerga literais no codigo.
  * ------------------------------------------------------------------ */
-
-const CRITERION_LABEL: Record<RankingCriterion, TranslationKey> = {
-  COMBINED: 'heroGridCriterionCombined',
-  META_ONLY: 'heroGridCriterionMetaOnly',
-  PERSONAL_ONLY: 'heroGridCriterionPersonalOnly',
-};
-
-const NO_DATA_LABEL: Record<NoDataReason, TranslationKey> = {
-  NO_META: 'heroGridNoDataNoMeta',
-  NO_PERSONAL_IN_PERSONAL_ONLY: 'heroGridNoDataNoPersonal',
-  HERO_UNKNOWN: 'heroGridNoDataHeroUnknown',
-};
 
 const OUTCOME_LABEL: Record<SyncOutcome, TranslationKey> = {
   SUCCESS: 'heroGridOutcomeSuccess',
@@ -124,93 +113,6 @@ const BLOCKER_LABEL: Record<HeroGridBlocker, TranslationKey> = {
   SOURCE_MUTATED: 'heroGridBlockSourceMutated',
   ALL_SOURCES_DOWN: 'heroGridBlockAllSourcesDown',
   WRITE_FAILED: 'heroGridBlockWriteFailed',
-};
-
-/**
- * Nome da fonte de meta -> chave.
- *
- * Recebe `string` porque `HeroGridSyncReport.sourcesUsed`/`sourcesMissing` e
- * `SyncRecord.sourcesUsed` chegam como texto (o segundo vem de `localStorage`, onde o tipo
- * nao vale nada em runtime). Fonte desconhecida devolve `null` e o chamador exibe o valor
- * cru — que é o identificador da fonte, e portanto informacao honesta, nao invencao.
- */
-function metaSourceKey(value: string): TranslationKey | null {
-  if (value === 'OPENDOTA_BRACKET') return 'heroGridSourceOpenDota';
-  if (value === 'STRATZ_BRACKET') return 'heroGridSourceStratz';
-  return null;
-}
-
-/* ------------------------------------------------------------------ *
- * Pecas de UI
- * ------------------------------------------------------------------ */
-
-/** Aviso em bloco. `tone` só muda a cor — o texto é que carrega o peso. */
-const Notice: React.FC<{
-  tone: 'info' | 'warn' | 'danger';
-  icon: React.ReactNode;
-  title: string;
-  children?: React.ReactNode;
-}> = ({ tone, icon, title, children }) => {
-  const accent =
-    tone === 'danger'
-      ? 'border-rose-500/30 bg-rose-950/25'
-      : tone === 'warn'
-        ? 'border-amber-500/30 bg-amber-950/20'
-        : 'border-slate-700/70 bg-slate-900/50';
-  const titleColor =
-    tone === 'danger' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-300' : 'text-slate-200';
-
-  return (
-    <div className={`glass-card rounded-xl p-4 border ${accent} flex items-start gap-3`}>
-      <span className="mt-0.5 shrink-0">{icon}</span>
-      <div className="min-w-0">
-        <h4 className={`text-xs font-bold mb-1 ${titleColor}`}>{title}</h4>
-        {children && <div className="text-[11px] text-slate-400 leading-relaxed">{children}</div>}
-      </div>
-    </div>
-  );
-};
-
-/** Chip neutro de rotulo curto. */
-const Chip: React.FC<{ children: React.ReactNode; muted?: boolean; title?: string }> = ({
-  children,
-  muted,
-  title,
-}) => (
-  <span
-    title={title}
-    className={`inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-      muted
-        ? 'text-slate-400 border-slate-700 bg-slate-900/60'
-        : 'text-cyan-300/90 border-cyan-500/30 bg-cyan-950/40'
-    }`}
-  >
-    {children}
-  </span>
-);
-
-/** Rotulo de um layout: nome + POSICAO, porque a posicao é a identidade (N-1). */
-const LayoutRef: React.FC<{ label: string; configRef: ConfigRef | null; emptyLabel: string }> = ({
-  label,
-  configRef,
-  emptyLabel,
-}) => {
-  const { t } = useLanguage();
-  return (
-    <div className="flex items-center gap-2 min-w-0">
-      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0">
-        {label}
-      </span>
-      {configRef ? (
-        <>
-          <span className="text-xs font-bold text-slate-200 truncate">{configRef.name}</span>
-          <Chip muted>{t('heroGridLayoutPosition', { index: configRef.index })}</Chip>
-        </>
-      ) : (
-        <span className="text-xs text-slate-500 italic">{emptyLabel}</span>
-      )}
-    </div>
-  );
 };
 
 /**
@@ -398,7 +300,7 @@ const HistoryRow: React.FC<{ record: SyncRecord }> = ({ record }) => {
  * A aba
  * ------------------------------------------------------------------ */
 
-export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid }) => {
+export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid, onOpenMirror }) => {
   const { t, language } = useLanguage();
 
   /**
@@ -455,14 +357,8 @@ export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid }) => {
   const sourcesMissing = lastReport?.sourcesMissing ?? [];
   const sourcesUsed = lastReport?.sourcesUsed ?? [];
 
-  const daysText =
-    days.kind === 'NEVER'
-      ? t('heroGridNeverSynced')
-      : days.kind === 'TODAY'
-        ? t('heroGridDaysSinceToday')
-        : days.kind === 'ONE'
-          ? t('heroGridDaysSinceOne')
-          : t('heroGridDaysSinceMany', { n: days.days });
+  // `{n}` só é consumido por `MANY`; as outras chaves ignoram o parametro.
+  const daysText = t(DAYS_SINCE_LABEL[days.kind], { n: days.days });
 
   const translateSources = (list: string[]) =>
     list
@@ -492,6 +388,17 @@ export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid }) => {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {onOpenMirror && (
+              <button
+                type="button"
+                onClick={onOpenMirror}
+                className="px-3.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs font-bold transition flex items-center gap-1.5"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                {t('heroGridMirrorOpenFromProfile')}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {

@@ -102,6 +102,62 @@ export interface MirrorResult {
   structureChanged: boolean;
 }
 
+/**
+ * Um grupo do espelho, como a REPLICA precisa ver.
+ *
+ * Existe porque `MirrorGroupReport` sozinho conta quantos herois foram ordenados, mas nao diz
+ * QUAIS nem em que ordem, e nao diz ONDE o grupo fica. A geometria vem junto porque a tela de
+ * replica posiciona os grupos como o Dota posiciona — sem ela a replica seria uma lista de
+ * caixas em fluxo, que nao é o layout do jogador.
+ */
+export interface HeroGridGroupView {
+  /** I-4a: a identidade é a POSICAO. Dois grupos podem ter o mesmo nome. */
+  categoryIndex: number;
+  categoryName: string;
+  /** `hero_ids` na ORDEM do espelho — é o que o jogador vai ver no jogo. */
+  heroIds: number[];
+  ordered: number;
+  withoutData: number;
+  /** I-6: geometria copiada da origem, sem tocar. A replica posiciona por ela. */
+  xPosition: number;
+  yPosition: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * O espelho que ESTA no arquivo do jogador, datado — a fonte da tela de replica.
+ *
+ * Por que persistir: `scores` e `groups` do hook sao estado React e somem ao fechar o app.
+ * Sem snapshot a tela de replica nasceria vazia a cada abertura, mesmo com o espelho gravado
+ * no disco, e o jogador teria de sincronizar so para ver o que ja tem.
+ *
+ * A invariante que o torna honesto: ele so é gravado quando os BYTES chegaram ao disco
+ * (`written === true`). Sincronizacao recusada — Dota aberto, adiada — nao o sobrescreve, entao
+ * a tela nunca mostra "o que teria sido gravado" como se fosse o layout do jogador. É a mesma
+ * disciplina de `BenchmarkSource`: o numero vem com procedencia e com data.
+ *
+ * `scores` é o `HeroScore[]` inteiro, e nao um formato reduzido, para `isScoreDisplayable`,
+ * `isPersonalApplied` e as linhas de ranking continuarem valendo sem traducao no meio do
+ * caminho. O tamanho é limitado pelo catalogo de herois (uma entrada por heroi da origem), nao
+ * cresce com o tempo — diferente de `SyncState.history`, que por isso tem corte em 20.
+ */
+export interface MirrorSnapshot {
+  /** Epoch ms da sincronizacao que produziu ESTE espelho. É a data que a tela exibe. */
+  at: number;
+  /** Sempre `true` no que é persistido; o campo existe para o consumidor nao ter de supor. */
+  written: boolean;
+  criterion: RankingCriterion;
+  /** I-13: `false` => a tela diz "media geral", NUNCA "no seu ranque". */
+  bracketIsPlayerSpecific: boolean;
+  sourcesUsed: MetaSource[];
+  sourcesMissing: MetaSource[];
+  source: ConfigRef;
+  mirror: ConfigRef;
+  groups: HeroGridGroupView[];
+  scores: HeroScore[];
+}
+
 /* ------------------------------------------------------------------ *
  * 4. Winrate com procedencia
  * ------------------------------------------------------------------ */

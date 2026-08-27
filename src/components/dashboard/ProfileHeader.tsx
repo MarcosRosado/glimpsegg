@@ -1,21 +1,53 @@
 import React from 'react';
-import { Trophy, Flame, Target, Award, ExternalLink, Sparkles } from 'lucide-react';
+import { Trophy, Flame, Target, Award, ExternalLink, LayoutGrid, Sparkles } from 'lucide-react';
 import { PlayerProfileSummary } from '../../types/dota';
 import { getRankTierInfo } from '../../constants/ranks';
 import { formatPercent } from '../../utils/dotaFormatters';
 import { handleAvatarError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 import { computeRecentFormStats } from '../../utils/recentFormStats';
+import { describeDaysSince } from '../../utils/heroGrid/tabFormat';
+import { DAYS_SINCE_LABEL } from '../heroGrid/labels';
 
 interface ProfileHeaderProps {
   profile: PlayerProfileSummary;
+  /**
+   * T036: o acesso à replica existe SÓ com a feature ativa — mesmo molde do toggle da
+   * `Navbar`. Desligada, a feature nao lê nem escreve nada, entao um botao para uma tela
+   * que so pode estar vazia seria ruido.
+   */
+  heroGridEnabled?: boolean;
+  /** Epoch ms da ultima gravacao do espelho, para o `title` do botao. */
+  lastMirrorSyncAt?: number | null;
+  onOpenHeroGridMirror?: () => void;
 }
 
-export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
-  const { t } = useLanguage();
+export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
+  profile,
+  heroGridEnabled = false,
+  lastMirrorSyncAt = null,
+  onOpenHeroGridMirror,
+}) => {
+  const { t, language } = useLanguage();
   const rankInfo = getRankTierInfo(profile.seasonRank, profile.leaderboardRank);
   // Mesmos agregados da stat rail e do card de Forma Recente.
   const form = computeRecentFormStats(profile.recentMatches);
+
+  /**
+   * "Ha quantos dias" no proprio botao, e nao so no `title`.
+   *
+   * FR-024a manda tornar visivel que o espelho envelheceu — com o app fechado nao ha
+   * sincronizacao. Deixar isso so no tooltip esconderia justamente o caso que o requisito
+   * existe para mostrar. `describeDaysSince` recebe FRACAO de dia, entao o epoch vira
+   * diferenca aqui.
+   */
+  const mirrorDays = lastMirrorSyncAt
+    ? describeDaysSince((Date.now() - lastMirrorSyncAt) / 86_400_000)
+    : describeDaysSince(null);
+  // `NEVER` é tratado antes da tabela: aqui o rotulo simplesmente NAO aparece, porque o
+  // botao ja diz "nunca gravado" no `title` e um chip a mais seria ruido no card.
+  const mirrorAge =
+    mirrorDays.kind === 'NEVER' ? null : t(DAYS_SINCE_LABEL[mirrorDays.kind], { n: mirrorDays.days });
 
   return (
     <div className="glass-card rounded-2xl p-6 relative overflow-hidden border border-slate-800 shadow-xl bg-gradient-to-r from-[#101726] via-[#121c2e] to-[#151c2a]">
@@ -83,6 +115,31 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
               <div className="text-xs font-mono font-medium text-slate-300 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
                 Est. <span className="text-amber-400 font-bold">{rankInfo.approxMmr.toLocaleString()}</span> MMR
               </div>
+
+              {/* Entrada para a replica do layout espelho. O `title` traz a data da ultima
+                  gravacao para o jogador saber, antes de clicar, se ha algo recente lá. */}
+              {heroGridEnabled && onOpenHeroGridMirror && (
+                <button
+                  type="button"
+                  onClick={onOpenHeroGridMirror}
+                  title={
+                    lastMirrorSyncAt
+                      ? t('heroGridMirrorLastSync', {
+                          date: new Date(lastMirrorSyncAt).toLocaleString(language),
+                        })
+                      : t('heroGridMirrorNeverWritten')
+                  }
+                  className="flex items-center gap-2 px-3 py-1 rounded-lg border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white text-xs font-bold transition shadow-sm"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  <span>{t('heroGridMirrorOpenFromProfile')}</span>
+                  {mirrorAge && (
+                    <span className="text-[10px] font-mono font-normal text-cyan-400/70">
+                      {mirrorAge}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

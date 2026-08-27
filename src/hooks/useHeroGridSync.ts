@@ -4,8 +4,10 @@ import {
   GridBackupEntry,
   HeroGridErrorCode,
   HeroGridFile,
+  HeroGridGroupView,
   HeroGridPreferences,
   HeroScore,
+  MirrorSnapshot,
   SyncFreshness,
   MetaSource,
   SyncOutcome,
@@ -14,12 +16,14 @@ import {
 } from '../types/heroGrid';
 import {
   loadHeroGridPreferences,
+  loadMirrorSnapshot,
   loadSyncState,
   saveHeroGridPreferences,
+  saveMirrorSnapshot,
   saveSyncState,
 } from '../utils/heroGrid/preferences';
 import { buildMirror, removeMirror } from '../utils/heroGrid/mirrorBuilder';
-import { MirrorGroupReport } from '../types/heroGrid';
+import { buildGroupViews } from '../utils/heroGrid/mirrorLayout';
 import { rankHeroes } from '../utils/heroGrid/ranking';
 import {
   openDotaSourceInput,
@@ -78,21 +82,10 @@ export type HeroGridBlocker =
   | 'WRITE_FAILED';
 
 /**
- * Um grupo do espelho, como a aba precisa ver.
- *
- * Existe porque `perGroup` sozinho conta quantos herois foram ordenados, mas nao diz QUAIS
- * nem em que ordem — e T035 pede o ranking POR GRUPO. Sem isto a aba so conseguia mostrar
- * uma lista unica, perdendo justamente a estrutura que o espelho reproduz.
+ * O tipo mora em `types/heroGrid.ts` desde que a tela de replica passou a precisar dele
+ * junto da geometria; reexportado aqui para os imports antigos continuarem valendo.
  */
-export interface HeroGridGroupView {
-  /** I-4a: a identidade é a posicao. Dois grupos podem ter o mesmo nome. */
-  categoryIndex: number;
-  categoryName: string;
-  /** `hero_ids` na ORDEM do espelho — é o que o jogador vai ver no jogo. */
-  heroIds: number[];
-  ordered: number;
-  withoutData: number;
-}
+export type { HeroGridGroupView };
 
 export interface HeroGridSyncReport {
   outcome: SyncOutcome;
@@ -131,6 +124,17 @@ export interface UseHeroGridSyncResult {
    * jogador mais precisa ver o que teria sido gravado.
    */
   groups: HeroGridGroupView[];
+  /**
+   * O espelho que ESTA no arquivo do jogador, datado, lido da config na montagem.
+   *
+   * Diferente de `groups`/`scores`, sobrevive a fechar o app — é o que permite a tela de
+   * replica nascer preenchida sem sincronizar. E diferente deles tambem no que representa:
+   * `groups` é o que foi CONSTRUIDO nesta sessao (mesmo que a escrita tenha sido recusada),
+   * o snapshot é o que foi GRAVADO. Quando os dois divergem, a tela mostra o snapshot e
+   * avisa — mostrar o construido seria apresentar como layout do jogador algo que o Dota
+   * nao vai exibir.
+   */
+  mirrorSnapshot: MirrorSnapshot | null;
   bracketIsPlayerSpecific: boolean;
   backups: GridBackupEntry[];
   fileAccessAvailable: boolean;
@@ -163,31 +167,6 @@ function heroIdsOf(file: HeroGridFile, sourceIndex: number): number[] {
     }
   }
   return [...seen];
-}
-
-/**
- * Monta a visao por grupo a partir do espelho construido.
- *
- * Le as categorias do ESPELHO (nao da origem) porque é lá que os `hero_ids` ja estao na
- * ordem final — é literalmente o que o jogador vera no jogo.
- */
-function groupViewsOf(
-  mirrorFile: HeroGridFile,
-  mirrorIndex: number,
-  perGroup: MirrorGroupReport[],
-): HeroGridGroupView[] {
-  const config = mirrorFile.configs[mirrorIndex];
-  if (!config) return [];
-  return (config.categories || []).map((category, i) => {
-    const report = perGroup[i];
-    return {
-      categoryIndex: i,
-      categoryName: category.category_name,
-      heroIds: [...(category.hero_ids || [])],
-      ordered: report ? report.ordered : 0,
-      withoutData: report ? report.withoutData : 0,
-    };
-  });
 }
 
 /** Mapeia o codigo da ponte/main no motivo que a UI sabe explicar. */
@@ -227,6 +206,7 @@ export function useHeroGridSync(
   const [lastReport, setLastReport] = useState<HeroGridSyncReport | null>(null);
   const [scores, setScores] = useState<HeroScore[]>([]);
   const [groups, setGroups] = useState<HeroGridGroupView[]>([]);
+  const [mirrorSnapshot, setMirrorSnapshot] = useState<MirrorSnapshot | null>(null);
   const [bracketIsPlayerSpecific, setBracketIsPlayerSpecific] = useState(false);
   const [backups, setBackups] = useState<GridBackupEntry[]>([]);
 
@@ -247,9 +227,17 @@ export function useHeroGridSync(
   }, []);
 
   const reloadPreferences = useCallback(async () => {
-    const [prefs, state] = await Promise.all([loadHeroGridPreferences(), loadSyncState()]);
+    // O snapshot entra na MESMA leitura: os tres saem de um `getAll()` só no Electron, e
+    // carrega-lo num efeito separado faria a tela de replica piscar o estado vazio antes de
+    // preencher — vazio ali significa "nao ha espelho", que é outra coisa.
+    const [prefs, state, snapshot] = await Promise.all([
+      loadHeroGridPreferences(),
+      loadSyncState(),
+      loadMirrorSnapshot(),
+    ]);
     setPreferences(prefs);
     setSyncState(state);
+    setMirrorSnapshot(snapshot);
   }, []);
 
   useEffect(() => {
@@ -452,7 +440,12 @@ export function useHeroGridSync(
         // ANTES da escrita, de proposito: se a gravacao for recusada (Dota aberto, permissao,
         // guarda de imutabilidade), o jogador continua vendo exatamente o que teria sido
         // gravado. Esconder o resultado justamente no caminho recusado seria o pior momento.
-        setGroups(groupViewsOf(built.data.file, built.data.mirror.index, built.data.perGroup));
+        const builtGroups = buildGroupViews(
+          built.data.file,
+          built.data.mirror.index,
+          built.data.perGroup,
+        );
+        setGroups(builtGroups);
 
         const heroesOrdered = built.data.perGroup.reduce((sum, g) => sum + g.ordered, 0);
         /**
@@ -494,6 +487,29 @@ export function useHeroGridSync(
         });
 
         setLastReport({ ...report, written: true, backupPath: write.data.backupPath });
+
+        /**
+         * A foto do espelho, gravada SÓ aqui — depois de os bytes chegarem ao disco.
+         *
+         * O ramo de recusa acima retorna antes, de proposito: sobrescrever a foto com o que
+         * "teria sido gravado" faria a tela de replica mostrar uma ordem que o Dota nao vai
+         * exibir, e apresentar isso como o layout do jogador é a forma mais convincente de
+         * inventar dado que esta feature tem ao alcance. Recusada, a foto anterior continua
+         * valendo, e ela continua verdadeira.
+         */
+        const snapshot: MirrorSnapshot = {
+          at: now,
+          written: true,
+          criterion: prefs.criterion,
+          bracketIsPlayerSpecific: resolution.bracket.isPlayerSpecific,
+          sourcesUsed: resolution.sourcesUsed,
+          sourcesMissing: resolution.sourcesMissing,
+          source: built.data.source,
+          mirror: built.data.mirror,
+          groups: builtGroups,
+          scores: ranked,
+        };
+        await saveMirrorSnapshot(snapshot);
 
         await persistOutcome(resolution.outcome, now, {
           sourcesUsed: resolution.sourcesUsed,
@@ -596,6 +612,14 @@ export function useHeroGridSync(
           mirror: null,
           source: removal.data.source || prefs.source,
         });
+        // O espelho saiu da colecao: manter a foto faria a tela de replica continuar
+        // desenhando um layout que o jogador nao tem mais no jogo.
+        await saveMirrorSnapshot(null);
+        // O ranking e o relatorio descreviam o espelho que acabou de sair da colecao;
+        // deixa-los na tela mostraria a ordem de um layout que nao existe mais.
+        setGroups([]);
+        setScores([]);
+        setLastReport(null);
         await persistOutcome('SUCCESS', now, { heroesOrdered: 0, structureChanged: true });
         await reloadPreferences();
         await refreshBackups();
@@ -625,9 +649,24 @@ export function useHeroGridSync(
         setBlockerDetail(res.error);
         return;
       }
+
+      /**
+       * O disco voltou a um estado ANTERIOR — outra ordem de herois, outro espelho, ou
+       * espelho nenhum — e o app nao sabe qual. Manter a foto faria a tela de replica
+       * desenhar o espelho de antes da restauracao sob a moldura "este é o seu layout",
+       * que é precisamente a falha que o snapshot existe para impedir.
+       *
+       * "Nao sei" é a resposta correta aqui: a foto sai, a tela cai no estado vazio, e a
+       * proxima sincronizacao a reconstroi a partir do que estiver no arquivo.
+       */
+      await saveMirrorSnapshot(null);
+      setGroups([]);
+      setScores([]);
+      setLastReport(null);
+      await reloadPreferences();
       await refreshBackups();
     },
-    [fileAccessAvailable, resolveGridPath, refreshBackups],
+    [fileAccessAvailable, resolveGridPath, reloadPreferences, refreshBackups],
   );
 
   /**
@@ -675,6 +714,7 @@ export function useHeroGridSync(
     lastReport,
     scores,
     groups,
+    mirrorSnapshot,
     bracketIsPlayerSpecific,
     backups,
     fileAccessAvailable,

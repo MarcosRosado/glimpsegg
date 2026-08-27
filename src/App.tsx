@@ -18,6 +18,7 @@ import { PlayerPerformanceTab } from './components/performance/PlayerPerformance
 import { WardMinimapTab } from './components/vision/WardMinimapTab';
 import { CoachingInsightsTab } from './components/coaching/CoachingInsightsTab';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { HeroGridMirrorScreen } from './components/heroGrid/HeroGridMirrorScreen';
 import { HeroGridTab } from './components/heroGrid/HeroGridTab';
 import { SearchPlayerModal } from './components/search/SearchPlayerModal';
 import { OnboardingModal } from './components/auth/OnboardingModal';
@@ -39,6 +40,16 @@ import { useHeroGridSync } from './hooks/useHeroGridSync';
 
 type MatchTab = 'OVERVIEW' | 'PERFORMANCE' | 'VISION' | 'COACHING';
 
+/**
+ * As views de nivel de painel, mutuamente exclusivas.
+ *
+ * Uniao fechada e nao um booleano por tela: com dois booleanos existiria o estado "painel e
+ * replica abertos ao mesmo tempo", que o ternario resolveria por ordem de escrita em vez de
+ * por intencao — e a terceira tela reintroduziria o mesmo problema. Com `strict: false`, um
+ * `Record`/uniao literal é praticamente a unica rede de tipos disponivel aqui.
+ */
+type PanelView = 'DASHBOARD' | 'HERO_GRID_PANEL' | 'HERO_GRID_MIRROR';
+
 function MainAppContent() {
   const { t } = useLanguage();
   const [isAppInitializing, setIsAppInitializing] = useState<boolean>(true);
@@ -51,10 +62,10 @@ function MainAppContent() {
   const [selectedPlayerSlot, setSelectedPlayerSlot] = useState<number>(0);
   const [activeMatchTab, setActiveMatchTab] = useState<MatchTab>('OVERVIEW');
   /**
-   * A aba do layout espelho é uma view de nivel de painel, nao uma aba de partida: ela nao
-   * depende de partida selecionada nenhuma. Fica visivel so com a feature ativa (T036).
+   * As telas do layout espelho sao views de nivel de painel, nao abas de partida: nao
+   * dependem de partida selecionada nenhuma. Visiveis so com a feature ativa (T036).
    */
-  const [isHeroGridOpen, setIsHeroGridOpen] = useState<boolean>(false);
+  const [panelView, setPanelView] = useState<PanelView>('DASHBOARD');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
@@ -81,6 +92,19 @@ function MainAppContent() {
     profile?.seasonRank ? Math.floor(profile.seasonRank / 10) : null,
   );
   const heroGridEnabled = !!heroGridSync.preferences?.enabled;
+
+  /**
+   * Feature desligada fecha as telas dela, venha o desligamento de onde vier.
+   *
+   * O handler das configuracoes ja faz `setPanelView('DASHBOARD')`, mas ele cobre so aquele
+   * caminho: `preferences` tambem é relida do config, e um `enabled` que vire `false` por
+   * fora deixaria `panelView` preso numa tela que o render nao mostra mais — e reativar a
+   * feature devolveria o jogador à replica sem ele ter pedido. Aqui a categoria inteira
+   * fecha, em vez de o buraco conhecido ser tapado.
+   */
+  useEffect(() => {
+    if (!heroGridEnabled) setPanelView('DASHBOARD');
+  }, [heroGridEnabled]);
 
   // Helper to persist profile history in store or localStorage
   const saveProfileHistory = useCallback(async (newHistory: ProfileHistoryItem[]) => {
@@ -420,13 +444,15 @@ function MainAppContent() {
         configuredProfileName={currentSteamId === configuredSteamId ? profile?.name : undefined}
         onGoHome={() => {
           setSelectedMatch(null);
-          setIsHeroGridOpen(false);
+          setPanelView('DASHBOARD');
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenSearch={() => setIsSearchOpen(true)}
         heroGridEnabled={heroGridEnabled}
-        isHeroGridOpen={isHeroGridOpen}
-        onToggleHeroGrid={() => setIsHeroGridOpen((open) => !open)}
+        isHeroGridOpen={panelView === 'HERO_GRID_PANEL'}
+        onToggleHeroGrid={() =>
+          setPanelView((view) => (view === 'HERO_GRID_PANEL' ? 'DASHBOARD' : 'HERO_GRID_PANEL'))
+        }
         onReturnToConfiguredAccount={handleReturnToConfigured}
         onRefresh={() => {
           if (selectedMatch) handleSelectMatch(selectedMatch.id);
@@ -444,12 +470,26 @@ function MainAppContent() {
           </div>
         )}
 
-        {isHeroGridOpen && heroGridEnabled ? (
+        {panelView === 'HERO_GRID_PANEL' && heroGridEnabled ? (
           /* =========================================================================
-             HERO GRID VIEW — layout espelho ordenado por winrate do meta
+             HERO GRID PANEL — sincronizacao, diagnostico e ranking em lista
              ========================================================================= */
           <div className="animate-in fade-in duration-200">
-            <HeroGridTab sync={heroGridSync} />
+            <HeroGridTab
+              sync={heroGridSync}
+              onOpenMirror={() => setPanelView('HERO_GRID_MIRROR')}
+            />
+          </div>
+        ) : panelView === 'HERO_GRID_MIRROR' && heroGridEnabled ? (
+          /* =========================================================================
+             HERO GRID MIRROR — a replica do que esta gravado na colecao do jogador
+             ========================================================================= */
+          <div className="animate-in fade-in duration-200">
+            <HeroGridMirrorScreen
+              sync={heroGridSync}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenPanel={() => setPanelView('HERO_GRID_PANEL')}
+            />
           </div>
         ) : !selectedMatch ? (
           !profile ? (
@@ -478,7 +518,12 @@ function MainAppContent() {
                ========================================================================= */
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* Identidade, rank e KPIs de carreira */}
-              <ProfileHeader profile={profile} />
+              <ProfileHeader
+                profile={profile}
+                heroGridEnabled={heroGridEnabled}
+                lastMirrorSyncAt={heroGridSync.mirrorSnapshot?.at ?? null}
+                onOpenHeroGridMirror={() => setPanelView('HERO_GRID_MIRROR')}
+              />
 
               {/* Top Grid: Main Stage (Match History) + Right Sidebar (Tendências & Heróis) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -733,7 +778,7 @@ function MainAppContent() {
           void heroGridSync.reloadPreferences();
           // Desmarcar fecha a aba: deixa-la aberta mostraria o estado DISABLED sem que o
           // jogador tenha pedido para ver isso.
-          if (!enabled) setIsHeroGridOpen(false);
+          if (!enabled) setPanelView('DASHBOARD');
         }}
         onHeroGridSyncRequest={(request) => heroGridSync.syncNow({ mirrorName: request.mirrorName })}
         onHeroGridRemoveMirror={() => heroGridSync.removeMirrorNow()}

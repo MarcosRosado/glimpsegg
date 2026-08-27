@@ -5,6 +5,7 @@ import {
   GridReadPayload,
   GridWriteRequest,
   HeroGridResult,
+  MirrorSnapshot,
   RankingCriterion,
   SteamAccountCandidate,
   SyncRecord,
@@ -48,6 +49,14 @@ export interface AppConfig {
   heroGridConsecutiveFailures?: number;
   /** C-5: no maximo 20 registros. */
   heroGridSyncHistory?: SyncRecord[];
+  /**
+   * O espelho gravado no disco, datado — o que a tela de replica exibe sem sincronizar.
+   *
+   * Uma entrada por heroi da origem, entao o tamanho é limitado pelo catalogo e nao cresce
+   * com o tempo (ao contrario de `heroGridSyncHistory`, que por isso tem corte em 20). Só
+   * escrito quando os bytes chegaram ao disco: sincronizacao recusada nao o sobrescreve.
+   */
+  heroGridMirrorSnapshot?: MirrorSnapshot | null;
 }
 
 /**
