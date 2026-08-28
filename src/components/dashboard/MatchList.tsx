@@ -412,7 +412,22 @@ export const MatchList: React.FC<MatchListProps> = ({
               <div
                 key={match.matchId}
                 onClick={() => onSelectMatch(match.matchId)}
-                className={`grid grid-cols-1 xl:grid-cols-[minmax(260px,1fr)_100px_100px_86px_108px_210px_24px] items-center gap-3.5 p-3.5 rounded-xl border transition-all cursor-pointer group ${
+                /* Layout em DUAS formas, sem largura fixa que possa estourar.
+                 *
+                 * Ate `2xl` a linha é uma coluna: o bloco do heroi em cima e, embaixo, uma
+                 * faixa que QUEBRA (`flex-wrap`) com numeros, contexto e itens. A partir de
+                 * `2xl` o wrapper vira `display: contents` e os mesmos filhos passam a ser
+                 * celulas da tabela de 7 colunas — mesmo DOM, duas apresentacoes.
+                 *
+                 * A primeira trilha é `minmax(0,1fr)`, e nao `minmax(260px,1fr)`: com um
+                 * minimo em px o grid nao consegue encolher abaixo da soma das trilhas e
+                 * transborda o card, que é como os itens iam parar por baixo da coluna da
+                 * direita. Com `0` o nome do heroi trunca e nada vaza.
+                 *
+                 * `2xl` e nao `xl`: nesta pagina a lista ocupa 8 de 12 colunas, entao em
+                 * 1280px de viewport ela tem ~800px uteis — a tabela so respira a partir de
+                 * ~1536px. O breakpoint anterior ligava a tabela 300px cedo demais. */
+                className={`flex flex-col gap-3 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_92px_96px_84px_108px_auto_20px] 2xl:items-center 2xl:gap-3 p-3.5 rounded-xl border transition-all cursor-pointer group ${
                   isSelected
                     ? 'border-cyan-500/80 bg-cyan-500/10 shadow-lg shadow-cyan-950/30'
                     : 'border-slate-800/80 bg-slate-900/40 hover:bg-slate-800/60 hover:border-slate-700'
@@ -470,8 +485,13 @@ export const MatchList: React.FC<MatchListProps> = ({
                   </div>
                 </div>
 
+                {/* Faixa que quebra ate `2xl`; `contents` a dissolve na tabela depois.
+                    A borda de cima separa os numeros do bloco do heroi no modo cartao e
+                    desaparece sozinha em `2xl` — caixa com `display: contents` nao pinta
+                    borda nem padding. */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 border-t border-slate-800/60 pt-2.5 2xl:contents">
                 {/* 2. KDA */}
-                <div className="text-left xl:text-center font-mono">
+                <div className="text-left 2xl:text-center font-mono">
                   <div className="font-bold text-slate-200 text-xs">
                     <span className="text-emerald-400">{match.kills}</span> /{' '}
                     <span className="text-rose-400">{match.deaths}</span> /{' '}
@@ -481,7 +501,7 @@ export const MatchList: React.FC<MatchListProps> = ({
                 </div>
 
                 {/* 3. CS & GPM */}
-                <div className="text-left xl:text-center font-mono">
+                <div className="text-left 2xl:text-center font-mono">
                   <div className="font-bold text-slate-300 text-xs">
                     {match.goldPerMinute} <span className="text-[10px] text-slate-500">{t('gpmShort')}</span>
                   </div>
@@ -491,7 +511,7 @@ export const MatchList: React.FC<MatchListProps> = ({
                 </div>
 
                 {/* 4. Prominent IMP Rating */}
-                <div className="text-left xl:text-center font-mono">
+                <div className="text-left 2xl:text-center font-mono">
                   <div
                     className={`inline-flex items-center gap-1 px-3 py-1 rounded-xl border text-xs font-black shadow-md ${impStyle.bg} ${impStyle.text} ${impStyle.border}`}
                   >
@@ -510,8 +530,11 @@ export const MatchList: React.FC<MatchListProps> = ({
                 />
 
                 {/* 6. Item Inventory */}
-                <div className="flex items-center xl:justify-center">
-                  <div className="flex items-center gap-1 bg-slate-950/70 p-1 rounded-lg border border-slate-800">
+                <div className="flex items-center 2xl:justify-center min-w-0">
+                  {/* `flex-wrap` porque sao sempre 6 itens + neutro (~226px): numa trilha
+                      fixa de 210px isso transbordava em QUALQUER largura, e era esse
+                      excedente que aparecia por baixo do card ao lado. */}
+                  <div className="flex flex-wrap items-center gap-1 bg-slate-950/70 p-1 rounded-lg border border-slate-800">
                     {match.items.map((itemId, idx) => {
                       const item = getItem(itemId);
                       return (
@@ -548,8 +571,10 @@ export const MatchList: React.FC<MatchListProps> = ({
                   </div>
                 </div>
 
+                </div>
+
                 {/* 7. Open Arrow */}
-                <div className="hidden xl:flex items-center justify-center text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all">
+                <div className="hidden 2xl:flex items-center justify-center text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all">
                   <ChevronRight className="w-5 h-5" />
                 </div>
               </div>

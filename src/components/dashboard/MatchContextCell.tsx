@@ -67,14 +67,14 @@ export const MatchContextCell: React.FC<MatchContextCellProps> = ({
 
   if (!badge && !matchType && !hasParty) {
     return (
-      <div className="text-left xl:text-center text-slate-600 font-mono text-xs" title={t('noData')}>
+      <div className="text-left 2xl:text-center text-slate-600 font-mono text-xs" title={t('noData')}>
         —
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-start xl:items-center gap-1">
+    <div className="flex flex-col items-start 2xl:items-center gap-1">
       <div className="flex items-center gap-1.5">
         {badge && (
           <img

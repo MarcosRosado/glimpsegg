@@ -189,6 +189,49 @@ export function resolveMetaBracket(input: BracketResolutionInput = {}): Resolved
   return { bracket: 'ALL', isPlayerSpecific: false };
 }
 
+/**
+ * Tier da conta CONFIGURADA — o unico que pode derivar bracket.
+ *
+ * O `App` guarda DOIS steam ids: o configurado (a conta do dono) e o atualmente
+ * visualizado, que a busca de jogadores pode apontar para qualquer um. O perfil carregado
+ * segue o segundo. Passar o `seasonRank` dele para `resolveMetaBracket` fazia o espelho da
+ * SUA conta ser ordenado pelo ranque de referencia de OUTRA pessoa, e gravado assim em
+ * silencio: o winrate pessoal continuava certo (vem de `prefs.steamId3`), so o recorte de
+ * meta trocava de dono.
+ *
+ * Devolver `null` quando o perfil nao é o da conta configurada é a degradacao honesta —
+ * `resolveMetaBracket` cai em `{ bracket: 'ALL', isPlayerSpecific: false }` e a UI diz
+ * "media geral", nunca "no seu ranque". A alternativa seria adivinhar a medalha do dono a
+ * partir de quem esta na tela, que é exatamente o tipo de preenchimento que a doutrina
+ * proibe.
+ *
+ * Fica aqui, e nao no `App.tsx`, porque `.tsx` nao tem teste neste projeto (vitest em
+ * `environment: 'node'`) — e este é o calculo que ja errou uma vez.
+ */
+export interface ConfiguredTierInput {
+  /** Steam id do perfil que esta carregado na tela. */
+  profileSteamId?: string | null;
+  /** Steam id da conta configurada, dona do layout espelho. */
+  configuredSteamId?: string | null;
+  /** `seasonRank` do perfil carregado: medalha*10 + estrelas. */
+  seasonRank?: number | null;
+}
+
+export function configuredProfileTier(input: ConfiguredTierInput): number | null {
+  const profileId = (input.profileSteamId ?? '').trim();
+  const configuredId = (input.configuredSteamId ?? '').trim();
+
+  // Id ausente dos dois lados nao é "iguais": sem conta configurada nao ha dono de espelho,
+  // e comparar '' com '' daria o tier de qualquer perfil que estivesse aberto.
+  if (!profileId || !configuredId || profileId !== configuredId) return null;
+
+  const rank = input.seasonRank;
+  if (typeof rank !== 'number' || !Number.isFinite(rank) || rank <= 0) return null;
+
+  // `seasonRank` é medalha*10 + estrelas; o bracket vem de floor(rank/10).
+  return Math.floor(rank / 10);
+}
+
 /* ------------------------------------------------------------------ *
  * 4. Degradacao (contrato § 5, I-21, I-24)
  * ------------------------------------------------------------------ */

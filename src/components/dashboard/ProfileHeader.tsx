@@ -19,6 +19,11 @@ interface ProfileHeaderProps {
   heroGridEnabled?: boolean;
   /** Epoch ms da ultima gravacao do espelho, para o `title` do botao. */
   lastMirrorSyncAt?: number | null;
+  /**
+   * Perfil de OUTRA conta na tela. O espelho é da conta configurada, entao o botao fica
+   * desativado com a explicacao no `title` — desativar, e nao esconder.
+   */
+  isViewingDifferentAccount?: boolean;
   onOpenHeroGridMirror?: () => void;
 }
 
@@ -26,6 +31,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   profile,
   heroGridEnabled = false,
   lastMirrorSyncAt = null,
+  isViewingDifferentAccount = false,
   onOpenHeroGridMirror,
 }) => {
   const { t, language } = useLanguage();
@@ -122,14 +128,17 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenHeroGridMirror}
+                  disabled={isViewingDifferentAccount}
                   title={
-                    lastMirrorSyncAt
-                      ? t('heroGridMirrorLastSync', {
-                          date: new Date(lastMirrorSyncAt).toLocaleString(language),
-                        })
-                      : t('heroGridMirrorNeverWritten')
+                    isViewingDifferentAccount
+                      ? t('heroGridOtherAccountBody')
+                      : lastMirrorSyncAt
+                        ? t('heroGridMirrorLastSync', {
+                            date: new Date(lastMirrorSyncAt).toLocaleString(language),
+                          })
+                        : t('heroGridMirrorNeverWritten')
                   }
-                  className="flex items-center gap-2 px-3 py-1 rounded-lg border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white text-xs font-bold transition shadow-sm"
+                  className="flex items-center gap-2 px-3 py-1 rounded-lg border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white text-xs font-bold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-cyan-500/10 disabled:hover:text-cyan-300"
                 >
                   <LayoutGrid className="w-4 h-4" />
                   <span>{t('heroGridMirrorOpenFromProfile')}</span>

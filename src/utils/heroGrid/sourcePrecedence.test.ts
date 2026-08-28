@@ -6,6 +6,7 @@ import {
   SEGMENTED_BRACKETS,
   classifyOutcome,
   openDotaSourceInput,
+  configuredProfileTier,
   resolveMetaBracket,
   resolveMetaWinrates,
   sourceAvailable,
@@ -522,6 +523,85 @@ describe('ranque de referencia e honestidade do rotulo (T061 — FR-020, I-13)',
     // Guarda contra um modulo que devolvesse 'ALL' sempre e passasse a asercao acima de graca.
     expect(viuAll).toBe(true);
     expect(viuEspecifico).toBe(true);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Tier da conta configurada (o bug do perfil visualizado)
+ * ------------------------------------------------------------------ */
+
+describe('tier da conta configurada', () => {
+  const MEU = '76561198000000001';
+  const OUTRO = '76561198000000002';
+
+  it('devolve o tier quando o perfil carregado É a conta configurada', () => {
+    // 54 = Ancestral 4 -> tier 5.
+    expect(
+      configuredProfileTier({ profileSteamId: MEU, configuredSteamId: MEU, seasonRank: 54 }),
+    ).toBe(5);
+  });
+
+  it('devolve null quando o perfil carregado é de OUTRA conta', () => {
+    // O bug: o espelho da conta configurada era ordenado pela medalha do jogador visitado.
+    expect(
+      configuredProfileTier({ profileSteamId: OUTRO, configuredSteamId: MEU, seasonRank: 80 }),
+    ).toBeNull();
+  });
+
+  it('nao trata dois ids ausentes como iguais', () => {
+    for (const par of [
+      { profileSteamId: '', configuredSteamId: '' },
+      { profileSteamId: null, configuredSteamId: null },
+      { profileSteamId: MEU, configuredSteamId: '' },
+      { profileSteamId: '', configuredSteamId: MEU },
+      { profileSteamId: undefined, configuredSteamId: undefined },
+    ]) {
+      expect(configuredProfileTier({ ...par, seasonRank: 54 })).toBeNull();
+    }
+  });
+
+  it('ignora espaco em volta do id', () => {
+    expect(
+      configuredProfileTier({
+        profileSteamId: `  ${MEU} `,
+        configuredSteamId: MEU,
+        seasonRank: 54,
+      }),
+    ).toBe(5);
+  });
+
+  it('seasonRank ausente ou nao positivo nao vira tier', () => {
+    for (const seasonRank of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, null, undefined]) {
+      expect(
+        configuredProfileTier({ profileSteamId: MEU, configuredSteamId: MEU, seasonRank }),
+      ).toBeNull();
+    }
+  });
+
+  it('o null resultante degrada para media geral, nunca para "no seu ranque"', () => {
+    // A ponta do contrato: o que a funcao devolve alimenta `resolveMetaBracket`, e o
+    // caminho de outra conta TEM de terminar em `isPlayerSpecific: false`.
+    const tier = configuredProfileTier({
+      profileSteamId: OUTRO,
+      configuredSteamId: MEU,
+      seasonRank: 80,
+    });
+    expect(resolveMetaBracket({ preferredBracket: null, profileTier: tier })).toEqual({
+      bracket: 'ALL',
+      isPlayerSpecific: false,
+    });
+  });
+
+  it('a preferencia explicita do jogador continua vencendo o tier ausente', () => {
+    // Quem escolheu o ranque a mao nao perde a escolha por estar vendo outro perfil.
+    const tier = configuredProfileTier({
+      profileSteamId: OUTRO,
+      configuredSteamId: MEU,
+      seasonRank: 80,
+    });
+    expect(
+      resolveMetaBracket({ preferredBracket: 'LEGEND_ANCIENT', profileTier: tier }),
+    ).toEqual({ bracket: 'LEGEND_ANCIENT', isPlayerSpecific: true });
   });
 });
 

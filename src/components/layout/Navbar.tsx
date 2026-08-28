@@ -145,10 +145,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Layout espelho de heróis. Renderizado só com a feature ativa: um botão
               permanente para algo desligado por padrão só ensinaria a ignorá-lo. */}
           {heroGridEnabled && onToggleHeroGrid && (
+            /* Vendo outra conta, o botao fica DESATIVADO com a explicacao no label, e nao
+               escondido: sumir faria a pessoa achar que a feature quebrou. O espelho é da
+               conta configurada, e a tela fala em "seu winrate". */
             <IconButton
               icon={LayoutGrid}
-              label={t('heroGridTabTitle')}
+              label={
+                isViewingDifferentAccount
+                  ? `${t('heroGridTabTitle')} — ${t('heroGridOtherAccountBody')}`
+                  : t('heroGridTabTitle')
+              }
               onClick={onToggleHeroGrid}
+              disabled={isViewingDifferentAccount}
               variant={isHeroGridOpen ? 'accent' : undefined}
               className="p-1.5"
               iconClassName={`w-3.5 h-3.5 ${isHeroGridOpen ? 'text-cyan-300' : 'text-slate-400'}`}

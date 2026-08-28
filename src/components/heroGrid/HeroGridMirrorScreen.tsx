@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ChevronRight,
   Clock,
   Info,
   LayoutGrid,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { getHero } from '../../constants/heroes';
+import { Tooltip } from '../ui/Tooltip';
 import { useLanguage } from '../../context/LanguageContext';
 import { UseHeroGridSyncResult } from '../../hooks/useHeroGridSync';
 import type { TranslationKey } from '../../i18n/translations';
@@ -18,6 +20,7 @@ import type {
   MirrorSnapshot,
   RankingCriterion,
 } from '../../types/heroGrid';
+import { buildHeroTooltipRows } from '../../utils/heroGrid/heroTooltip';
 import { PERSONAL_WEIGHT_K } from '../../utils/heroGrid/ranking';
 import { handleHeroImageError } from '../../utils/imageFallback';
 import {
@@ -37,10 +40,9 @@ import {
   describeDaysSince,
   formatRatioPercent,
   isMirrorStale,
-  isPersonalApplied,
   isScoreDisplayable,
 } from '../../utils/heroGrid/tabFormat';
-import { CRITERION_LABEL, DAYS_SINCE_LABEL, metaSourceKey, NO_DATA_LABEL } from './labels';
+import { CRITERION_LABEL, DAYS_SINCE_LABEL, metaSourceKey } from './labels';
 import { Chip, LayoutRef, Notice } from './primitives';
 
 /**
@@ -140,9 +142,9 @@ const GroupBox: React.FC<{
   box: MirrorCanvasBox | null;
   scoreOf: (heroId: number) => HeroScore | null;
   snapshot: MirrorSnapshot;
-  bracketLabel: string;
+  bracketLabelKey: TranslationKey;
   qualityScale: ScoreQualityScale | null;
-}> = ({ group, box, scoreOf, snapshot, bracketLabel, qualityScale }) => {
+}> = ({ group, box, scoreOf, snapshot, bracketLabelKey, qualityScale }) => {
   const { t } = useLanguage();
 
   // `box` ausente => `usesGeometry: false`, e o grupo entra no fluxo normal da pagina.
@@ -187,7 +189,7 @@ const GroupBox: React.FC<{
               heroId={heroId}
               score={scoreOf(heroId)}
               snapshot={snapshot}
-              bracketLabel={bracketLabel}
+              bracketLabelKey={bracketLabelKey}
               qualityScale={qualityScale}
             />
           ))}
@@ -223,9 +225,10 @@ const HeroTile: React.FC<{
   heroId: number;
   score: HeroScore | null;
   snapshot: MirrorSnapshot;
-  bracketLabel: string;
+  /** CHAVE, nao texto: a afirmacao de I-13 nao pode depender de quem chamou traduzir certo. */
+  bracketLabelKey: TranslationKey;
   qualityScale: ScoreQualityScale | null;
-}> = ({ heroId, score, snapshot, bracketLabel, qualityScale }) => {
+}> = ({ heroId, score, snapshot, bracketLabelKey, qualityScale }) => {
   const { t } = useLanguage();
   const hero = getHero(heroId);
   const display: MirrorHeroDisplay = mirrorHeroDisplay(score, snapshot.criterion);
@@ -238,60 +241,68 @@ const HeroTile: React.FC<{
   // confunda com "intermediario".
   const quality = scoreText ? scoreQuality(score?.score, qualityScale) : null;
 
-  // O `title` carrega a procedencia inteira: fonte, amostra, ranque e a decomposicao da
-  // nota. Ele existe porque o tile é pequeno demais para tudo isso — o que a tela NAO faz é
-  // esconder o rodape: o cabecalho declara criterio, ranque e fontes para a pagina toda, e a
-  // aba de ranking traz linha a linha.
-  const detail = (() => {
-    const parts: string[] = [hero.displayName];
-    if (noData) {
-      parts.push(t('heroGridNoData'));
-      if (display.noDataReason) parts.push(t(NO_DATA_LABEL[display.noDataReason]));
-      return parts.join(' · ');
-    }
-    const sourceKey = display.source ? metaSourceKey(display.source) : null;
-    const label = display.kind === 'META' ? t('heroGridMetaWinrate') : t('heroGridPersonalWinrate');
-    parts.push(`${label}: ${percent}`);
-    if (sourceKey) parts.push(t(sourceKey));
-    if (display.sampleSize !== null) parts.push(t('coachSampleSize', { n: display.sampleSize }));
-    if (display.kind === 'META') parts.push(bracketLabel);
-    if (scoreText) parts.push(`GlimpseScore ${scoreText}`);
-
-    const breakdown = score?.breakdown;
-    if (breakdown) {
-      // As parcelas na MESMA escala da nota: "GlimpseScore 42.6" ao lado de "parcela 0.512"
-      // faria o jogador procurar a relacao entre dois numeros que nao se comparam.
-      const metaComponent = formatGlimpseScore(breakdown.metaComponent);
-      const personalComponent = formatGlimpseScore(breakdown.personalComponent);
-      const weight = formatRatioPercent(breakdown.personalWeight, 0);
-      if (metaComponent) parts.push(`${t('heroGridMetaComponent')}: ${metaComponent}`);
-      if (personalComponent) parts.push(`${t('heroGridPersonalComponent')}: ${personalComponent}`);
-      if (weight) parts.push(`${t('heroGridPersonalWeight')}: ${weight}`);
-      if (!isPersonalApplied(score)) parts.push(t('heroGridPersonalNotApplied'));
-    }
-
-    // Em COMBINED o OUTRO winrate tambem entra: é ele que explica a nota quando o peso
-    // pessoal é alto, e sem ele a distancia entre a % exibida e a posicao fica sem causa.
-    if (snapshot.criterion === 'COMBINED') {
-      const personal = score?.personal;
-      const personalPercent = personal ? formatRatioPercent(personal.winRate) : null;
-      if (personal && personal.games > 0 && personalPercent) {
-        parts.push(
-          `${t('heroGridPersonalWinrate')}: ${personalPercent} (${t('heroGridPersonalGames', {
-            n: personal.games,
-          })})`,
+  /**
+   * O conteudo do tooltip vem de `buildHeroTooltipRows`, que é PURA e testada. Aqui só se
+   * traduz e se desenha: a decisao de quais linhas existem — e a invariante FR-014, de que
+   * winrate nunca sai sem fonte e amostra — mora em `utils/heroGrid/heroTooltip.ts`, onde o
+   * vitest alcanca. Enquanto isso era uma IIFE neste arquivo, nada verificava esse caminho.
+   */
+  const tooltip = (
+    <div className="space-y-1">
+      {buildHeroTooltipRows(
+        { heroName: hero.displayName, score, criterion: snapshot.criterion, bracketLabelKey },
+        metaSourceKey,
+      ).map((row, i) => {
+        if (row.kind === 'HEADER') {
+          return (
+            <div key={i} className="flex items-center gap-2 pb-1.5 mb-1 border-b border-slate-800">
+              <img
+                src={hero.iconUrl}
+                alt=""
+                onError={handleHeroImageError}
+                className="w-7 h-7 rounded-full border border-slate-700 object-cover shrink-0"
+              />
+              <span className="text-xs font-bold text-slate-100">{row.value}</span>
+            </div>
+          );
+        }
+        if (row.kind === 'SCORE') {
+          return (
+            <div key={i} className="flex items-baseline justify-between gap-3">
+              <span className="text-xs text-slate-400">{t(row.labelKey!)}</span>
+              <span
+                className={`text-base font-mono font-black tabular-nums ${
+                  quality ? SCORE_QUALITY_COLOR[quality] : 'text-slate-500'
+                }`}
+              >
+                {row.value}
+              </span>
+            </div>
+          );
+        }
+        if (row.kind === 'NOTE') {
+          return (
+            <div key={i} className="text-xs text-slate-500 italic pt-0.5">
+              {t(row.labelKey!, row.labelParams)}
+            </div>
+          );
+        }
+        return (
+          <div key={i} className="flex items-baseline justify-between gap-3">
+            <span className="text-xs text-slate-400">{t(row.labelKey!, row.labelParams)}</span>
+            {row.value && (
+              <span className="text-xs font-mono tabular-nums text-slate-200">{row.value}</span>
+            )}
+          </div>
         );
-      } else {
-        parts.push(t('heroGridPersonalNone'));
-      }
-    }
-    return parts.join(' · ');
-  })();
+      })}
+    </div>
+  );
 
   return (
-    <div
-      title={detail}
-      className={`flex items-center gap-1.5 px-1.5 py-1 rounded-md border min-w-0 ${
+    <Tooltip
+      content={tooltip}
+      className={`flex items-center gap-1.5 px-1.5 py-1 rounded-md border min-w-0 outline-none focus-visible:ring-1 focus-visible:ring-cyan-500/60 ${
         noData ? 'border-slate-800 bg-slate-900/40' : 'border-slate-800/80 bg-slate-900/70'
       }`}
     >
@@ -312,7 +323,6 @@ const HeroTile: React.FC<{
             className={`text-sm font-mono font-black tabular-nums shrink-0 ${
               quality ? SCORE_QUALITY_COLOR[quality] : 'text-slate-500'
             }`}
-            title={`GlimpseScore${scoreText ? ` ${scoreText}` : ''}`}
           >
             {scoreText ?? '—'}
           </span>
@@ -333,7 +343,7 @@ const HeroTile: React.FC<{
           )}
         </div>
       </div>
-    </div>
+    </Tooltip>
   );
 };
 
@@ -421,9 +431,12 @@ export const HeroGridMirrorScreen: React.FC<HeroGridMirrorScreenProps> = ({
 
   // I-13 / FR-020: "no seu ranque" SÓ quando o bracket era de fato o do jogador na gravacao.
   // Mesmas chaves que o painel e `useBuildAdvice` usam — é a mesma afirmacao.
-  const bracketLabel = mirrorSnapshot?.bracketIsPlayerSpecific
-    ? t('coachBracketYours')
-    : t('coachBracketGeneric');
+  // A CHAVE é a fonte; o texto resolvido é derivado dela. `HeroTile` precisa da chave
+  // porque quem monta o conteudo do tooltip é uma funcao pura, que nao traduz.
+  const bracketLabelKey: TranslationKey = mirrorSnapshot?.bracketIsPlayerSpecific
+    ? 'coachBracketYours'
+    : 'coachBracketGeneric';
+  const bracketLabel = t(bracketLabelKey);
 
   const days = describeDaysSince(freshness?.daysSinceLastSuccess ?? null);
   // `{n}` só é consumido por `MANY`; as outras chaves ignoram o parametro.
@@ -573,7 +586,23 @@ export const HeroGridMirrorScreen: React.FC<HeroGridMirrorScreenProps> = ({
           title={t('heroGridMirrorGuideTitle')}
         >
           <div className="space-y-2.5">
-            <div className="space-y-1">
+            {/* O comeco que faltava: o card explicava o GlimpseScore assumindo que a pessoa
+                ja sabia o que é o espelho. RECOLHIVEL e fechado por padrao porque este card
+                acabou de ser enxugado por excesso de texto — fechado, custa uma linha.
+                O texto é reaproveitado das configuracoes, para nao existirem duas versoes
+                da mesma promessa envelhecendo em paralelo. */}
+            <details className="group">
+              <summary className="cursor-pointer list-none flex items-center gap-1.5 text-xs font-bold text-cyan-300/90 hover:text-cyan-200 transition">
+                <ChevronRight className="w-3.5 h-3.5 shrink-0 transition-transform group-open:rotate-90" />
+                <span>{t('heroGridMirrorWhatIsThis')}</span>
+              </summary>
+              <div className="pt-2 pl-5 space-y-1.5 text-slate-400">
+                <p>{t('heroGridDesc')}</p>
+                <p>{t('heroGridSourceDesc')}</p>
+              </div>
+            </details>
+
+            <div className="space-y-1 pt-1 border-t border-slate-800/80">
               <p>
                 <strong className="text-cyan-300">GlimpseScore</strong> — {t('heroGridMirrorScoreWhat')}
               </p>
@@ -703,7 +732,7 @@ export const HeroGridMirrorScreen: React.FC<HeroGridMirrorScreenProps> = ({
                       box={boxesByCategory.get(group.categoryIndex) ?? null}
                       scoreOf={(heroId) => scoresByHero.get(heroId) ?? null}
                       snapshot={mirrorSnapshot}
-                      bracketLabel={bracketLabel}
+                      bracketLabelKey={bracketLabelKey}
                       qualityScale={qualityScale}
                     />
                   ))}
@@ -718,7 +747,7 @@ export const HeroGridMirrorScreen: React.FC<HeroGridMirrorScreenProps> = ({
                     box={null}
                     scoreOf={(heroId) => scoresByHero.get(heroId) ?? null}
                     snapshot={mirrorSnapshot}
-                    bracketLabel={bracketLabel}
+                    bracketLabelKey={bracketLabelKey}
                     qualityScale={qualityScale}
                   />
                 ))}

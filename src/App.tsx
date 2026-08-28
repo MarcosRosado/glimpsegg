@@ -20,11 +20,13 @@ import { CoachingInsightsTab } from './components/coaching/CoachingInsightsTab';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { HeroGridMirrorScreen } from './components/heroGrid/HeroGridMirrorScreen';
 import { HeroGridTab } from './components/heroGrid/HeroGridTab';
+import { Notice } from './components/heroGrid/primitives';
 import { SearchPlayerModal } from './components/search/SearchPlayerModal';
 import { OnboardingModal } from './components/auth/OnboardingModal';
 import { MatchDetails, PlayerProfileSummary, ProfileHistoryItem } from './types/dota';
 import { fetchMatchDetails, fetchPlayerProfile } from './services/stratzGql';
 import { resolveSteamId } from './services/steamResolver';
+import { configuredProfileTier } from './utils/heroGrid/sourcePrecedence';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import {
   Layers,
@@ -33,6 +35,7 @@ import {
   Eye,
   Lightbulb,
   DownloadCloud,
+  UserX,
 } from 'lucide-react';
 
 import { extractSteamIdFromStratzToken } from './utils/stratzToken';
@@ -56,6 +59,15 @@ function MainAppContent() {
   const [apiKey, setApiKey] = useState<string>('');
   const [configuredSteamId, setConfiguredSteamId] = useState<string>('');
   const [currentSteamId, setCurrentSteamId] = useState<string>('');
+  /**
+   * `seasonRank` da conta CONFIGURADA, guardado à parte de `profile`.
+   *
+   * `profile` segue a conta VISUALIZADA, que a busca de jogadores pode apontar para
+   * qualquer um. Derivar o ranque de referência do espelho dali fazia o layout da conta do
+   * dono ser gravado com a medalha de outra pessoa, em silêncio. Só é escrito quando o
+   * perfil que chegou é o da conta configurada — ver `configuredProfileTier`.
+   */
+  const [configuredSeasonRank, setConfiguredSeasonRank] = useState<number | null>(null);
   const [profile, setProfile] = useState<PlayerProfileSummary | null>(null);
   const [profileHistory, setProfileHistory] = useState<ProfileHistoryItem[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MatchDetails | null>(null);
@@ -88,10 +100,50 @@ function MainAppContent() {
   const heroGridSync = useHeroGridSync(
     apiKey,
     configuredSteamId,
-    // `seasonRank` é medalha*10+estrelas; o bracket vem de floor(rank/10).
-    profile?.seasonRank ? Math.floor(profile.seasonRank / 10) : null,
+    // O tier sai de `configuredSeasonRank`, NUNCA de `profile` — ver o estado acima.
+    configuredProfileTier({
+      profileSteamId: configuredSteamId,
+      configuredSteamId,
+      seasonRank: configuredSeasonRank,
+    }),
   );
   const heroGridEnabled = !!heroGridSync.preferences?.enabled;
+
+  /**
+   * Ver outra conta desativa as ENTRADAS do layout espelho, não a sincronização.
+   *
+   * A sincronização continua correta: escreve na conta configurada, com o bracket dela. O
+   * que confunde é a tela, que fala em "seu winrate" enquanto o perfil na frente é de
+   * outra pessoa. Desativar com explicação, e não esconder — botão que some faz a pessoa
+   * achar que a feature quebrou.
+   */
+  const isViewingDifferentAccount = !!configuredSteamId && currentSteamId !== configuredSteamId;
+
+  /**
+   * O aviso para quem JA estava com uma das telas do grid aberta quando trocou de perfil.
+   *
+   * Fechar a tela na cara da pessoa seria pior que explicar: as entradas ja ficam
+   * desativadas, e aqui o que falta é dizer por que o que ela está vendo pertence a outra
+   * conta, com o caminho de volta ao lado.
+   */
+  const heroGridOtherAccountNotice = isViewingDifferentAccount ? (
+    <Notice
+      tone="warn"
+      icon={<UserX className="w-4 h-4 text-amber-400" />}
+      title={t('viewingDifferentAccount')}
+    >
+      <div className="space-y-2">
+        <p>{t('heroGridOtherAccountBody')}</p>
+        <button
+          type="button"
+          onClick={() => void handleReturnToConfigured()}
+          className="px-3 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-200 text-xs font-bold transition"
+        >
+          {t('returnToConfigured')}
+        </button>
+      </div>
+    </Notice>
+  ) : null;
 
   /**
    * Feature desligada fecha as telas dela, venha o desligamento de onde vier.
@@ -208,6 +260,8 @@ function MainAppContent() {
             const profileData = await fetchPlayerProfile(resolvedSteamId, cleanToken);
             if (profileData && profileData.steamAccountId) {
               setProfile(profileData);
+              // Aqui `resolvedSteamId === configuredSteamId` por construção.
+              setConfiguredSeasonRank(profileData.seasonRank ?? null);
               upsertProfileHistory(profileData);
               setIsOnboardingOpen(false);
               setIsAppInitializing(false);
@@ -255,11 +309,20 @@ function MainAppContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const loadProfileData = async (steamId: string, token: string) => {
+  /**
+   * `configuredIdOverride` existe por causa do `handleSaveSettings`: ele chama esta função
+   * no mesmo tique em que faz `setConfiguredSteamId`, então `configuredSteamId` aqui ainda
+   * seria o valor ANTIGO e o `seasonRank` da conta nova não seria guardado.
+   */
+  const loadProfileData = async (steamId: string, token: string, configuredIdOverride?: string) => {
     setIsLoading(true);
     try {
       const data = await fetchPlayerProfile(steamId, token);
       setProfile(data);
+      // Só o perfil da conta configurada alimenta o ranque de referência do espelho.
+      if (steamId === (configuredIdOverride ?? configuredSteamId)) {
+        setConfiguredSeasonRank(data?.seasonRank ?? null);
+      }
       if (data && data.steamAccountId && token) {
         upsertProfileHistory(data);
       }
@@ -353,6 +416,9 @@ function MainAppContent() {
     setApiKey(newApiKey);
     setConfiguredSteamId(newSteamId);
     setCurrentSteamId(newSteamId);
+    // Conta nova, ranque desconhecido até o perfil chegar. Manter o anterior derivaria o
+    // bracket da conta antiga — o mesmo erro, só que mais difícil de ver.
+    if (newSteamId !== configuredSteamId) setConfiguredSeasonRank(null);
 
     if (window.api && typeof window.api.store?.set === 'function') {
       await window.api.store.set('stratzApiKey', newApiKey);
@@ -363,7 +429,7 @@ function MainAppContent() {
     }
 
     showToast('Configurações salvas com sucesso!');
-    await loadProfileData(newSteamId, newApiKey);
+    await loadProfileData(newSteamId, newApiKey, newSteamId);
   };
 
   const handleOnboardingComplete = async (newApiKey: string, newSteamId: string) => {
@@ -439,7 +505,7 @@ function MainAppContent() {
         profile={profile}
         hasApiKey={!!apiKey}
         isLoading={isLoading}
-        isViewingDifferentAccount={!!configuredSteamId && currentSteamId !== configuredSteamId}
+        isViewingDifferentAccount={isViewingDifferentAccount}
         configuredSteamId={configuredSteamId}
         configuredProfileName={currentSteamId === configuredSteamId ? profile?.name : undefined}
         onGoHome={() => {
@@ -474,7 +540,8 @@ function MainAppContent() {
           /* =========================================================================
              HERO GRID PANEL — sincronizacao, diagnostico e ranking em lista
              ========================================================================= */
-          <div className="animate-in fade-in duration-200">
+          <div className="animate-in fade-in duration-200 space-y-4">
+            {heroGridOtherAccountNotice}
             <HeroGridTab
               sync={heroGridSync}
               onOpenMirror={() => setPanelView('HERO_GRID_MIRROR')}
@@ -484,7 +551,8 @@ function MainAppContent() {
           /* =========================================================================
              HERO GRID MIRROR — a replica do que esta gravado na colecao do jogador
              ========================================================================= */
-          <div className="animate-in fade-in duration-200">
+          <div className="animate-in fade-in duration-200 space-y-4">
+            {heroGridOtherAccountNotice}
             <HeroGridMirrorScreen
               sync={heroGridSync}
               onOpenSettings={() => setIsSettingsOpen(true)}
@@ -522,6 +590,7 @@ function MainAppContent() {
                 profile={profile}
                 heroGridEnabled={heroGridEnabled}
                 lastMirrorSyncAt={heroGridSync.mirrorSnapshot?.at ?? null}
+                isViewingDifferentAccount={isViewingDifferentAccount}
                 onOpenHeroGridMirror={() => setPanelView('HERO_GRID_MIRROR')}
               />
 

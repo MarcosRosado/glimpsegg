@@ -151,7 +151,7 @@ const HeroScoreRow: React.FC<{
       }`}
     >
       <div className="flex items-start gap-3">
-        <span className="w-7 text-right text-[11px] font-mono font-bold text-slate-500 shrink-0 pt-1">
+        <span className="w-7 text-right text-xs font-mono font-bold text-slate-500 shrink-0 pt-1">
           {noData ? '—' : position}
         </span>
         <img
@@ -168,7 +168,7 @@ const HeroScoreRow: React.FC<{
             {noData ? (
               <Chip muted>{t('heroGridNoData')}</Chip>
             ) : displayable ? (
-              <span className="text-[11px] font-mono font-bold text-cyan-300">
+              <span className="text-xs font-mono font-bold text-cyan-300">
                 {t('heroGridScoreLabel')} {formatScoreValue(entry.score)}
               </span>
             ) : (
@@ -180,17 +180,17 @@ const HeroScoreRow: React.FC<{
 
           {/* Sem dado: o MOTIVO, nunca um numero presumido. */}
           {noData && entry.noDataReason && (
-            <p className="text-[11px] text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-400 leading-relaxed">
               {t(NO_DATA_LABEL[entry.noDataReason])}
             </p>
           )}
 
           {/* Winrate de meta — sempre com fonte, amostra e rotulo de ranque. */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] text-slate-400">{t('heroGridMetaWinrate')}:</span>
+            <span className="text-xs text-slate-400">{t('heroGridMetaWinrate')}:</span>
             {meta && metaWinRate ? (
               <>
-                <span className="text-[11px] font-mono font-bold text-slate-200">
+                <span className="text-xs font-mono font-bold text-slate-200">
                   {metaWinRate}
                 </span>
                 <Chip title={bracketLabel}>
@@ -201,22 +201,22 @@ const HeroScoreRow: React.FC<{
                 <Chip muted>{bracketLabel}</Chip>
               </>
             ) : (
-              <span className="text-[11px] text-slate-500 italic">{t('heroGridNoData')}</span>
+              <span className="text-xs text-slate-500 italic">{t('heroGridNoData')}</span>
             )}
           </div>
 
           {/* Amostra pessoal por heroi (FR-032). */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] text-slate-400">{t('heroGridPersonalWinrate')}:</span>
+            <span className="text-xs text-slate-400">{t('heroGridPersonalWinrate')}:</span>
             {personal && personalWinRate && personal.games > 0 ? (
               <>
-                <span className="text-[11px] font-mono font-bold text-slate-200">
+                <span className="text-xs font-mono font-bold text-slate-200">
                   {personalWinRate}
                 </span>
                 <Chip muted>{t('heroGridPersonalGames', { n: personal.games })}</Chip>
               </>
             ) : (
-              <span className="text-[11px] text-slate-500 italic">
+              <span className="text-xs text-slate-500 italic">
                 {t('heroGridPersonalNone')}
               </span>
             )}
@@ -225,13 +225,13 @@ const HeroScoreRow: React.FC<{
           {/* As duas parcelas da nota (FR-030b). Sem elas a nota acima nao é exibida. */}
           {breakdown && (
             <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-slate-800/80">
-              <span className="text-[10px] font-mono text-slate-400">
+              <span className="text-xs font-mono text-slate-400">
                 {t('heroGridMetaComponent')}: {metaComponent ?? t('heroGridNoData')}
               </span>
-              <span className="text-[10px] font-mono text-slate-400">
+              <span className="text-xs font-mono text-slate-400">
                 {t('heroGridPersonalComponent')}: {personalComponent ?? t('heroGridNoData')}
               </span>
-              <span className="text-[10px] font-mono text-slate-400">
+              <span className="text-xs font-mono text-slate-400">
                 {t('heroGridPersonalWeight')}: {personalWeight ?? t('heroGridNoData')}
               </span>
               {!isPersonalApplied(entry) && !noData && (
@@ -265,7 +265,7 @@ const HistoryRow: React.FC<{ record: SyncRecord }> = ({ record }) => {
 
   return (
     <div className="flex items-start gap-3 py-2 border-b border-slate-800/60 last:border-0">
-      <span className="text-[10px] font-mono text-slate-500 shrink-0 w-36">
+      <span className="text-xs font-mono text-slate-500 shrink-0 w-36">
         {new Date(record.at).toLocaleString(language)}
       </span>
       <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${outcomeColor}`}>
@@ -273,23 +273,23 @@ const HistoryRow: React.FC<{ record: SyncRecord }> = ({ record }) => {
       </span>
       <div className="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
         {used.length > 0 && (
-          <span className="text-[10px] font-mono text-slate-400">
+          <span className="text-xs font-mono text-slate-400">
             {t('heroGridHistorySources')}: {used.join(', ')}
           </span>
         )}
         {failed.length > 0 && (
-          <span className="text-[10px] font-mono text-rose-300/80">
+          <span className="text-xs font-mono text-rose-300/80">
             {t('heroGridHistoryFailed')}: {failed.join(', ')}
           </span>
         )}
         {record.heroesOrdered > 0 && (
-          <span className="text-[10px] font-mono text-slate-500">
+          <span className="text-xs font-mono text-slate-500">
             {t('heroGridHistoryHeroes', { n: record.heroesOrdered })}
           </span>
         )}
         {record.structureChanged && <Chip muted>{t('heroGridHistoryStructureChanged')}</Chip>}
         {record.error && (
-          <span className="text-[10px] font-mono text-slate-500 truncate">{record.error}</span>
+          <span className="text-xs font-mono text-slate-500 truncate">{record.error}</span>
         )}
       </div>
     </div>
@@ -461,7 +461,12 @@ export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid, onOpenMirr
           <Chip muted>
             {t('heroGridCriterionLabel')}: {t(CRITERION_LABEL[criterion])}
           </Chip>
-          <Chip muted>{t('heroGridBracketLabel', { bracket: bracketLabel })}</Chip>
+          {/* I-13 / FR-020: `heroGridBracketLabel` NAO tem placeholder — passar `{bracket}`
+              a ela descartava o valor em silencio, e o painel nunca dizia se o numero era
+              "no seu ranque" ou "media geral". Mesma montagem da tela do grid. */}
+          <Chip title={t('heroGridBracketFallbackNote')}>
+            {t('heroGridBracketLabel')}: {bracketLabel}
+          </Chip>
           <Chip muted>{t(PHASE_LABEL[phase])}</Chip>
           <Chip muted>
             {backups.length === 0
@@ -577,14 +582,14 @@ export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid, onOpenMirr
                 type="button"
                 onClick={() => void syncNow({ allowWhileDotaRunning: true })}
                 disabled={isSyncing}
-                className="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-200 text-[11px] font-bold transition disabled:opacity-50"
+                className="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-200 text-xs font-bold transition disabled:opacity-50"
               >
                 {t('heroGridDotaRunningConfirm')}
               </button>
               <button
                 type="button"
                 onClick={() => setDotaRunningPostponed(true)}
-                className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-[11px] font-bold transition"
+                className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs font-bold transition"
               >
                 {t('heroGridDotaRunningPostpone')}
               </button>
@@ -671,7 +676,7 @@ export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid, onOpenMirr
               return (
                 <span
                   key={heroId}
-                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-slate-700 bg-slate-900/60 text-slate-300"
+                  className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-slate-700 bg-slate-900/60 text-slate-300"
                 >
                   <img
                     src={hero.iconUrl}
@@ -706,7 +711,7 @@ export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid, onOpenMirr
           </div>
         </div>
 
-        <p className="text-[11px] text-slate-400 leading-relaxed">
+        <p className="text-xs text-slate-400 leading-relaxed">
           {t('heroGridRankingSubtitle')}
         </p>
 
@@ -741,7 +746,7 @@ export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid, onOpenMirr
               {t('heroGridHistoryTitle')}
             </h4>
           </div>
-          <span className="text-[10px] text-slate-500">{t('heroGridHistoryLimit')}</span>
+          <span className="text-xs text-slate-500">{t('heroGridHistoryLimit')}</span>
         </div>
 
         {history.length === 0 ? (
