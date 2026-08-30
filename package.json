@@ -42,7 +42,6 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "!electron/**/*.test.cjs",
       "build/icons/256x256.png",
       "package.json"
     ],

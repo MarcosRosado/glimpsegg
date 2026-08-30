@@ -2,7 +2,7 @@
 //
 // O modulo e dividido em duas metades de proposito: `parseProcessList` e pura (recebe a saida
 // crua do comando, devolve boolean) e por isso e testavel pelo vitest via
-// `electron/**/*.test.cjs`; `isDotaRunning` e a casca de I/O, com injecao de dependencia para
+// `tests/**/*.test.cjs`; `isDotaRunning` e a casca de I/O, com injecao de dependencia para
 // que o teste nunca precise executar `ps` ou `tasklist` de verdade.
 
 const { execFile } = require('child_process');
