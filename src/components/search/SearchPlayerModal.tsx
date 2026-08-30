@@ -48,7 +48,7 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
   onReturnToConfigured,
   isLoading = false,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [searchInput, setSearchInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmClear, setShowConfirmClear] = useState(false);
@@ -386,7 +386,7 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
                 {recentHistory.map((item) => {
                   const isActive = item.steamAccountId === currentSteamId;
                   const rank = item.seasonRank ? getRankTierInfo(item.seasonRank, item.leaderboardRank) : null;
-                  const formattedDate = new Date(item.lastSearched).toLocaleDateString(undefined, {
+                  const formattedDate = new Date(item.lastSearched).toLocaleDateString(language, {
                     month: 'short',
                     day: 'numeric',
                     hour: '2-digit',

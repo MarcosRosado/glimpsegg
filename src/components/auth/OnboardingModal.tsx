@@ -146,16 +146,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Language Switcher */}
-            <button
-              onClick={() => setLanguage(language === 'pt-BR' ? 'en-US' : 'pt-BR')}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 border border-slate-700 transition"
-              title={t('changeLanguage')}
-            >
-              <Globe className="w-3.5 h-3.5 text-amber-400" />
-              <span>{language === 'pt-BR' ? 'PT' : 'EN'}</span>
-            </button>
-
             {/* Optional Close Button if opened in guide mode */}
             {mode === 'guide' && onClose && (
               <button
@@ -170,6 +160,45 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
         {/* Scrollable Content */}
         <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
+          {/* Idioma vem PRIMEIRO, e no corpo — nao num canto do cabecalho.
+              É a unica decisao desta tela que muda a propria tela: escolher a lingua
+              depois de ler o passo a passo nao ajuda quem precisava dela para ler.
+              O padrao é en-US (ver LanguageContext); a escolha grava na hora, sem
+              botao de confirmar, e vale para o app inteiro. */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" />
+              <span>{t('languageSetting')}</span>
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setLanguage('en-US')}
+                aria-pressed={language === 'en-US'}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
+                  language === 'en-US'
+                    ? 'border-cyan-500 bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-500/50'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                }`}
+              >
+                <span>🇺🇸 English (US)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('pt-BR')}
+                aria-pressed={language === 'pt-BR'}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
+                  language === 'pt-BR'
+                    ? 'border-cyan-500 bg-cyan-500/15 text-cyan-300 ring-1 ring-cyan-500/50'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                }`}
+              >
+                <span>🇧🇷 Português (Brasil)</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">{t('languageDesc')}</p>
+          </div>
+
           {/* Privacy & 100% Local Storage Guarantee Disclaimer */}
           <div className="p-3.5 rounded-xl bg-cyan-950/25 border border-cyan-500/30 flex items-start gap-3 shadow-sm">
             <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />

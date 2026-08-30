@@ -7,7 +7,7 @@ import { PlayerMatchSummary } from '../../types/dota';
 import { TranslationKey } from '../../i18n/translations';
 import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
-import { formatDuration, formatGold, formatTimeAgo, resolveMatchType, MatchTypeCode } from '../../utils/dotaFormatters';
+import { formatDuration, formatGold, timeAgoText, resolveMatchType, MatchTypeCode } from '../../utils/dotaFormatters';
 import { ImpBadge } from '../ui/ImpBadge';
 import { handleHeroImageError, handleItemImageError } from '../../utils/imageFallback';
 import { LANE_RESULT_KEY, hasLaneVerdict, isLaneWin, isLaneLoss } from '../../utils/laneResult';
@@ -657,7 +657,7 @@ export const MatchList: React.FC<MatchListProps> = ({
                         {formatDuration(match.durationSeconds)}
                       </span>
                       <span>•</span>
-                      <span>{formatTimeAgo(match.startDateTime)}</span>
+                      <span>{timeAgoText(match.startDateTime, t)}</span>
                     </div>
                   </div>
                 </div>

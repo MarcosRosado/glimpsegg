@@ -8,7 +8,7 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType>({
-  language: 'pt-BR',
+  language: 'en-US',
   setLanguage: () => {},
   t: (key) => key,
 });
@@ -17,7 +17,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem('app_language');
     if (saved === 'en-US' || saved === 'pt-BR') return saved;
-    return 'pt-BR'; // Default to PT-BR as requested by user
+    // Padrao en-US, alinhado ao README: o publico que chega pelo repositorio nao é so
+    // brasileiro. Vale SO quando nao ha preferencia guardada — quem ja escolheu, em
+    // qualquer das duas fontes, mantem a escolha (o `saved` acima e o efeito do store
+    // do Electron abaixo tem precedencia sobre este default).
+    return 'en-US';
   });
 
   const setLanguage = (lang: Language) => {
@@ -40,7 +44,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const t = (key: TranslationKey, params?: Record<string, string | number>): string => {
-    const dict = translations[language] || translations['pt-BR'];
+    const dict = translations[language] || translations['en-US'];
     let text: string = dict[key] || translations['en-US'][key] || key;
 
     if (params) {

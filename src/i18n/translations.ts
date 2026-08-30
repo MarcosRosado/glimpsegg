@@ -497,6 +497,13 @@ export const translations = {
 
     // Settings Modal
     settingsTitle: 'Configurações do Aplicativo',
+    timeAgoRecently: 'Recentemente',
+    timeAgoJustNow: 'Agora mesmo',
+    timeAgoMinutes: 'Há {n}m',
+    timeAgoHours: 'Há {n}h',
+    timeAgoDays: 'Há {n}d',
+    timeAgoMonth: 'Há {n} mês',
+    timeAgoMonths: 'Há {n} meses',
     languageSetting: 'Idioma da Interface',
     languageDesc: 'Selecione o idioma padrão para o aplicativo.',
     stratzApiKey: 'Chave de API do STRATZ (Bearer Token)',
@@ -613,7 +620,6 @@ export const translations = {
 
     // Onboarding
     setupBadge: 'Setup',
-    changeLanguage: 'Trocar idioma',
     steamIdFormatHint: 'SteamID32 ou ID64',
     manualSteamIdPlaceholder: 'Ex: 123456789 ou 76561198083722517',
     requiresFreeKey: 'Requer chave de API gratuita do STRATZ.',
@@ -1359,6 +1365,13 @@ export const translations = {
 
     // Settings Modal
     settingsTitle: 'Application Settings',
+    timeAgoRecently: 'Recently',
+    timeAgoJustNow: 'Just now',
+    timeAgoMinutes: '{n}m ago',
+    timeAgoHours: '{n}h ago',
+    timeAgoDays: '{n}d ago',
+    timeAgoMonth: '{n} month ago',
+    timeAgoMonths: '{n} months ago',
     languageSetting: 'Interface Language',
     languageDesc: 'Choose your preferred language for the application.',
     stratzApiKey: 'STRATZ API Key (Bearer Token)',
@@ -1475,7 +1488,6 @@ export const translations = {
 
     // Onboarding
     setupBadge: 'Setup',
-    changeLanguage: 'Change language',
     steamIdFormatHint: 'SteamID32 or ID64',
     manualSteamIdPlaceholder: 'e.g. 123456789 or 76561198083722517',
     requiresFreeKey: 'Requires a free STRATZ API key.',

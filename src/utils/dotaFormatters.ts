@@ -1,3 +1,5 @@
+import { TranslationKey } from '../i18n/translations';
+
 export function formatDuration(seconds: number): string {
   if (isNaN(seconds) || seconds <= 0) return '0:00';
   const mins = Math.floor(seconds / 60);
@@ -26,16 +28,42 @@ export function formatPercent(value: number): string {
   return `${Math.round(value)}%`;
 }
 
-export function formatTimeAgo(timestampSec: number): string {
-  if (!timestampSec) return 'Recentemente';
+/**
+ * Tempo decorrido como CHAVE + numero cru, nunca frase pronta.
+ *
+ * A versao anterior devolvia `Há 3d` / `Agora mesmo` cravados em pt-BR, e a tela em
+ * en-US exibia portugues no meio da lista de partidas. E o mesmo erro que o
+ * `awardEngine` ja tinha cometido: texto nao mora no motor. Quem formata é a UI, via
+ * `t()`, que é quem conhece o idioma escolhido.
+ */
+export interface TimeAgo {
+  key: TranslationKey;
+  params?: Record<string, number>;
+}
+
+/** Atalho para a UI: resolve a chave com o `t` de quem chama. */
+export function timeAgoText(
+  timestampSec: number,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string,
+): string {
+  const { key, params } = formatTimeAgo(timestampSec);
+  return t(key, params);
+}
+
+export function formatTimeAgo(timestampSec: number): TimeAgo {
+  if (!timestampSec) return { key: 'timeAgoRecently' };
   const now = Date.now() / 1000;
   const diffSec = Math.max(0, now - timestampSec);
 
-  if (diffSec < 60) return 'Agora mesmo';
-  if (diffSec < 3600) return `Há ${Math.floor(diffSec / 60)}m`;
-  if (diffSec < 86400) return `Há ${Math.floor(diffSec / 3600)}h`;
-  if (diffSec < 2592000) return `Há ${Math.floor(diffSec / 86400)}d`;
-  return `Há ${Math.floor(diffSec / 2592000)} meses`;
+  if (diffSec < 60) return { key: 'timeAgoJustNow' };
+  if (diffSec < 3600) return { key: 'timeAgoMinutes', params: { n: Math.floor(diffSec / 60) } };
+  if (diffSec < 86400) return { key: 'timeAgoHours', params: { n: Math.floor(diffSec / 3600) } };
+  if (diffSec < 2592000) return { key: 'timeAgoDays', params: { n: Math.floor(diffSec / 86400) } };
+  const months = Math.floor(diffSec / 2592000);
+  // Sem pluralizacao no `t()`: a chave do singular existe para nao exibir "1 months ago".
+  return months === 1
+    ? { key: 'timeAgoMonth', params: { n: months } }
+    : { key: 'timeAgoMonths', params: { n: months } };
 }
 
 /**

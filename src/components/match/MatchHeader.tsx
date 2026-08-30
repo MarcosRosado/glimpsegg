@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Clock, Copy, Check, Trophy } from 'lucide-react';
 import { MatchAnalysisOutcome, MatchDetails } from '../../types/dota';
 import { TranslationKey } from '../../i18n/translations';
-import { formatDuration, formatTimeAgo } from '../../utils/dotaFormatters';
+import { formatDuration, timeAgoText } from '../../utils/dotaFormatters';
 import { useLanguage } from '../../context/LanguageContext';
 
 /**
@@ -92,7 +92,7 @@ export const MatchHeader: React.FC<MatchHeaderProps> = ({ match, onBack }) => {
                 <span>{formatDuration(match.durationSeconds)}</span>
               </span>
               <span>•</span>
-              <span>{formatTimeAgo(match.startDateTime)}</span>
+              <span>{timeAgoText(match.startDateTime, t)}</span>
               {/* `null` quando a STRATZ manda `NONE`: some, nao vira rotulo neutro. */}
               {match.analysisOutcome && (
                 <>
