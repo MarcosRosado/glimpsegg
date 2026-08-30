@@ -77,6 +77,34 @@ jobs:
           echo "version=$next" >> "$GITHUB_OUTPUT"
           echo "tag=v$next"    >> "$GITHUB_OUTPUT"
 
+      # A release nasce AQUI, uma vez so, e nao nos tres jobs de plataforma.
+      #
+      # O publisher do electron-builder faz "procura ou cria" a release da tag. Com os
+      # tres jobs da matriz rodando `--publish always` em paralelo, nenhum encontrava a
+      # release ainda inexistente e dois deles criavam objetos DIFERENTES para a mesma
+      # tag. Aconteceu na v1.0.14: o AppImage e o `latest-linux.yml` foram parar numa
+      # release e os artefatos de mac/Windows na outra, entao a release que aparece como
+      # `latest` ficou sem o manifesto que o auto-updater do Linux le. Os jobs ja
+      # dependem deste (`needs: version`), entao criar a release aqui garante que os tres
+      # ENCONTREM a mesma e apenas subam artefatos nela.
+      #
+      # Nome sem corpo para nao divergir do que o electron-builder criava antes.
+      - name: Create the GitHub release (single owner of the tag)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.bump.outputs.tag }}"
+
+          # Idempotente de proposito: um `workflow_dispatch` reexecutado sobre uma tag
+          # que ja tem release nao pode falhar aqui.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag ja existe; os jobs de plataforma vao subir os artefatos nela."
+          else
+            gh release create "$tag" --title "${{ steps.bump.outputs.version }}" --notes ""
+          fi
+
   release:
     name: Build & Release (${{ matrix.os }})
     needs: version
@@ -139,9 +167,12 @@ jobs:
             *) echo "::error::runner.os inesperado: ${{ runner.os }}" >&2; exit 1 ;;
           esac
 
+          # A release ja existe: o job `version` a criou. Aqui o electron-builder so
+          # ENCONTRA a release da tag e sobe os artefatos deste target — nunca cria.
+          #
           # Retry porque o upload de assets grandes (.exe/.dmg) já estourou o
           # timeout do httpExecutor do electron-builder. Com nome de artefato
-          # único por target e uma release nova por push, repetir é seguro.
+          # único por target e a release ja criada, repetir é seguro.
           for attempt in 1 2 3; do
             echo "::group::electron-builder (tentativa $attempt/3)"
             if npx electron-builder $builder_args --publish always; then

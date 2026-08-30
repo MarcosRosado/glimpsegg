@@ -300,6 +300,13 @@ Todo push na `main` dispara `.github/workflows/release.yml`: incrementa o patch,
 ordem: `icons:check` → `npm test` → `npm run build`. Teste vermelho bloqueia a release de propósito.
 Não editar `version` no `package.json` à mão — o workflow faz isso.
 
+**Quem cria a release é o job `version`, e só ele.** Os três jobs de plataforma rodam em paralelo e
+o publisher do electron-builder faz *procura ou cria* — com a release ainda inexistente, dois deles
+criavam objetos **diferentes** para a mesma tag. Foi o que aconteceu na v1.0.14: o AppImage e o
+`latest-linux.yml` num objeto, mac e Windows no outro, e o auto-updater do Linux ficou sem
+manifesto na release marcada como `latest`. Criar a release antes da matriz faz os três
+**encontrarem** a mesma e apenas subirem artefatos. Ao mexer no publish, manter essa ordem.
+
 ## Metadados estáticos do Dota
 
 `src/constants/heroes.ts`, `items.ts` e `abilities.ts` são tabelas grandes com acesso por
