@@ -8,18 +8,8 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { MatchDetails, MatchPlayer, PlayerLaneResult } from '../../types/dota';
-import { TranslationKey } from '../../i18n/translations';
-
-/** Resultado real de lane (STRATZ) -> chave i18n. Substituiu o "88%" inventado. */
-const LANE_RESULT_KEY: Record<PlayerLaneResult, TranslationKey> = {
-  STOMP_WON: 'laneResultStompWon',
-  WON: 'laneResultWon',
-  TIE: 'laneResultTie',
-  LOST: 'laneResultLost',
-  STOMP_LOST: 'laneResultStompLost',
-  UNKNOWN: 'laneResultUnknown',
-};
+import { MatchDetails, MatchPlayer } from '../../types/dota';
+import { LANE_RESULT_KEY } from '../../utils/laneResult';
 import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
 import { getRoleBaseline } from '../../constants/baselines';
@@ -63,14 +53,15 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
   const playerNwShare = Math.round((player.networth / teamNetworth) * 100);
   const radarStats = calculateRadarStats(player, teamKills, match.durationSeconds);
 
-  // Data for Recharts Radar
+  // Data for Recharts Radar. Eixo sem dado (`null`) e OMITIDO — o radar renderiza com
+  // quatro eixos em vez de pontuar a fase de rotas com numero de outra fase.
   const radarData = [
     { subject: t('laningPhase'), value: radarStats.laning, fullMark: 100 },
     { subject: t('farmingEcon'), value: radarStats.farming, fullMark: 100 },
     { subject: t('fightingKp'), value: radarStats.fighting, fullMark: 100 },
     { subject: t('survivability'), value: radarStats.survivability, fullMark: 100 },
     { subject: t('objectives'), value: radarStats.objectives, fullMark: 100 },
-  ];
+  ].filter((axis): axis is { subject: string; value: number; fullMark: number } => axis.value !== null);
 
   // Marco de CS que a serie nao alcanca aparece como "sem dado", nunca interpolado.
   const csCell = (v: number | null) => (v !== null ? String(v) : t('noData'));
@@ -388,7 +379,10 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
             </ResponsiveContainer>
           </div>
 
-          <div className="grid grid-cols-5 gap-1 pt-2 border-t border-slate-800/80 text-center font-mono text-[11px]">
+          <div
+            className="grid gap-1 pt-2 border-t border-slate-800/80 text-center font-mono text-[11px]"
+            style={{ gridTemplateColumns: `repeat(${radarData.length}, minmax(0, 1fr))` }}
+          >
             {radarData.map((d, i) => (
               <div key={i} className="p-1 rounded bg-slate-900/60">
                 <div className="text-slate-500 text-[9px] truncate">{d.subject}</div>
@@ -443,13 +437,17 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
             </div>
 
             <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-              <div className="text-[10px] text-slate-400">{t('laneKillsDeaths')}</div>
-              {/* `killsInLane || 2` mostrava 2 abates para quem nao tinha o dado. */}
+              <div className="text-[10px] text-slate-400">{t('killsDeathsAt10')}</div>
+              {/* `killsInLane || 2` mostrava 2 abates para quem nao tinha o dado; depois
+                  virou `0` fixo, que a tela exibia como medicao. Agora vem dos eventos
+                  reais de morte, e sem eles a celula diz "sem dado". */}
               <div className="text-base font-black text-emerald-400 mt-0.5">
-                {player.laningStats ? (
+                {player.laningStats &&
+                player.laningStats.kills10 !== null &&
+                player.laningStats.deaths10 !== null ? (
                   <>
-                    {player.laningStats.killsInLane}{t('laneKillsShort')} /{' '}
-                    <span className="text-rose-400">{player.laningStats.deathsInLane}{t('laneDeathsShort')}</span>
+                    {player.laningStats.kills10}{t('laneKillsShort')} /{' '}
+                    <span className="text-rose-400">{player.laningStats.deaths10}{t('laneDeathsShort')}</span>
                   </>
                 ) : (
                   t('noData')

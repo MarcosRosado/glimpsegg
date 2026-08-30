@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveMatchType } from './dotaFormatters';
-import { derivePartySize } from '../services/stratzGql';
+import { ALL_TOWERS_STANDING, derivePartySize, deriveTeamShares } from '../services/stratzGql';
 
 /**
  * As duas regras novas do contexto de partida. Ambas existem para NAO inventar
@@ -70,5 +70,64 @@ describe('derivePartySize', () => {
 
   it('partyId que nao aparece em ninguem devolve null, nao zero', () => {
     expect(derivePartySize(party, 999)).toBeNull();
+  });
+});
+
+/**
+ * Participacao em abates e fatia de dano alimentam duas tags da lista. Sao RAZOES
+ * sobre o total do time, e por isso nao envelhecem quando um patch infla a economia
+ * do jogo — diferente de um limiar absoluto de GPM, que ja passou a disparar em 59%
+ * das partidas sem ninguem notar.
+ */
+describe('deriveTeamShares', () => {
+  const todos = [
+    { isRadiant: true, kills: 10, assists: 5, heroDamage: 40000 },
+    { isRadiant: true, kills: 5, assists: 10, heroDamage: 30000 },
+    { isRadiant: true, kills: 5, assists: 5, heroDamage: 30000 },
+    { isRadiant: false, kills: 100, assists: 100, heroDamage: 999000 },
+  ];
+  const eu = { kills: 10, assists: 5, heroDamage: 40000 };
+
+  it('divide pelo total do PROPRIO time, ignorando o time inimigo', () => {
+    const r = deriveTeamShares(todos, true, eu);
+    // Abates do time = 20; (10 + 5) / 20 = 75%. Dano = 100k; 40k = 40%.
+    expect(r.killParticipationPct).toBeCloseTo(75, 5);
+    expect(r.damageSharePct).toBeCloseTo(40, 5);
+  });
+
+  it('o lado importa: o mesmo jogador contra o outro time da outra razao', () => {
+    const r = deriveTeamShares(todos, false, eu);
+    // Abates do lado Dire = 100; (10 + 5) / 100 = 15%.
+    expect(r.killParticipationPct).toBeCloseTo(15, 5);
+  });
+
+  it('sem a lista de jogadores devolve null nos dois, nunca zero', () => {
+    for (const vazio of [undefined, null, [], 'nao é lista']) {
+      const r = deriveTeamShares(vazio, true, eu);
+      expect(r.killParticipationPct).toBeNull();
+      expect(r.damageSharePct).toBeNull();
+    }
+  });
+
+  it('time sem abates: a razao nao existe, e isso e null e nao 0%', () => {
+    const zerados = [
+      { isRadiant: true, kills: 0, assists: 0, heroDamage: 0 },
+      { isRadiant: true, kills: 0, assists: 0, heroDamage: 0 },
+    ];
+    const r = deriveTeamShares(zerados, true, { kills: 0, assists: 0, heroDamage: 0 });
+    expect(r.killParticipationPct).toBeNull();
+    expect(r.damageSharePct).toBeNull();
+  });
+
+  it('ninguem do lado pedido tambem e null', () => {
+    const r = deriveTeamShares([{ isRadiant: false, kills: 5, assists: 0, heroDamage: 10 }], true, eu);
+    expect(r.killParticipationPct).toBeNull();
+  });
+});
+
+describe('ALL_TOWERS_STANDING', () => {
+  it('e a mascara de 11 torres inteiras', () => {
+    expect(ALL_TOWERS_STANDING).toBe(2047);
+    expect(ALL_TOWERS_STANDING.toString(2)).toBe('11111111111');
   });
 });

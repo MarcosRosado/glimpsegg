@@ -23,25 +23,33 @@ function benchFromRole(value: number): Benchmarked {
   return { value, source: 'ROLE_BASELINE' };
 }
 
-function buildBenchmarks(player: MatchPlayer, position: Role, durationMin: number): BenchmarkSet {
+/**
+ * Minuto de comparacao para metricas de fim de jogo: o minuto final da partida, mas
+ * nunca alem do alcance da curva — passar disso seria extrapolar.
+ */
+function resolveEndMinute(player: MatchPlayer, durationMin: number): number | null {
+  const maxMin = heroAverageMaxMinute(player.heroAverageCurve ?? null);
+  return maxMin === null ? null : Math.min(Math.floor(durationMin), maxMin);
+}
+
+function buildBenchmarks(player: MatchPlayer, position: Role, endMin: number | null): BenchmarkSet {
   const curve = player.heroAverageCurve ?? null;
   const roleBaseline = getRoleBaseline(player.role);
 
   const at10 = heroAverageAt(curve, 10, position);
-  const maxMin = heroAverageMaxMinute(curve);
-  // Para metricas de fim de jogo, compara no minuto final da partida — mas nunca
-  // alem do alcance da curva, senao a comparacao seria extrapolacao.
-  const endMin = maxMin === null ? null : Math.min(Math.floor(durationMin), maxMin);
   const atEnd = endMin === null ? null : heroAverageAt(curve, endMin, position);
 
   return {
     cs10: at10 ? benchFromHeroAverage(at10.cs, at10.matchCount) : benchFromRole(roleBaseline.cs10Min),
     dn10: at10 ? benchFromHeroAverage(at10.dn, at10.matchCount) : benchFromRole(roleBaseline.denies10Min),
     networth10: at10 ? benchFromHeroAverage(at10.networth, at10.matchCount) : null,
-    // heroAverage nao expoe GPM direto de forma confiavel; derivamos do patrimonio.
-    gpm: atEnd && endMin
+    // Patrimonio contra patrimonio. Sem fallback para ROLE_BASELINE de proposito:
+    // `ROLE_BASELINES.gpm` e ouro GANHO por minuto, outra unidade — cair nele traria
+    // de volta exatamente a comparacao enviesada que esta linha existe para corrigir.
+    // Sem curva, a regra nao dispara, e isso e um resultado valido.
+    networthPerMin: atEnd && endMin
       ? benchFromHeroAverage(atEnd.networth / Math.max(1, endMin), atEnd.matchCount)
-      : benchFromRole(roleBaseline.gpm),
+      : null,
     xpm: atEnd && endMin
       ? benchFromHeroAverage(atEnd.xp / Math.max(1, endMin), atEnd.matchCount)
       : benchFromRole(roleBaseline.xpm),
@@ -55,11 +63,15 @@ function buildBenchmarks(player: MatchPlayer, position: Role, durationMin: numbe
     deaths: atEnd
       ? benchFromHeroAverage(atEnd.deaths, atEnd.matchCount)
       : benchFromRole(roleBaseline.maxAcceptableDeaths),
-    killParticipationPct: atEnd
-      ? benchFromHeroAverage(atEnd.killContributionAverage
-          ? atEnd.killContributionAverage * 100
-          : roleBaseline.killParticipationPct, atEnd.matchCount)
-      : benchFromRole(roleBaseline.killParticipationPct),
+    // `killContributionAverage` costuma NAO vir da STRATZ (a fixture real de partida
+    // parseada nao traz o campo). Quando falta, o valor usado e a constante de
+    // ROLE_BASELINES — e ela precisa sair rotulada como tal. Antes saia como
+    // HERO_AVERAGE com sampleSize na casa dos milhares, ou seja, a UI exibia chip de
+    // "media do heroi · n=4425" em cima de uma estimativa estatica.
+    killParticipationPct:
+      atEnd && atEnd.killContributionAverage
+        ? benchFromHeroAverage(atEnd.killContributionAverage * 100, atEnd.matchCount)
+        : benchFromRole(roleBaseline.killParticipationPct),
   };
 }
 
@@ -70,6 +82,8 @@ export function buildInsightContext(
 ): InsightContext {
   const position = effectivePosition(player);
   const durationMin = Math.max(1, match.durationSeconds / 60);
+  const endMin = resolveEndMinute(player, durationMin);
+  const networthAtEnd = endMin === null ? null : cumulativeAt(player.series?.networthPerMinute, endMin);
   const isWinner =
     (player.isRadiant && match.didRadiantWin) || (!player.isRadiant && !match.didRadiantWin);
 
@@ -85,13 +99,16 @@ export function buildInsightContext(
     position,
     durationMin,
     isWinner,
-    benchmarks: buildBenchmarks(player, position, durationMin),
+    benchmarks: buildBenchmarks(player, position, endMin),
     heroAverage: player.heroAverageCurve ?? null,
     measured: {
       cs10: sumDeltas(player.series?.lastHitsPerMinute, 0, 10),
       dn10: sumDeltas(player.series?.deniesPerMinute, 0, 10),
       // CUMULATIVO: le a posicao 10, nao soma.
       networth10: cumulativeAt(player.series?.networthPerMinute, 10),
+      // Medido no MESMO minuto do benchmark, senao a razao compara janelas diferentes.
+      networthPerMin:
+        networthAtEnd !== null && endMin ? networthAtEnd / Math.max(1, endMin) : null,
       killParticipationPct:
         teamKills > 0 ? ((player.kills + player.assists) / teamKills) * 100 : null,
       damageSharePct: teamDamage > 0 ? (player.heroDamage / teamDamage) * 100 : null,

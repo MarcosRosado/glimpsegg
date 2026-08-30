@@ -2,21 +2,30 @@ import { InsightRule } from '../types';
 import { heroAverageAt, sumAll } from '../timeSeries';
 
 export const farmingRules: InsightRule[] = [
+  /**
+   * Economia. As duas regras mediam `player.goldPerMinute` (ouro GANHO) contra um
+   * benchmark de `heroAverage.networth / min` (ouro ACUMULADO em itens e reserva).
+   * Unidades diferentes, vies sempre no mesmo sentido: na fixture real, 4 dos 10
+   * jogadores estouravam o gatilho de 1.15 so pelo erro, incluindo um pos 5 — e o
+   * lado `Low` (< 0.82) praticamente nunca disparava. Agora as duas pontas sao
+   * patrimonio por minuto, medidas no mesmo minuto.
+   */
   {
-    id: 'farmingGpmHigh',
+    id: 'farmingNetworthHigh',
     category: 'FARMING',
-    requires: [],
+    requires: ['networthSeries'],
     evaluate: (ctx) => {
-      const bench = ctx.benchmarks.gpm;
-      if (!bench || bench.value <= 50) return null;
-      const ratio = ctx.player.goldPerMinute / bench.value;
+      const bench = ctx.benchmarks.networthPerMin;
+      const measured = ctx.measured.networthPerMin;
+      if (measured === null || !bench || bench.value <= 50) return null;
+      const ratio = measured / bench.value;
       if (ratio < 1.15) return null;
       return {
         type: 'STRENGTH',
         magnitude: Math.min(1, (ratio - 1) / 0.5),
         params: {
-          gpm: ctx.player.goldPerMinute,
-          benchGpm: Math.round(bench.value),
+          nwpm: Math.round(measured),
+          benchNwpm: Math.round(bench.value),
           networth: ctx.player.networth,
         },
         source: bench.source,
@@ -25,19 +34,20 @@ export const farmingRules: InsightRule[] = [
     },
   },
   {
-    id: 'farmingGpmLow',
+    id: 'farmingNetworthLow',
     category: 'FARMING',
-    requires: [],
+    requires: ['networthSeries'],
     positions: ['POSITION_1', 'POSITION_2', 'POSITION_3'],
     evaluate: (ctx) => {
-      const bench = ctx.benchmarks.gpm;
-      if (!bench || bench.value <= 50) return null;
-      const ratio = ctx.player.goldPerMinute / bench.value;
+      const bench = ctx.benchmarks.networthPerMin;
+      const measured = ctx.measured.networthPerMin;
+      if (measured === null || !bench || bench.value <= 50) return null;
+      const ratio = measured / bench.value;
       if (ratio > 0.82) return null;
       return {
         type: 'IMPROVEMENT',
         magnitude: Math.min(1, (1 - ratio) / 0.45),
-        params: { gpm: ctx.player.goldPerMinute, benchGpm: Math.round(bench.value) },
+        params: { nwpm: Math.round(measured), benchNwpm: Math.round(bench.value) },
         source: bench.source,
         sampleSize: bench.sampleSize,
       };

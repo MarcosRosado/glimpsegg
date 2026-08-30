@@ -8,6 +8,7 @@ import { resolveMatchType } from '../../utils/dotaFormatters';
 import { handleHeroImageError, handleRankImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 import { TranslationKey } from '../../i18n/translations';
+import { hasLaneVerdict, isLaneWin, isLaneLoss } from '../../utils/laneResult';
 
 interface StratzTrendsCardProps {
   matches: PlayerMatchSummary[];
@@ -117,10 +118,14 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
       roleMap[r] = { count: 0, wins: 0, impSum: 0, heroes: {} };
     });
 
+    // Placar de rota, so das partidas que TEM veredito real. Antes contava
+    // `!m.isVictory && m.imp <= -8` como rota perdida — ou seja, o resultado do jogo
+    // inteiro. `laneMeasured` é o denominador honesto: sem ele o card mostrava 100%
+    // das partidas classificadas, incluindo as nao parseadas.
     let laneWon = 0;
     let laneEven = 0;
     let laneLost = 0;
-    let laneOther = 0;
+    let laneMeasured = 0;
 
     displayedMatches.forEach((m) => {
       const role = roleMap[m.role] ? m.role : 'POSITION_1';
@@ -135,10 +140,12 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
       hero.impSum += m.imp || 0;
       if (m.isVictory) hero.wins++;
 
-      if (m.dynamicType === 'STOMP_LANE' || m.dynamicType === 'WIN_LANE' || (m.imp >= 5 && m.isVictory)) laneWon++;
-      else if (m.dynamicType === 'LOST_LANE' || (!m.isVictory && m.imp <= -8)) laneLost++;
-      else if (m.dynamicType === 'EVEN_MATCH' || m.dynamicType === 'DRAW_LANE' || Math.abs(m.imp) < 5) laneEven++;
-      else laneOther++;
+      if (hasLaneVerdict(m.laneResult)) {
+        laneMeasured++;
+        if (isLaneWin(m.laneResult)) laneWon++;
+        else if (isLaneLoss(m.laneResult)) laneLost++;
+        else laneEven++;
+      }
     });
 
     return {
@@ -151,7 +158,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
       laneWon,
       laneEven,
       laneLost,
-      laneOther,
+      laneMeasured,
     };
   }, [displayedMatches]);
 
@@ -727,19 +734,22 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
 
         <div>
           <div className="text-slate-500">{t('laneHistory')}</div>
-          <div className="text-sm font-black font-mono mt-0.5">
-            <span className="text-emerald-400">{stats.laneWon}</span>
-            <span className="text-slate-600">-</span>
-            <span className="text-yellow-400">{stats.laneEven}</span>
-            <span className="text-slate-600">-</span>
-            <span className="text-rose-400">{stats.laneLost}</span>
-            {stats.laneOther > 0 && (
-              <>
+          {stats.laneMeasured > 0 ? (
+            <>
+              <div className="text-sm font-black font-mono mt-0.5">
+                <span className="text-emerald-400">{stats.laneWon}</span>
                 <span className="text-slate-600">-</span>
-                <span className="text-slate-500">{stats.laneOther}</span>
-              </>
-            )}
-          </div>
+                <span className="text-yellow-400">{stats.laneEven}</span>
+                <span className="text-slate-600">-</span>
+                <span className="text-rose-400">{stats.laneLost}</span>
+              </div>
+              <div className="text-[9px] text-slate-600 font-sans mt-0.5">
+                {t('laneSampleOf', { measured: stats.laneMeasured, total: stats.total })}
+              </div>
+            </>
+          ) : (
+            <div className="text-xs text-slate-600 font-sans mt-1">{t('laneNoParsedMatches')}</div>
+          )}
         </div>
 
         <div>

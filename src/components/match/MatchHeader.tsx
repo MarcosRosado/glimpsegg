@@ -1,8 +1,28 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Clock, Copy, Check, Trophy } from 'lucide-react';
-import { MatchDetails } from '../../types/dota';
+import { MatchAnalysisOutcome, MatchDetails } from '../../types/dota';
+import { TranslationKey } from '../../i18n/translations';
 import { formatDuration, formatTimeAgo } from '../../utils/dotaFormatters';
 import { useLanguage } from '../../context/LanguageContext';
+
+/**
+ * Veredito da STRATZ sobre a forma da partida — o mesmo "comeback"/"stomp" que o site
+ * mostra. Ja vinha na resposta e era mapeado, mas nenhuma tela renderizava.
+ *
+ * Literais explicitos num `Record` de uniao fechada: chave nova no enum quebra o build,
+ * e o teste de chave orfa enxerga as chaves. Nunca montar `t(`match${x}`)`.
+ */
+const ANALYSIS_OUTCOME_KEY: Record<MatchAnalysisOutcome, TranslationKey> = {
+  STOMPED: 'analysisStomped',
+  COMEBACK: 'analysisComeback',
+  CLOSE_GAME: 'analysisCloseGame',
+};
+
+const ANALYSIS_OUTCOME_STYLE: Record<MatchAnalysisOutcome, string> = {
+  STOMPED: 'bg-orange-500/15 text-orange-300 border-orange-500/40',
+  COMEBACK: 'bg-purple-500/15 text-purple-300 border-purple-500/40',
+  CLOSE_GAME: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40',
+};
 
 interface MatchHeaderProps {
   match: MatchDetails;
@@ -73,6 +93,18 @@ export const MatchHeader: React.FC<MatchHeaderProps> = ({ match, onBack }) => {
               </span>
               <span>•</span>
               <span>{formatTimeAgo(match.startDateTime)}</span>
+              {/* `null` quando a STRATZ manda `NONE`: some, nao vira rotulo neutro. */}
+              {match.analysisOutcome && (
+                <>
+                  <span>•</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-md border font-semibold ${ANALYSIS_OUTCOME_STYLE[match.analysisOutcome]}`}
+                    title={t('analysisOutcomeSource')}
+                  >
+                    {t(ANALYSIS_OUTCOME_KEY[match.analysisOutcome])}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>

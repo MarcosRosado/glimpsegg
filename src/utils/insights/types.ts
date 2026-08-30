@@ -24,8 +24,8 @@ export type RuleId =
   | 'laningLaneStomped'
   | 'laningLaneLost'
   // Farming
-  | 'farmingGpmHigh'
-  | 'farmingGpmLow'
+  | 'farmingNetworthHigh'
+  | 'farmingNetworthLow'
   | 'farmingStacksHigh'
   | 'farmingCurveBehind'
   // Fighting
@@ -100,7 +100,14 @@ export interface BenchmarkSet {
   cs10: Benchmarked | null;
   dn10: Benchmarked | null;
   networth10: Benchmarked | null;
-  gpm: Benchmarked | null;
+  /**
+   * Patrimonio por minuto no minuto final. Substituiu `gpm`, que derivava o benchmark
+   * de `heroAverage.networth / min` e comparava contra `player.goldPerMinute` — ouro
+   * ACUMULADO contra ouro GANHO. O vies era sempre o mesmo: benchmark baixo demais,
+   * elogio de farm que nao aconteceu. `heroAverage` nao expoe campo de ouro, entao a
+   * unica comparacao honesta e patrimonio contra patrimonio.
+   */
+  networthPerMin: Benchmarked | null;
   xpm: Benchmarked | null;
   heroDamage: Benchmarked | null;
   towerDamage: Benchmarked | null;
@@ -124,6 +131,8 @@ export interface InsightContext {
     cs10: number | null;
     dn10: number | null;
     networth10: number | null;
+    /** Patrimonio/min do jogador NO MESMO minuto do benchmark. `null` sem a serie. */
+    networthPerMin: number | null;
     killParticipationPct: number | null;
     damageSharePct: number | null;
     heroDamagePerMin: number;

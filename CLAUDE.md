@@ -94,6 +94,71 @@ Quando faltar dado, as saídas legítimas são esconder a seção ou marcar a pr
 lacuna com estimativa não rotulada é regressão, mesmo que a tela fique mais bonita. Precisar de uma
 condição nova de disponibilidade → adicionar flag em `MatchDataAvailability`.
 
+**Veredito de rota vem só de `top/mid/bottomLaneOutcome`.** IMP, KDA, mortes, last hits e
+vitória/derrota medem a **partida inteira** e não podem receber rótulo de rota — a função
+`resolvePlayerLaneResult` (`services/stratzGql.ts`) recebe exatamente três coisas (lane, lado,
+outcomes) e nenhum sinal de resultado de partida, de propósito. A dashboard mantinha um segundo
+sistema, paralelo ao do detalhe da partida, que decidia rota por `deaths >= 7 && !isVictory`: uma
+safelane atropelada que perdeu o jogo depois saía como "Rota Difícil", e `WIN_LANE` exigia `isWin`,
+então ganhar a rota e perder o jogo era **impossível** de rotular. Sem os campos de outcome
+(partida não parseada) o veredito é `UNKNOWN` e a UI **omite o badge** — `utils/laneResult.ts`
+concentra o rótulo e o `hasLaneVerdict`. `MatchDynamicType` é sobre a forma da partida
+(`STOMP`/`COMEBACK`/`HIGH_IMPACT`/…), nunca sobre rota.
+
+**Janela importa tanto quanto procedência.** Métrica rotulada como de rota tem de vir dos 10
+primeiros minutos: `cs10`/`dn10` somam os deltas, `gold10` lê o array cumulativo. O eixo "Fase de
+Rotas" do radar é `null` sem série por minuto (antes caía em `goldPerMinute` do jogo inteiro), e
+`kills10`/`deaths10` saem dos eventos reais de morte — eram literais `0` que a tela exibia como
+medição.
+
+**Comparar unidades iguais.** `heroAverage` não expõe campo de ouro, então o benchmark de economia
+é patrimônio/min contra patrimônio/min (`benchmarks.networthPerMin`), medido no mesmo minuto nas
+duas pontas. A versão anterior comparava `goldPerMinute` (ouro ganho) com `networth/min` (ouro
+acumulado): na fixture real, 4 dos 10 jogadores estouravam o gatilho de elogio só pelo erro, e o
+lado "abaixo da média" nunca disparava. Não existe fallback para `ROLE_BASELINES.gpm` aqui — cair
+nele reintroduziria a mistura.
+
+## Destaques da partida (`src/utils/awardEngine.ts`)
+
+Mesma separacao do motor de coaching: **o motor devolve `AwardId` + numero cru**, e texto e
+cor vivem na UI (`AWARD_LABEL`/`AWARD_STYLE` em `TeamOverviewCard`). Antes, `title`, `subtitle` e
+a classe Tailwind eram literais dentro do engine — e literais **em pt-BR**, entao a versao en-US
+exibia "Desempenho lendario com impacto decisivo".
+
+**Superlativo exige margem.** `sortedByImp[0]` coroava alguem em toda partida, inclusive num
+empate de dez — "o primeiro de uma lista" nao é destaque. Cada superlativo tem margem e piso
+**proprios da metrica**, calibrados sobre 60 partidas reais: a mediana da vantagem do 1º sobre o
+2º é 11% em assistencias e 202% em cura, entao um limiar unico ou premiaria cura sempre ou nunca
+premiaria assistencia. Lista vazia é resultado valido.
+
+**Tres slots sao fixos: MVP, melhor core e melhor suporte.** Sao os unicos premios sem
+exigencia de margem — toda partida tem cores e suportes, e "o core de maior IMP desta partida" e
+fato mesmo num placar apertado. O IMP aparece ao lado, entao quem le percebe sozinho quando a
+diferenca foi minima, e "melhor suporte" com IMP negativo e uma leitura valida da partida.
+`ROUGH_GAME` e os superlativos **continuam** exigindo margem: aqueles afirmam destaque, e o
+primeiro de uma lista empatada nao e destaque.
+
+**MVP nao sai do IMP.** IMP mede desempenho contra a *expectativa* do heroi/posicao/ranque, nao
+impacto na partida: na amostra, o maior IMP esta no time **perdedor** em 19% dos jogos. Caso real
+(8973449942): o carry vencedor fechou 21/5/13 com maior patrimonio, dano e dano em torres, e
+levou IMP -10, enquanto um suporte 2/6/20 do time derrotado levou +24. O MVP e o jogador do time
+vencedor que leva **mais superlativos**, com IMP so no desempate (e o IMP como criterio
+quando ninguem do time vencedor liderou categoria alguma). Ja `TOP_CORE`/`TOP_SUPPORT`
+continuam saindo do IMP de proposito — eles perguntam "quem jogou melhor NA FUNCAO", que é
+exatamente o que o IMP mede.
+
+**Numero sem metrica nao informa.** O card mostrava `Sufocador · Lifestealer · 27` — tres
+campos soltos, e o `27` sem dizer 27 de que. Todo valor sai por um template de i18n
+(`AWARD_VALUE`), entao vira "27 denies" / "19,6k de dano em torres" e cada idioma escolhe ordem e
+substantivo. Pelo mesmo motivo o premio de papel carrega `basis`: as categorias que elegeram o
+jogador. "MVP · 1 superlativo" nao diz nada; "MVP · Carrasco" diz que ele fez mais abates. E todo
+selo tem tooltip (`AWARD_HINT`) com o criterio — apelido sem criterio e enfeite.
+
+**Limiar de tag envelhece em silencio.** O badge de farm da lista de partidas usava
+`goldPerMinute >= 750` e passou a disparar em **59%** das partidas (a mediana medida é 835). Os
+limiares em `MatchList.tsx` e `awardEngine.ts` carregam a taxa de disparo medida ao lado; alvo de
+5% a 15%. Refazer a medicao antes de mexer, nunca ajustar no olho.
+
 ## Motor de coaching (`src/utils/insights/`)
 
 Determinístico, sem LLM. Regras declarativas, texto fora da regra:

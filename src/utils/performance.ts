@@ -44,14 +44,17 @@ export function calculateRadarStats(player: MatchPlayer, teamTotalKills: number,
   const baseline = getRoleBaseline(player.role);
   const durationMin = Math.max(15, matchDurationSec / 60);
 
-  // 1. Laning (0 - 100): LH @ 10, denies @ 10, lane kills
-  let laningScore = 60;
+  // 1. Laning (0 - 100): LH @ 10 e denies @ 10.
+  //
+  // Sem series por minuto o eixo é `null` e sai do radar. O fallback anterior media
+  // `goldPerMinute / baseline.gpm` — o GPM da PARTIDA INTEIRA — sob o rotulo "Fase de
+  // Rotas", que é o mesmo erro de janela que fazia a dashboard chamar de rota perdida
+  // um jogo que apenas terminou mal. Ausencia de dado nao é nota de rota.
+  let laningScore: number | null = null;
   if (player.laningStats && player.laningStats.lastHits10 > 0) {
     const csRatio = player.laningStats.lastHits10 / baseline.cs10Min;
     const dnBonus = Math.min(20, (player.laningStats.denies10 / baseline.denies10Min) * 15);
     laningScore = Math.min(100, Math.max(10, csRatio * 65 + dnBonus));
-  } else {
-    laningScore = Math.min(100, Math.max(20, (player.goldPerMinute / baseline.gpm) * 65));
   }
 
   // 2. Farming (0 - 100): GPM, XPM, Networth
@@ -92,7 +95,7 @@ export function calculateRadarStats(player: MatchPlayer, teamTotalKills: number,
   objectivesScore = Math.min(100, Math.max(10, objectivesScore));
 
   return {
-    laning: Math.round(laningScore),
+    laning: laningScore === null ? null : Math.round(laningScore),
     farming: Math.round(farmingScore),
     fighting: Math.round(fightingScore),
     survivability: Math.round(survivabilityScore),

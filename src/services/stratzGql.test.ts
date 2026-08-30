@@ -42,6 +42,26 @@ describe('mapStratzMatch — campos de partida', () => {
   });
 });
 
+describe('analysisOutcome — veredito da STRATZ sobre a partida', () => {
+  // Os quatro valores do enum vieram de introspecao do schema:
+  // MatchAnalysisOutcomeType = NONE | STOMPED | COMEBACK | CLOSE_GAME.
+  const comOutcome = (v: unknown) => mapStratzMatch({ ...raw, analysisOutcome: v }).analysisOutcome;
+
+  it('passa os tres vereditos reais adiante', () => {
+    expect(comOutcome('STOMPED')).toBe('STOMPED');
+    expect(comOutcome('COMEBACK')).toBe('COMEBACK');
+    expect(comOutcome('CLOSE_GAME')).toBe('CLOSE_GAME');
+  });
+
+  it('NONE, null e lixo viram null — ausencia de veredito nao é um veredito', () => {
+    expect(comOutcome('NONE')).toBeNull();
+    expect(comOutcome(null)).toBeNull();
+    expect(comOutcome(undefined)).toBeNull();
+    expect(comOutcome('VITORIA_ESMAGADORA')).toBeNull();
+    expect(comOutcome(3)).toBeNull();
+  });
+});
+
 describe('REGRESSAO: as wards falsas morreram', () => {
   it('nao existem 4 wards identicas por jogador', () => {
     // O bug antigo dava exatamente 4 wards para TODOS os 10 jogadores.
@@ -158,6 +178,41 @@ describe('laningStats — real, nao inventado', () => {
     const p = match.players[0];
     expect(p.laningStats!.laneResult).not.toBe('UNKNOWN');
     expect((p.laningStats as any).laneEfficiencyPct).toBeUndefined();
+  });
+
+  it('GEOMETRIA: safelane do Radiant le a bottom, safelane do Dire le a top', () => {
+    // A fixture tem top=RADIANT_VICTORY, mid=DIRE_VICTORY, bottom=RADIANT_VICTORY.
+    // Inverter os dois lados inverteria o veredito de metade da partida em silencio.
+    const safe = match.players.filter((p) => p.laningStats && p.lane === 'SAFE');
+    const off = match.players.filter((p) => p.laningStats && p.lane === 'OFF');
+    // Sem isto o teste passaria vazio, que e o modo de falhar mais caro aqui.
+    expect(safe.filter((p) => p.isRadiant).length).toBeGreaterThan(0);
+    expect(safe.filter((p) => !p.isRadiant).length).toBeGreaterThan(0);
+    expect(off.length).toBeGreaterThan(0);
+
+    // Radiant safe = bottom = RADIANT_VICTORY => WON; Dire safe = top = RADIANT_VICTORY => LOST.
+    for (const p of safe) expect(p.laningStats!.laneResult).toBe(p.isRadiant ? 'WON' : 'LOST');
+    // Radiant off = top = RADIANT_VICTORY => WON; Dire off = bottom = RADIANT_VICTORY => LOST.
+    for (const p of off) expect(p.laningStats!.laneResult).toBe(p.isRadiant ? 'WON' : 'LOST');
+  });
+
+  it('abates/mortes ate 10min saem dos eventos reais, nao dos zeros literais', () => {
+    const comDado = match.players.filter((p) => p.laningStats?.deaths10 !== null);
+    expect(comDado.length).toBeGreaterThan(0);
+
+    // O bug: `killsInLane: 0, deathsInLane: 0` fixos, que a tela renderizava como
+    // "0K / 0D" para os 10 jogadores. Se voltar, estes dois expects caem.
+    const mortes = comDado.map((p) => p.laningStats!.deaths10);
+    expect(mortes.every((m) => m === 0)).toBe(false);
+
+    // Bate com a contagem crua de eventos ate o minuto 10.
+    for (const p of comDado) {
+      const reais = (p.deathEvents ?? []).filter((d) => d.time <= 600).length;
+      expect(p.laningStats!.deaths10).toBe(reais);
+    }
+
+    const abates = comDado.map((p) => p.laningStats!.kills10);
+    expect(abates.every((k) => k === 0)).toBe(false);
   });
 
   it('firstCoreItemTimingSec sai das compras reais, sem o 840 literal', () => {
@@ -287,6 +342,21 @@ describe('degradacao para partida nao parseada', () => {
     for (const p of semNada.players) {
       expect(p.laningStats).toBeUndefined();
     }
+  });
+
+  it('lane desconhecida nao herda o veredito da safelane da faccao', () => {
+    // O default de `mapStratzLane` era 'SAFE': um roamer, ou qualquer `lane` que a
+    // STRATZ nao classificasse, recebia o resultado da safelane do time dele.
+    const roamer = mapStratzMatch({
+      ...raw,
+      players: raw.players.map((p: any, i: number) =>
+        i === 0 ? { ...p, lane: 'ROAMING' } : i === 1 ? { ...p, lane: null } : p,
+      ),
+    });
+    expect(roamer.players[0].lane).toBe('ROAMING');
+    expect(roamer.players[0].laningStats!.laneResult).toBe('UNKNOWN');
+    expect(roamer.players[1].lane).toBe('UNKNOWN');
+    expect(roamer.players[1].laningStats!.laneResult).toBe('UNKNOWN');
   });
 
   it('itemTimings é undefined em vez do ladder sintetico 300/840/1260/1680', () => {

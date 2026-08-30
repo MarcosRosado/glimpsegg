@@ -1,6 +1,11 @@
 export type Role = 'POSITION_1' | 'POSITION_2' | 'POSITION_3' | 'POSITION_4' | 'POSITION_5' | 'UNKNOWN';
 export type Lane = 'SAFE' | 'MID' | 'OFF' | 'JUNGLE' | 'ROAMING' | 'UNKNOWN';
-export type MatchDynamicType = 'COMEBACK' | 'STOMP' | 'STOMP_LANE' | 'WIN_LANE' | 'DRAW_LANE' | 'LOST_LANE' | 'EVEN_MATCH';
+/**
+ * Forma da PARTIDA, medida por IMP/KDA/duracao. Nao diz nada sobre a fase de rota:
+ * os membros `*_LANE` foram removidos porque rotulavam "Venceu/Perdeu a Rota" a partir
+ * do jogo inteiro. Veredito de rota vem de `PlayerLaneResult`, e so de la.
+ */
+export type MatchDynamicType = 'COMEBACK' | 'STOMP' | 'HIGH_IMPACT' | 'LOW_IMPACT' | 'EVEN_MATCH';
 
 export interface HeroMetadata {
   id: number;
@@ -183,6 +188,13 @@ export interface DetailedFarmStats {
   campsStacked: number | null;
 }
 
+/**
+ * `MatchAnalysisOutcomeType` da STRATZ, verificado por introspecao do schema. O enum
+ * tem tambem `NONE`, que o mapper normaliza para `null` — ausencia de veredito nao é
+ * um veredito.
+ */
+export type MatchAnalysisOutcome = 'STOMPED' | 'COMEBACK' | 'CLOSE_GAME';
+
 export type LaneOutcome = 'TIE' | 'RADIANT_VICTORY' | 'RADIANT_STOMP' | 'DIRE_VICTORY' | 'DIRE_STOMP';
 
 /** Resultado da lane do ponto de vista do jogador, derivado de LaneOutcomeEnums. */
@@ -197,12 +209,19 @@ export interface LaningStats {
   laneResult: PlayerLaneResult;
   firstCoreItemTimingSec: number | null;
   firstCoreItemId: number | null;
-  killsInLane: number;
-  deathsInLane: number;
+  /**
+   * Abates e mortes nos primeiros 10 minutos, dos eventos reais de morte.
+   * Sao "ate o minuto 10", NAO "dentro da rota" — nao ha como recortar por regiao.
+   * `null` = a partida nao trouxe deathEvents. Antes eram literais `0`, que a UI
+   * renderizava como medicao.
+   */
+  kills10: number | null;
+  deaths10: number | null;
 }
 
 export interface RadarStats {
-  laning: number; // 0 - 100
+  /** `null` = sem series por minuto. O eixo sai do radar em vez de virar GPM do jogo inteiro. */
+  laning: number | null; // 0 - 100
   farming: number; // 0 - 100
   fighting: number; // 0 - 100
   survivability: number; // 0 - 100
@@ -460,7 +479,8 @@ export interface MatchDetails {
   parsedDateTime: number | null;
   bracket: number | null;
   actualRank: number | null;
-  analysisOutcome: 'NONE' | 'STOMPED' | 'COMEBACK' | 'CLOSE_GAME' | null;
+  /** Veredito da STRATZ sobre a forma da partida. `null` = a API mandou `NONE`. */
+  analysisOutcome: MatchAnalysisOutcome | null;
   firstBloodTime: number | null;
   laneOutcomes: {
     top: LaneOutcome | null;
@@ -545,6 +565,11 @@ export interface PlayerMatchSummary {
   lane: Lane;
   award?: string;
   dynamicType?: MatchDynamicType;
+  /**
+   * Veredito real da rota, de `top/mid/bottomLaneOutcome`. `UNKNOWN` (ou ausente) =
+   * partida nao parseada; a UI omite o badge em vez de estimar por IMP.
+   */
+  laneResult?: PlayerLaneResult;
   items: number[];
   neutralItem?: number;
   // Contexto da partida. Opcionais porque a STRATZ nem sempre devolve: ausente
@@ -557,6 +582,22 @@ export interface PlayerMatchSummary {
   networth?: number;
   /** 1 = solo. `null` = a API nao devolveu o suficiente para contar o grupo. */
   partySize?: number | null;
+  /**
+   * Campos que alimentam as tags da lista. Todos OPCIONAIS pelo mesmo motivo dos
+   * demais: ausente significa "a API nao devolveu" e a tag some, nunca vira 0.
+   * `killParticipationPct` e `damageSharePct` sao razoes sobre o total do time e
+   * exigem `allPlayers`; sem ele sao `null`.
+   */
+  level?: number;
+  /** Ouro em maos no fim da partida — o que nao chegou a virar item. */
+  unspentGold?: number;
+  heroDamage?: number;
+  towerDamage?: number;
+  heroHealing?: number;
+  killParticipationPct?: number | null;
+  damageSharePct?: number | null;
+  /** O time do jogador terminou a partida sem perder uma unica torre. */
+  keptAllTowers?: boolean;
   /** Tier 1-8 do rank medio da partida. `null` = sem dado. */
   bracket?: number | null;
 }

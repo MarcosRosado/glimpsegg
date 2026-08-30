@@ -1,11 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { ScanEye, Swords, ChevronRight, Zap, Trophy, Shield, Clock, Flame, RotateCcw, Crown, Coins, User, Users, X } from 'lucide-react';
+import {
+  ScanEye, Swords, ChevronRight, Zap, Trophy, Shield, Clock, Flame, RotateCcw, Crown, Coins,
+  User, Users, X, Crosshair, Hammer, HeartPulse, Ban, ChevronsUp, Hourglass, PiggyBank, ShieldCheck,
+} from 'lucide-react';
 import { PlayerMatchSummary } from '../../types/dota';
 import { TranslationKey } from '../../i18n/translations';
 import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
-import { formatDuration, formatTimeAgo, getImpBadgeStyle, resolveMatchType, MatchTypeCode } from '../../utils/dotaFormatters';
+import { formatDuration, formatGold, formatTimeAgo, getImpBadgeStyle, resolveMatchType, MatchTypeCode } from '../../utils/dotaFormatters';
 import { handleHeroImageError, handleItemImageError } from '../../utils/imageFallback';
+import { LANE_RESULT_KEY, hasLaneVerdict, isLaneWin, isLaneLoss } from '../../utils/laneResult';
 import { useLanguage } from '../../context/LanguageContext';
 import { MatchContextCell } from './MatchContextCell';
 
@@ -18,6 +22,37 @@ interface MatchTag {
   className: string;
   priority: number;
 }
+
+/**
+ * Limiares das tags.
+ *
+ * CALIBRACAO — 100 partidas reais de um perfil de bracket 6 (Divine/Immortal),
+ * consultadas na STRATZ em 2026-08-30. A taxa de disparo medida esta ao lado de cada
+ * constante; o alvo foi a faixa de 5% a 15%, que é onde a tag ainda significa
+ * "destaque". Numero fora dessa faixa vira decoracao: `goldPerMinute >= 750`, o valor
+ * anterior de `FARM_GPM`, disparava em **59%** das partidas — a mediana da amostra é
+ * 835 de GPM.
+ *
+ * A amostra é de UM jogador, entao ela calibra bem a ordem de grandeza e mal a cauda
+ * por posicao (só 10-11 partidas de cada suporte). Refazer a medicao antes de mexer
+ * nestes numeros, e nao ajusta-los "no olho" — foi assim que o 750 envelheceu sem
+ * ninguem notar.
+ *
+ * Limiares RELATIVOS (participacao em abates, fatia de dano) sao preferidos aos
+ * absolutos onde possivel: sao razoes sobre o time, entao nao envelhecem quando um
+ * patch infla a economia do jogo.
+ */
+const FARM_GPM = 1500;               // 10% — p90 da amostra é 1498
+const KILL_PARTICIPATION_PCT = 80;   //  9%
+const DAMAGE_SHARE_PCT = 33;         // 10%
+const CS_PER_MIN = 8;                //  9%
+const TOWER_DAMAGE = 12000;          // 11%
+const HERO_HEALING = 5000;           //  6%
+const DENIES = 15;                   //  6%
+const MAX_LEVEL = 30;                // 13% — nivel maximo do Dota
+const MARATHON_MIN = 60;             //  6%
+const UNSPENT_GOLD = 5000;           // 15%
+const MAX_TAGS = 4;
 
 function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): MatchTag[] {
   const tags: MatchTag[] = [];
@@ -82,34 +117,50 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
     }
   }
 
-  // 2. RESULTADO DA ROTA (Lane Outcome)
-  if ((match.imp >= 15 && kda >= 4) || (match.numLastHits >= 230 && match.deaths <= 3)) {
+  // 2. RESULTADO DA ROTA — do dado real da STRATZ, e so dele.
+  //
+  // Este bloco decidia a rota por `imp`, `kda`, `numLastHits`, `deaths` e `isVictory`,
+  // todos da PARTIDA INTEIRA. `deaths >= 7 && !isVictory` marcava "Rota Dificil" numa
+  // safelane atropelada que perdeu o jogo depois. Sem `laneResult`, a partida nao foi
+  // parseada e nenhum badge de rota aparece — omitir é a saida honesta, estimar nao é.
+  if (hasLaneVerdict(match.laneResult)) {
+    const won = isLaneWin(match.laneResult);
+    const lost = isLaneLoss(match.laneResult);
+    const stomp = match.laneResult === 'STOMP_WON' || match.laneResult === 'STOMP_LOST';
     tags.push({
-      key: 'lane-stomp',
-      label: t('badgeLaneStomp'),
-      className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold',
-      priority: 80,
+      key: 'lane-result',
+      label: t(LANE_RESULT_KEY[match.laneResult]),
+      className: won
+        ? stomp
+          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold'
+          : 'bg-teal-500/20 text-teal-300 border-teal-500/40 font-medium'
+        : lost
+          ? stomp
+            ? 'bg-rose-500/25 text-rose-200 border-rose-500/50 font-bold'
+            : 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-medium'
+          : 'bg-slate-500/20 text-slate-300 border-slate-500/40 font-medium',
+      // Alta de proposito, atras so do MVP. Com o teto de 4 tags, a rota é o unico
+      // eixo aqui que a linha nao mostra de outro jeito — vitoria/derrota ja aparece
+      // em texto ao lado do placar, entao o badge de resultado pode ser cortado.
+      priority: stomp ? 95 : won || lost ? 82 : 64,
     });
-  } else if (match.imp >= 5 || (kda >= 3.0 && match.isVictory)) {
+  }
+
+  // 2b. IMPACTO INDIVIDUAL. Mede a partida inteira, e o rotulo agora diz isso — era
+  // este numero que se passava por veredito de rota.
+  if (match.imp >= 15 && kda >= 4) {
     tags.push({
-      key: 'lane-won',
-      label: t('badgeLaneWon'),
-      className: 'bg-teal-500/20 text-teal-300 border-teal-500/40 font-medium',
-      priority: 60,
+      key: 'impact-high',
+      label: t('badgeHighImpact'),
+      className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-bold',
+      priority: 58,
     });
-  } else if (match.imp <= -10 || (match.deaths >= 7 && !match.isVictory)) {
+  } else if (match.imp <= -10) {
     tags.push({
-      key: 'lane-lost',
-      label: t('badgeLaneHard'),
-      className: 'bg-rose-500/20 text-rose-300 border-rose-500/40 font-medium',
-      priority: 55,
-    });
-  } else {
-    tags.push({
-      key: 'lane-even',
-      label: t('badgeLaneEven'),
-      className: 'bg-slate-500/20 text-slate-300 border-slate-500/40 font-medium',
-      priority: 25,
+      key: 'impact-low',
+      label: t('badgeLowImpact'),
+      className: 'bg-slate-600/25 text-slate-300 border-slate-600/40 font-medium',
+      priority: 22,
     });
   }
 
@@ -134,6 +185,29 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
     });
   }
 
+  // `TOP_CORE` vinha da STRATZ e era simplesmente ignorado, embora `TOP_SUPPORT`
+  // fosse honrado logo acima. Na amostra de calibracao apareceu em 8% das partidas.
+  if (match.award === 'TOP_CORE') {
+    tags.push({
+      key: 'award-top-core',
+      label: t('badgeTopCore'),
+      icon: <Swords className="w-3 h-3 text-orange-400" />,
+      className: 'bg-orange-500/20 text-orange-300 border-orange-500/50 font-bold',
+      priority: 89,
+    });
+  }
+
+  // Raro (3% da amostra) e coletivo, mas é o tipo de partida que se lembra.
+  if (match.keptAllTowers) {
+    tags.push({
+      key: 'ctx-flawless',
+      label: t('badgeNoTowersLost'),
+      icon: <ShieldCheck className="w-2.5 h-2.5 text-teal-300" />,
+      className: 'bg-teal-500/20 text-teal-200 border-teal-500/50 font-bold',
+      priority: 88,
+    });
+  }
+
   if (match.deaths === 0) {
     tags.push({
       key: 'acc-immortal',
@@ -154,7 +228,10 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
     });
   }
 
-  if (match.goldPerMinute >= 750) {
+  // 750 GPM disparava em 59% das partidas da amostra de calibracao — nao era
+  // destaque, era ruido. A mediana ali é 835 e o p90 é 1498. Ver o bloco de
+  // calibracao acima.
+  if (match.goldPerMinute >= FARM_GPM) {
     tags.push({
       key: 'acc-heavy-farm',
       label: t('badgeFarm', { value: match.goldPerMinute }),
@@ -173,10 +250,110 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
     });
   }
 
-  // Sort strictly by priority descending and cap at maximum 3 most important tags!
+  // 4. MEDIDAS DE JOGO, cada uma com um eixo que nenhuma outra tag cobre.
+  //    Todas guardadas por `!= null`: campo ausente = sem tag, nunca zero.
+
+  // Presenca nas lutas. Razao sobre os abates do time, entao imune a inflacao de
+  // patch — diferente de GPM/dano absolutos.
+  if (match.killParticipationPct != null && match.killParticipationPct >= KILL_PARTICIPATION_PCT) {
+    tags.push({
+      key: 'acc-kill-participation',
+      label: t('badgeKillParticipation', { value: Math.round(match.killParticipationPct) }),
+      icon: <Users className="w-2.5 h-2.5 text-sky-400" />,
+      className: 'bg-sky-500/20 text-sky-300 border-sky-500/40 font-bold',
+      priority: 62,
+    });
+  }
+
+  if (match.damageSharePct != null && match.damageSharePct >= DAMAGE_SHARE_PCT) {
+    tags.push({
+      key: 'acc-damage-share',
+      label: t('badgeDamageShare', { value: Math.round(match.damageSharePct) }),
+      icon: <Swords className="w-2.5 h-2.5 text-red-400" />,
+      className: 'bg-red-500/20 text-red-300 border-red-500/40 font-bold',
+      priority: 57,
+    });
+  }
+
+  // CS por minuto e GPM medem coisas diferentes: ouro vem tambem de abates e de
+  // bounty. Na amostra, as duas tags coincidiram em so 4 das 100 partidas.
+  if (durMin !== null && match.numLastHits / durMin >= CS_PER_MIN) {
+    tags.push({
+      key: 'acc-cs-per-min',
+      label: t('badgeCsPerMin', { value: (match.numLastHits / durMin).toFixed(1) }),
+      icon: <Crosshair className="w-2.5 h-2.5 text-lime-400" />,
+      className: 'bg-lime-500/20 text-lime-300 border-lime-500/40 font-medium',
+      priority: 52,
+    });
+  }
+
+  if (match.towerDamage != null && match.towerDamage >= TOWER_DAMAGE) {
+    tags.push({
+      key: 'acc-tower-damage',
+      label: t('badgeTowerDamage', { value: formatGold(match.towerDamage) }),
+      icon: <Hammer className="w-2.5 h-2.5 text-orange-400" />,
+      className: 'bg-orange-500/20 text-orange-300 border-orange-500/40 font-medium',
+      priority: 48,
+    });
+  }
+
+  if (match.heroHealing != null && match.heroHealing >= HERO_HEALING) {
+    tags.push({
+      key: 'acc-healing',
+      label: t('badgeHealing', { value: formatGold(match.heroHealing) }),
+      icon: <HeartPulse className="w-2.5 h-2.5 text-emerald-400" />,
+      className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-medium',
+      priority: 47,
+    });
+  }
+
+  // `numDenies` ja vinha no historico e nao era usado por nenhuma tag.
+  if (match.numDenies >= DENIES) {
+    tags.push({
+      key: 'acc-denies',
+      label: t('badgeDenies', { value: match.numDenies }),
+      icon: <Ban className="w-2.5 h-2.5 text-violet-400" />,
+      className: 'bg-violet-500/20 text-violet-300 border-violet-500/40 font-medium',
+      priority: 44,
+    });
+  }
+
+  if (match.level != null && match.level >= MAX_LEVEL) {
+    tags.push({
+      key: 'acc-max-level',
+      label: t('badgeMaxLevel'),
+      icon: <ChevronsUp className="w-2.5 h-2.5 text-indigo-400" />,
+      className: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 font-medium',
+      priority: 33,
+    });
+  }
+
+  if (durMin !== null && durMin >= MARATHON_MIN) {
+    tags.push({
+      key: 'ctx-marathon',
+      label: t('badgeMarathon'),
+      icon: <Hourglass className="w-2.5 h-2.5 text-slate-300" />,
+      className: 'bg-slate-500/20 text-slate-300 border-slate-500/40 font-medium',
+      priority: 28,
+    });
+  }
+
+  // Fato, nao repreensao: ouro que terminou a partida em maos em vez de virar item.
+  if (match.unspentGold != null && match.unspentGold >= UNSPENT_GOLD) {
+    tags.push({
+      key: 'acc-unspent-gold',
+      label: t('badgeUnspentGold', { value: formatGold(match.unspentGold) }),
+      icon: <PiggyBank className="w-2.5 h-2.5 text-yellow-500" />,
+      className: 'bg-yellow-600/15 text-yellow-200/90 border-yellow-600/40 font-medium',
+      priority: 18,
+    });
+  }
+
+  // O teto era 3, e com o conjunto novo isso escondia tag em 16% das partidas.
+  // Com 4, cai para 11% — e a media medida é 2.29 tags por partida.
   return tags
     .sort((a, b) => b.priority - a.priority)
-    .slice(0, 3);
+    .slice(0, MAX_TAGS);
 }
 
 interface MatchListProps {

@@ -13,6 +13,7 @@ import {
   HeroAverageEntry,
   ItemTimingEvent,
   LaneOutcome,
+  MatchAnalysisOutcome,
   LaningStats,
   MatchDataAvailability,
   PlayerLaneResult,
@@ -57,8 +58,17 @@ query GetPlayerProfile($steamAccountId: Long!) {
       gameMode
       lobbyType
       bracket
+      topLaneOutcome
+      midLaneOutcome
+      bottomLaneOutcome
+      towerStatusRadiant
+      towerStatusDire
       allPlayers: players {
         partyId
+        isRadiant
+        kills
+        assists
+        heroDamage
       }
       players(steamAccountId: $steamAccountId) {
         partyId
@@ -76,6 +86,11 @@ query GetPlayerProfile($steamAccountId: Long!) {
         role
         lane
         award
+        level
+        gold
+        heroDamage
+        towerDamage
+        heroHealing
         item0Id
         item1Id
         item2Id
@@ -408,6 +423,21 @@ function mapDamageReport(raw: any): DamageReport | null {
   return hasAny ? report : null;
 }
 
+/**
+ * `MatchAnalysisOutcomeType` da STRATZ. Os quatro valores vieram de introspecao do
+ * schema, nao de palpite. `NONE` significa "sem veredito" e vira `null` — a UI omite,
+ * em vez de traduzir "nenhum" para uma frase que soaria como diagnostico.
+ */
+function normalizeAnalysisOutcome(raw: unknown): MatchAnalysisOutcome | null {
+  const valid: MatchAnalysisOutcome[] = ['STOMPED', 'COMEBACK', 'CLOSE_GAME'];
+  return typeof raw === 'string' && (valid as string[]).includes(raw)
+    ? (raw as MatchAnalysisOutcome)
+    : null;
+}
+
+/** Fim da fase de rotas, em segundos. Convencao do Dota, usada tambem por `cs10`/`dn10`. */
+const LANE_PHASE_SECONDS = 600;
+
 function normalizeLaneOutcome(raw: unknown): LaneOutcome | null {
   const valid: LaneOutcome[] = [
     'TIE',
@@ -426,7 +456,7 @@ function normalizeLaneOutcome(raw: unknown): LaneOutcome | null {
  * Cuidado com a geometria: a safelane do Radiant é a bottom lane, e a safelane do
  * Dire é a top lane. Trocar isso inverte o veredito de lane de metade dos jogadores.
  */
-function resolvePlayerLaneResult(
+export function resolvePlayerLaneResult(
   lane: Lane,
   isRadiant: boolean,
   outcomes: { top: LaneOutcome | null; mid: LaneOutcome | null; bottom: LaneOutcome | null },
@@ -474,8 +504,10 @@ function buildLaningStats(
     laneResult,
     firstCoreItemTimingSec: firstCore ? firstCore.time : null,
     firstCoreItemId: firstCore ? firstCore.itemId : null,
-    killsInLane: 0,
-    deathsInLane: 0,
+    // Preenchidos no pos-passe, depois que `vision.deaths` existe. `null` ate la, e
+    // `null` para sempre se a partida nao trouxer eventos de morte.
+    kills10: null,
+    deaths10: null,
   };
 }
 
@@ -525,15 +557,23 @@ function mapStratzRole(rawRole: string, rawLane: string): Role {
   if (rawRole === 'POSITION_1' || rawRole === 'POSITION_2' || rawRole === 'POSITION_3' || rawRole === 'POSITION_4' || rawRole === 'POSITION_5') {
     return rawRole as Role;
   }
-  return 'POSITION_1';
+  // 'UNKNOWN', nao 'POSITION_1': `ROLE_BASELINES` tem entrada para UNKNOWN, e chutar
+  // carry media um pos 5 contra cs10=62 / gpm=680.
+  return 'UNKNOWN';
 }
 
+/**
+ * O default era `'SAFE'`, e isso nao era inofensivo: `resolvePlayerLaneResult` entao
+ * entregava a um roamer (ou a qualquer lane desconhecida) o veredito da safelane da
+ * faccao dele. `UNKNOWN` faz o veredito virar 'UNKNOWN', que a UI omite.
+ */
 function mapStratzLane(rawLane: string): Lane {
   if (rawLane === 'SAFE_LANE' || rawLane === 'SAFE') return 'SAFE';
   if (rawLane === 'MID_LANE' || rawLane === 'MID') return 'MID';
   if (rawLane === 'OFF_LANE' || rawLane === 'OFF') return 'OFF';
   if (rawLane === 'JUNGLE') return 'JUNGLE';
-  return 'SAFE';
+  if (rawLane === 'ROAMING' || rawLane === 'ROAM') return 'ROAMING';
+  return 'UNKNOWN';
 }
 
 /**
@@ -553,6 +593,38 @@ export function derivePartySize(allPlayers: any, partyId: any): number | null {
   return size > 0 ? size : null;
 }
 
+/** Mascara de 11 torres. `0x7FF` = nenhuma torre do time caiu. */
+export const ALL_TOWERS_STANDING = 0x7ff;
+
+/**
+ * Participacao em abates e fatia de dano, do time do jogador.
+ *
+ * Precisa dos 10 jogadores porque as duas sao RAZOES sobre o total do time — nao da
+ * para derivar do registro de um jogador so. `allPlayers` ausente (query recusada ou
+ * campo removido) devolve `null` nos dois, e a tag some. Zero seria uma afirmacao.
+ */
+export function deriveTeamShares(
+  allPlayers: any,
+  isRadiant: boolean,
+  player: { kills: number; assists: number; heroDamage: number },
+): { killParticipationPct: number | null; damageSharePct: number | null } {
+  if (!Array.isArray(allPlayers) || allPlayers.length === 0) {
+    return { killParticipationPct: null, damageSharePct: null };
+  }
+  const team = allPlayers.filter((p: any) => p && !!p.isRadiant === isRadiant);
+  if (team.length === 0) return { killParticipationPct: null, damageSharePct: null };
+
+  const teamKills = team.reduce((sum: number, p: any) => sum + (p.kills || 0), 0);
+  const teamDamage = team.reduce((sum: number, p: any) => sum + (p.heroDamage || 0), 0);
+
+  return {
+    // Time com 0 abates é dado valido, mas a razao nao existe — nao é 0%.
+    killParticipationPct:
+      teamKills > 0 ? ((player.kills + player.assists) / teamKills) * 100 : null,
+    damageSharePct: teamDamage > 0 ? (player.heroDamage / teamDamage) * 100 : null,
+  };
+}
+
 function classifyMatchDynamic(m: any, playerObj: any, isWin: boolean, imp: number): MatchDynamicType {
   const durMin = (m.durationSeconds || 2100) / 60;
   const kda = (playerObj.kills + playerObj.assists) / Math.max(1, playerObj.deaths);
@@ -567,19 +639,15 @@ function classifyMatchDynamic(m: any, playerObj: any, isWin: boolean, imp: numbe
     return 'COMEBACK';
   }
 
-  // Stomp Lane: dominant CS, kills, and high IMP
-  if (playerObj.numLastHits >= 260 && playerObj.deaths <= 3 && imp >= 15) {
-    return 'STOMP_LANE';
+  // Impacto individual. Deliberadamente NAO depende de `isWin`: era a clausula
+  // `imp >= 5 && isWin` que tornava impossivel reportar uma partida bem jogada e
+  // perdida — o caso que trouxe esta correcao.
+  if (imp >= 5) {
+    return 'HIGH_IMPACT';
   }
 
-  // Win Lane: solid victory and positive impact
-  if (imp >= 5 && isWin) {
-    return 'WIN_LANE';
-  }
-
-  // Lost Lane
-  if (!isWin && imp <= -10) {
-    return 'LOST_LANE';
+  if (imp <= -10) {
+    return 'LOW_IMPACT';
   }
 
   return 'EVEN_MATCH';
@@ -694,6 +762,24 @@ export async function fetchPlayerProfile(steamAccountId: string, apiKey?: string
         }
 
         const dynamicType = classifyMatchDynamic(m, playerObj, isWin, imp);
+        // Mesmas funcoes do caminho de detalhe. Partida nao parseada devolve os tres
+        // campos nulos, e o resultado e 'UNKNOWN' — que a UI omite em vez de estimar.
+        const heroDamage = playerObj.heroDamage || 0;
+        const shares = deriveTeamShares(m.allPlayers, isRad, {
+          kills: k,
+          assists: a,
+          heroDamage,
+        });
+        // Torres do PROPRIO lado. `null` quando a API nao mandou a mascara.
+        const ownTowerStatus = isRad ? m.towerStatusRadiant : m.towerStatusDire;
+        const keptAllTowers =
+          typeof ownTowerStatus === 'number' ? ownTowerStatus === ALL_TOWERS_STANDING : undefined;
+
+        const laneResult = resolvePlayerLaneResult(lane, isRad, {
+          top: normalizeLaneOutcome(m.topLaneOutcome),
+          mid: normalizeLaneOutcome(m.midLaneOutcome),
+          bottom: normalizeLaneOutcome(m.bottomLaneOutcome),
+        });
 
         return {
           // Cru, nao formatado: quem renderiza decide o idioma e a abreviacao.
@@ -721,6 +807,16 @@ export async function fetchPlayerProfile(steamAccountId: string, apiKey?: string
           lane,
           award: playerObj.award,
           dynamicType,
+          laneResult,
+          // Ausente = a API nao devolveu. A tag some; nunca vira 0.
+          level: typeof playerObj.level === 'number' ? playerObj.level : undefined,
+          unspentGold: typeof playerObj.gold === 'number' ? playerObj.gold : undefined,
+          heroDamage: typeof playerObj.heroDamage === 'number' ? playerObj.heroDamage : undefined,
+          towerDamage: typeof playerObj.towerDamage === 'number' ? playerObj.towerDamage : undefined,
+          heroHealing: typeof playerObj.heroHealing === 'number' ? playerObj.heroHealing : undefined,
+          killParticipationPct: shares.killParticipationPct,
+          damageSharePct: shares.damageSharePct,
+          keptAllTowers,
           items: [
             playerObj.item0Id || 0,
             playerObj.item1Id || 0,
@@ -953,6 +1049,16 @@ export function mapStratzMatch(m: any): MatchDetails {
     }
     player.visionStats = computePlayerVisionStats(vision, player.playerSlot);
     player.deathEvents = deathsBySlot.get(player.playerSlot) ?? null;
+
+    // Abates/mortes ate o minuto 10. Sao "ate 10 min", nao "na rota": nao da para
+    // recortar por regiao do mapa com confianca, e o rotulo da UI diz isso.
+    if (player.laningStats && vision.source !== 'NONE') {
+      const own = deathsBySlot.get(player.playerSlot) ?? [];
+      player.laningStats.deaths10 = own.filter((d) => d.time <= LANE_PHASE_SECONDS).length;
+      player.laningStats.kills10 = vision.deaths.filter(
+        (d) => d.attackerSlot === player.playerSlot && d.time <= LANE_PHASE_SECONDS,
+      ).length;
+    }
   }
 
   const availability = computeAvailability(m, players);
@@ -978,7 +1084,7 @@ export function mapStratzMatch(m: any): MatchDetails {
     parsedDateTime: m.parsedDateTime ?? null,
     bracket: typeof m.bracket === 'number' ? m.bracket : null,
     actualRank: typeof m.actualRank === 'number' ? m.actualRank : null,
-    analysisOutcome: m.analysisOutcome ?? null,
+    analysisOutcome: normalizeAnalysisOutcome(m.analysisOutcome),
     firstBloodTime: typeof m.firstBloodTime === 'number' ? m.firstBloodTime : null,
     laneOutcomes,
     vision,

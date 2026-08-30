@@ -27,8 +27,8 @@ export const RULE_TEXT: Record<RuleId, RuleTextKeys> = {
   laningLaneStomped: { title: 'coachLaningLaneStompedTitle', body: 'coachLaningLaneStompedBody', stat: 'coachLaningLaneStompedStat' },
   laningLaneLost: { title: 'coachLaningLaneLostTitle', body: 'coachLaningLaneLostBody', stat: 'coachLaningLaneLostStat' },
 
-  farmingGpmHigh: { title: 'coachFarmingGpmHighTitle', body: 'coachFarmingGpmHighBody', stat: 'coachFarmingGpmHighStat' },
-  farmingGpmLow: { title: 'coachFarmingGpmLowTitle', body: 'coachFarmingGpmLowBody', stat: 'coachFarmingGpmLowStat' },
+  farmingNetworthHigh: { title: 'coachFarmingNetworthHighTitle', body: 'coachFarmingNetworthHighBody', stat: 'coachFarmingNetworthHighStat' },
+  farmingNetworthLow: { title: 'coachFarmingNetworthLowTitle', body: 'coachFarmingNetworthLowBody', stat: 'coachFarmingNetworthLowStat' },
   farmingStacksHigh: { title: 'coachFarmingStacksHighTitle', body: 'coachFarmingStacksHighBody', stat: 'coachFarmingStacksHighStat' },
   farmingCurveBehind: { title: 'coachFarmingCurveBehindTitle', body: 'coachFarmingCurveBehindBody', stat: 'coachFarmingCurveBehindStat' },
 
