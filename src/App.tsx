@@ -594,7 +594,8 @@ function MainAppContent() {
                 onOpenHeroGridMirror={() => setPanelView('HERO_GRID_MIRROR')}
               />
 
-              {/* Top Grid: Main Stage (Match History) + Right Sidebar (Tendências & Heróis) */}
+              {/* Top Grid: Main Stage (Match History) + Right Sidebar (Forma, Tendências, Heróis,
+                  Atividade, Evolução e Companheiros) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Left 7/8 cols: Main Stage - Detailed Recent Match History */}
                 <div className="lg:col-span-7 xl:col-span-8 space-y-6">
@@ -609,25 +610,9 @@ function MainAppContent() {
                       onSelectMatch={handleSelectMatch}
                     />
                   )}
-
-                  {/* Atividade dos ultimos 30 dias — o dado ja era calculado e
-                      nunca chegava a ser exibido. Fica na coluna larga porque
-                      precisa de 30 colunas. */}
-                  {profile && profile.activityDays && profile.activityDays.length > 0 && (
-                    <ActivityHeatmap activityDays={profile.activityDays} />
-                  )}
-
-                  {/* Leitura temporal que o sunburst nao da: evolucao ao longo
-                      da janela, nao composicao. */}
-                  {profile && profile.recentMatches.length > 1 && (
-                    <PerformanceTrendChart
-                      matches={profile.recentMatches}
-                      onSelectMatch={handleSelectMatch}
-                    />
-                  )}
                 </div>
 
-                {/* Right 5/4 cols: Side Widgets - Forma Recente, Tendências, Heróis & Companheiros */}
+                {/* Right 5/4 cols: Side Widgets */}
                 <div className="lg:col-span-5 xl:col-span-4 space-y-5">
                   {/* 1. Forma Recente (10 Matches Sequence - Posicionado antes do gráfico) */}
                   {profile && (
@@ -657,7 +642,23 @@ function MainAppContent() {
                     />
                   )}
 
-                  {/* 4. Companheiros de Equipe (Na lateral direita, abaixo dos outros campos) */}
+                  {/* 4. Atividade dos ultimos 30 dias. Ficava embaixo da lista de
+                      partidas, que e longa — na pratica so aparecia depois de rolar a
+                      pagina inteira. */}
+                  {profile && profile.activityDays && profile.activityDays.length > 0 && (
+                    <ActivityHeatmap activityDays={profile.activityDays} />
+                  )}
+
+                  {/* 5. Leitura temporal que o sunburst nao da: evolucao ao longo da
+                      janela, nao composicao. Mesmo motivo da mudanca acima. */}
+                  {profile && profile.recentMatches.length > 1 && (
+                    <PerformanceTrendChart
+                      matches={profile.recentMatches}
+                      onSelectMatch={handleSelectMatch}
+                    />
+                  )}
+
+                  {/* 6. Companheiros de Equipe (Na lateral direita, abaixo dos outros campos) */}
                   {profile && profile.peers && profile.peers.length > 0 && (
                     <StratzTeammatesCard peers={profile.peers} />
                   )}

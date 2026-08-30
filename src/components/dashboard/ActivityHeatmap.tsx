@@ -17,7 +17,9 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityDays =
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-slate-800 shadow-xl bg-[#111723]">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+      {/* Empilha ate `xl`: na lateral direita, `lg` da ~386px de card, e ai titulo e
+          numeros lado a lado nao cabem. */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-amber-400" />
           <div>
@@ -39,8 +41,12 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityDays =
         </div>
       </div>
 
-      {/* 30-Day Activity Bar Chart */}
-      <div className="grid grid-cols-15 sm:grid-cols-30 gap-1.5 items-end h-24 pt-2 border-b border-slate-800/80 pb-2">
+      {/* 30-Day Activity Bar Chart.
+          `gap-1` e nao `gap-1.5`: com 30 colunas, o espacamento come mais largura que as
+          proprias barras quando o card esta na lateral. Medido no pior caso (breakpoint
+          `lg`, card de ~386px): 29 espacos de 6px deixavam barras de 5,7px; com 4px, elas
+          sobem para 7,7px. No `xl` a lateral da ~579px e as barras ficam em ~14px. */}
+      <div className="grid grid-cols-15 sm:grid-cols-30 gap-1 items-end h-24 pt-2 border-b border-slate-800/80 pb-2">
         {activityDays.map((day, idx) => {
           const heightPercent = day.count > 0 ? Math.max(15, Math.round((day.count / maxInDay) * 100)) : 6;
           const winPercent = day.count > 0 ? Math.round((day.wins / day.count) * 100) : 0;
@@ -80,7 +86,7 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityDays =
       </div>
 
       {/* Timeline Footnote */}
-      <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono mt-2">
+      <div className="flex flex-wrap items-center justify-between gap-y-1 text-[10px] text-slate-500 font-mono mt-2">
         <span>{t('thirtyDaysAgo')}</span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">

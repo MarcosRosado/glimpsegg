@@ -4,7 +4,7 @@ import { MatchDetails, Role } from '../../types/dota';
 import { AwardId, AwardUnit, MatchAward, computeMatchAwards } from '../../utils/awardEngine';
 import { TranslationKey } from '../../i18n/translations';
 import { getHero } from '../../constants/heroes';
-import { formatGold } from '../../utils/dotaFormatters';
+import { formatGold, formatImpMarked } from '../../utils/dotaFormatters';
 import { handleHeroImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -95,11 +95,9 @@ const AWARD_STYLE: Record<AwardId, string> = {
 
 type Translate = (key: TranslationKey, params?: Record<string, string | number>) => string;
 
-const formatImp = (imp: number) => `${imp >= 0 ? '+' : ''}${imp}`;
-
 /** So o numero, ja abreviado. Quem chama decide se ele vira frase. */
 function formatAwardNumber(value: number, unit: AwardUnit): string {
-  if (unit === 'IMP') return formatImp(value);
+  if (unit === 'IMP') return formatImpMarked(value);
   if (unit === 'GOLD' || unit === 'DAMAGE') return formatGold(value);
   return String(value);
 }
@@ -351,7 +349,7 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
                         {hero.displayName}
                       </span>
                       <span className="block text-[10px] font-mono text-slate-400 truncate">
-                        {t('awardValueImp', { value: formatImp(ph.imp) })}
+                        {t('awardValueImp', { value: formatImpMarked(ph.imp) })}
                         {ph.stat && ` \u2022 ${formatAwardValue({ ...ph.stat }, t)}`}
                       </span>
                     </span>

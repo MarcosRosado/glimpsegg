@@ -1,7 +1,7 @@
 import React from 'react';
 import { Crown, Zap } from 'lucide-react';
 import { getHero } from '../../constants/heroes';
-import { formatPercent, getImpColor } from '../../utils/dotaFormatters';
+import { formatImpMarked, formatPercent, getImpColor } from '../../utils/dotaFormatters';
 import { handleHeroImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -88,7 +88,7 @@ export const MostPlayedHeroes: React.FC<MostPlayedHeroesProps> = ({ heroes, onFi
                 <div className="text-right min-w-[48px]">
                   <div className={`font-black flex items-center justify-end gap-0.5 ${getImpColor(h.avgImp)}`}>
                     <Zap className="w-3 h-3 text-amber-400" />
-                    <span>{h.avgImp >= 0 ? `+${h.avgImp}` : h.avgImp}</span>
+                    <span>{formatImpMarked(h.avgImp)}</span>
                   </div>
                   <div className="text-[9px] text-slate-500">{t('imp')}</div>
                 </div>

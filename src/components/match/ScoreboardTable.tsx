@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Trophy,
   Shield,
-  Zap,
   Sparkles,
   User,
   ArrowRight,
@@ -21,7 +20,8 @@ import { MatchPlayer } from '../../types/dota';
 import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
 import { getRankTierInfo } from '../../constants/ranks';
-import { formatGold, getImpBadgeStyle, formatRoleName, formatLaneName } from '../../utils/dotaFormatters';
+import { formatGold, formatRoleName, formatLaneName } from '../../utils/dotaFormatters';
+import { ImpBadge } from '../ui/ImpBadge';
 import { handleHeroImageError, handleItemImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -175,7 +175,6 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
               {teamPlayers.map((player) => {
                 const hero = getHero(player.heroId);
                 const rankInfo = getRankTierInfo(player.seasonRank);
-                const impStyle = getImpBadgeStyle(player.imp);
                 const isExpanded = expandedSlots.has(player.playerSlot);
 
                 // Filter items timeline based on hideConsumables
@@ -315,12 +314,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
                       {/* IMP Rating */}
                       <td className="py-2.5 px-3 text-center">
-                        <div
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-black ${impStyle.bg} ${impStyle.text} ${impStyle.border}`}
-                        >
-                          <Zap className="w-3 h-3" />
-                          <span>{player.imp >= 0 ? `+${player.imp}` : player.imp}</span>
-                        </div>
+                        <ImpBadge imp={player.imp} size="sm" />
                       </td>
 
                       {/* Expand / Collapse Indicator */}

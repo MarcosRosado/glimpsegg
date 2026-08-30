@@ -38,7 +38,65 @@ export function formatTimeAgo(timestampSec: number): string {
   return `Há ${Math.floor(diffSec / 2592000)} meses`;
 }
 
+/**
+ * Onde o IMP deixa de ser "muito bom/ruim" e vira excepcional.
+ *
+ * Cuidado: **o IMP da STRATZ nao e limitado em +-50**. Medido em 400 jogadores reais
+ * (60 partidas, bracket 6): apareceram -52 e -51, e o maior positivo foi +42. Por isso a
+ * comparacao e `>=` / `<=`, e nao `=== 50` — igualdade deixaria -51 e -52 de fora, que
+ * sao justamente os casos mais extremos.
+ *
+ * Quem produz exatamente +-50 e o nosso `calculateCustomImp`, usado so quando a STRATZ
+ * devolve `imp` nulo; esse sim satura no limite.
+ */
+export const IMP_EXTREME = 50;
+
+export function isExtremeImp(imp: number): boolean {
+  return imp >= IMP_EXTREME || imp <= -IMP_EXTREME;
+}
+
+/**
+ * Qual icone o chip de IMP usa. Funcao pura e nao um `if` dentro do componente porque
+ * `vitest.config.ts` roda em `environment: 'node'` e nao alcanca `.tsx` — a regra do
+ * extremo precisa de teste, o componente nao tem como ter.
+ */
+export type ImpIconKind = 'STAR' | 'SKULL' | 'ZAP';
+
+export function getImpIconKind(imp: number): ImpIconKind {
+  if (imp >= IMP_EXTREME) return 'STAR';
+  if (imp <= -IMP_EXTREME) return 'SKULL';
+  return 'ZAP';
+}
+
+/** Simbolo do extremo. String vazia para IMP normal, para poder concatenar sem guarda. */
+export function getImpSymbol(imp: number): string {
+  if (imp >= IMP_EXTREME) return '★';
+  if (imp <= -IMP_EXTREME) return '☠';
+  return '';
+}
+
+/**
+ * IMP com sinal: "+24", "-52". Ponto unico de formatacao — o app montava o sinal na mao
+ * em sete lugares diferentes.
+ */
+export function formatImp(imp: number): string {
+  return imp >= 0 ? `+${imp}` : `${imp}`;
+}
+
+/**
+ * IMP com sinal E simbolo de extremo: "★ +50", "☠ -52", "+24".
+ *
+ * Para contexto de TEXTO puro. Onde existe chip, o icone ja e o simbolo e usar os dois
+ * seria redundante — ali use `formatImp` dentro de `<ImpBadge>`.
+ */
+export function formatImpMarked(imp: number): string {
+  const symbol = getImpSymbol(imp);
+  return symbol ? `${symbol} ${formatImp(imp)}` : formatImp(imp);
+}
+
 export function getImpColor(imp: number): string {
+  if (imp >= IMP_EXTREME) return 'text-fuchsia-300 font-black';
+  if (imp <= -IMP_EXTREME) return 'text-fuchsia-400 font-black';
   if (imp >= 25) return 'text-emerald-400 font-bold';
   if (imp > 0) return 'text-emerald-400';
   if (imp === 0) return 'text-zinc-400';
@@ -47,6 +105,18 @@ export function getImpColor(imp: number): string {
 }
 
 export function getImpBadgeStyle(imp: number): { bg: string; text: string; border: string } {
+  // Magenta nos dois extremos, de proposito: verde e vermelho ja significam "bom" e
+  // "ruim" na escala normal, entao um verde mais forte para +50 se perderia entre os
+  // +25. A cor fora da escala sinaliza "saiu da curva"; o icone diz o lado.
+  //
+  // Translucido como o resto da escala. Uma versao com fundo SOLIDO foi tentada e
+  // rejeitada: pesava demais e quebrava a consistencia com os outros chips.
+  if (imp >= IMP_EXTREME) {
+    return { bg: 'bg-fuchsia-500/20', text: 'text-fuchsia-200', border: 'border-fuchsia-400/60' };
+  }
+  if (imp <= -IMP_EXTREME) {
+    return { bg: 'bg-fuchsia-900/40', text: 'text-fuchsia-300', border: 'border-fuchsia-500/50' };
+  }
   if (imp >= 25) return { bg: 'bg-emerald-500/15', text: 'text-emerald-300', border: 'border-emerald-500/30' };
   if (imp > 0) return { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' };
   if (imp === 0) return { bg: 'bg-zinc-500/10', text: 'text-zinc-400', border: 'border-zinc-500/20' };

@@ -7,7 +7,8 @@ import { PlayerMatchSummary } from '../../types/dota';
 import { TranslationKey } from '../../i18n/translations';
 import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
-import { formatDuration, formatGold, formatTimeAgo, getImpBadgeStyle, resolveMatchType, MatchTypeCode } from '../../utils/dotaFormatters';
+import { formatDuration, formatGold, formatTimeAgo, resolveMatchType, MatchTypeCode } from '../../utils/dotaFormatters';
+import { ImpBadge } from '../ui/ImpBadge';
 import { handleHeroImageError, handleItemImageError } from '../../utils/imageFallback';
 import { LANE_RESULT_KEY, hasLaneVerdict, isLaneWin, isLaneLoss } from '../../utils/laneResult';
 import { useLanguage } from '../../context/LanguageContext';
@@ -582,7 +583,6 @@ export const MatchList: React.FC<MatchListProps> = ({
         ) : (
           filteredMatches.map((match) => {
             const hero = getHero(match.heroId);
-            const impStyle = getImpBadgeStyle(match.imp);
             const isSelected = selectedMatchId === match.matchId;
 
             return (
@@ -689,12 +689,7 @@ export const MatchList: React.FC<MatchListProps> = ({
 
                 {/* 4. Prominent IMP Rating */}
                 <div className="text-left 2xl:text-center font-mono">
-                  <div
-                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-xl border text-xs font-black shadow-md ${impStyle.bg} ${impStyle.text} ${impStyle.border}`}
-                  >
-                    <Zap className="w-3.5 h-3.5" />
-                    <span>{match.imp >= 0 ? `+${match.imp}` : match.imp}</span>
-                  </div>
+                  <ImpBadge imp={match.imp} />
                   <div className="text-[9px] text-slate-400 font-sans mt-0.5">{t('impImpact')}</div>
                 </div>
 
@@ -731,20 +726,28 @@ export const MatchList: React.FC<MatchListProps> = ({
                         </div>
                       );
                     })}
-                    {/* Neutral Item */}
-                    {match.neutralItem ? (
-                      <div
-                        className="w-6 h-5 rounded-full border border-amber-500/60 overflow-hidden shrink-0 ml-1 bg-slate-900"
-                        title={getItem(match.neutralItem).displayName}
-                      >
+                    {/* Item neutro. A vaga é SEMPRE renderizada, vazia quando nao houve
+                        neutro — igual as seis vagas de item acima, que ja desenham a
+                        caixa vazia para slot sem item.
+                        Nao e detalhe estetico: a trilha de itens no grid e `auto`, entao
+                        um bloco 32px mais estreito faz o `minmax(0,1fr)` do heroi crescer
+                        32px e TODAS as colunas do meio deslizarem. Aparecia em partida
+                        curta demais para o neutro dropar (a 8873711711 durou 7min50). */}
+                    <div
+                      className={`w-6 h-5 rounded-full border overflow-hidden shrink-0 ml-1 bg-slate-900 ${
+                        match.neutralItem ? 'border-amber-500/60' : 'border-slate-800/80'
+                      }`}
+                      title={match.neutralItem ? getItem(match.neutralItem).displayName : undefined}
+                    >
+                      {match.neutralItem ? (
                         <img
                           src={getItem(match.neutralItem).imageUrl}
                           alt={t('neutralItemAlt')}
                           className="w-full h-full object-cover"
                           onError={handleItemImageError}
                         />
-                      </div>
-                    ) : null}
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 

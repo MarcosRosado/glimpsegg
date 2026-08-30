@@ -9,6 +9,7 @@ import { handleHeroImageError, handleRankImageError } from '../../utils/imageFal
 import { useLanguage } from '../../context/LanguageContext';
 import { TranslationKey } from '../../i18n/translations';
 import { hasLaneVerdict, isLaneWin, isLaneLoss } from '../../utils/laneResult';
+import { formatImpMarked } from '../../utils/dotaFormatters';
 
 interface StratzTrendsCardProps {
   matches: PlayerMatchSummary[];
@@ -388,7 +389,6 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
   );
   const avgBracketBadge = useMemo(() => getBracketBadge(context.avgBracket), [context.avgBracket]);
 
-  const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-slate-800/80 shadow-xl bg-[#0b101a]">
@@ -559,7 +559,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
                 <span className="text-rose-400 font-bold">{focus.count - focus.wins}</span>
               </div>
               <div className="text-[10px] text-slate-400 font-mono">
-                {Math.round((focus.wins / focus.count) * 100)}% · {signed(focus.avgImp)} IMP
+                {Math.round((focus.wins / focus.count) * 100)}% · {formatImpMarked(focus.avgImp)} IMP
               </div>
             </>
           )}
@@ -599,7 +599,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
               <span
                 className={`font-mono w-9 text-right ${avgImp >= 0 ? 'text-slate-300' : 'text-slate-500'}`}
               >
-                {signed(avgImp)}
+                {formatImpMarked(avgImp)}
               </span>
             </div>
           );
@@ -701,7 +701,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
                 {barFocus.isVictory ? t('win') : t('loss')}
               </span>
               <span className="text-slate-600">·</span>
-              <span className="text-slate-300">{signed(barFocus.imp || 0)} IMP</span>
+              <span className="text-slate-300">{formatImpMarked(barFocus.imp || 0)} IMP</span>
               <span className="text-slate-600">·</span>
               <span className="text-slate-400">
                 {barFocus.kills}/{barFocus.deaths}/{barFocus.assists}

@@ -12,6 +12,7 @@ import {
 import { PlayerMatchSummary } from '../../types/dota';
 import { TrendingUp, Zap, Trophy, Coins, Activity } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { formatImpMarked, getImpColor } from '../../utils/dotaFormatters';
 
 interface PerformanceTrendChartProps {
   matches: PlayerMatchSummary[];
@@ -81,7 +82,7 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ ma
               {t('trendsTitle')}
             </h3>
             <span className="text-[11px] text-slate-400 font-mono">
-              {t('rollingAvg')}: {metric === 'IMP' && (avgMetricValue >= 0 ? `+${avgMetricValue} IMP` : `${avgMetricValue} IMP`)}
+              {t('rollingAvg')}: {metric === 'IMP' && `${formatImpMarked(avgMetricValue)} IMP`}
               {metric === 'WINRATE' && `${avgMetricValue}% WR`}
               {metric === 'GPM' && `${avgMetricValue} Avg GPM`}
             </span>
@@ -195,7 +196,7 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ ma
                         </span>
                       </div>
                       <div className="text-slate-300">
-                        IMP Rating: <strong className={d.imp >= 0 ? 'text-amber-400' : 'text-rose-400'}>{d.imp >= 0 ? `+${d.imp}` : d.imp}</strong>
+                        IMP Rating: <strong className={getImpColor(d.imp)}>{formatImpMarked(d.imp)}</strong>
                       </div>
                       <div className="text-slate-400 text-[10px]">
                         Rolling Avg: <strong className="text-slate-200">{d.rollingAvgImp >= 0 ? `+${d.rollingAvgImp}` : d.rollingAvgImp}</strong>

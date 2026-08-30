@@ -20,7 +20,7 @@ import {
   getEnrichedAbilityUpgrades,
   getItemBenchmarkSeconds,
 } from '../../utils/performanceEnricher';
-import { formatDuration, formatGold } from '../../utils/dotaFormatters';
+import { formatDuration, formatGold, formatImpMarked, getImpColor } from '../../utils/dotaFormatters';
 import { handleHeroImageError, handleItemImageError, handleAbilityImageError } from '../../utils/imageFallback';
 import { getHeroAbilities } from '../../constants/abilities';
 import { Swords, Target, Clock, Zap, Trophy, Coins, Layers, Timer } from 'lucide-react';
@@ -137,9 +137,9 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
           {/* IMP Impact Score */}
           <div className="flex flex-col items-end px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800">
             <span className="text-[10px] text-slate-400 font-mono">{t('impImpact')}</span>
-            <div className={`text-base font-black flex items-center gap-1 mt-0.5 ${player.imp >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <div className={`text-base font-black flex items-center gap-1 mt-0.5 ${getImpColor(player.imp)}`}>
               <Zap className="w-4 h-4" />
-              <span>IMP {player.imp >= 0 ? `+${player.imp}` : player.imp}</span>
+              <span>IMP {formatImpMarked(player.imp)}</span>
             </div>
           </div>
 
