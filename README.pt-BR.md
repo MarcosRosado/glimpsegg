@@ -1,5 +1,7 @@
 # GlimpseGG
 
+[English](README.md) · **Português (pt-BR)**
+
 Aplicativo desktop de análise pós-jogo de Dota 2. Cruza dados da STRATZ e da OpenDota para
 transformar um replay já encerrado em leitura tática: benchmarks por herói e posição, timeline de
 vantagem, mapa de visão e insights acionáveis por jogador.
@@ -35,11 +37,19 @@ patch atual, com heróis e itens novos devidamente reconhecidos, exibidos e anal
 - `COACHING` — diagnóstico determinístico: comparação com a média do próprio herói na
   própria posição, recomendação de build por win rate do patch, e forense de morte
 
+**Layout espelho de heróis** — grava uma cópia do seu layout do Dota, reordenada por win rate
+- O seu layout **nunca é alterado**: o espelho é um elemento **novo** ao lado dele, e a gravação
+  aborta se qualquer outra coisa no arquivo tiver mudado
+- Ordenado pelo GlimpseScore, que combina o win rate do meta no patch com o seu próprio histórico
+- Funciona sem token da STRATZ — a fonte primária de meta é a OpenDota
+
 ## Telas
 
 As capturas abaixo saem do app em execução, com dados vindos da STRATZ e da OpenDota. O perfil
 exibido é uma conta pública de alto ranque (`86745912`), usada apenas para ilustrar as telas —
-nenhum dado do mantenedor aparece aqui.
+nenhum dado do mantenedor aparece aqui. As telas de hero grid usam um **layout fictício** agrupado
+pelos quatro atributos, como o Dota entrega por padrão: o grid é um arquivo local, então não existe
+"o grid de outro jogador" para exibir.
 
 **Dashboard do jogador** — perfil e rank, forma recente, lista de partidas com resumo por jogo,
 heróis principais e as tendências vindas da STRATZ.
@@ -66,8 +76,28 @@ dados do patch, esta partida) e o tamanho da amostra.
 
 ![Aba Coaching da análise de partida](docs/screenshots/match-coaching.png)
 
-**Onboarding** — a primeira execução pede o token da STRATZ. O Steam Account ID é detectado
-automaticamente a partir do próprio token.
+**Hero grid — o espelho** — a réplica do que o app gravou na sua coleção de layouts do Dota, com os
+grupos nas posições que ocupam no jogo e o GlimpseScore que definiu a ordem dentro de cada um.
+
+![Réplica do espelho de heróis](docs/screenshots/hero-grid-mirror.png)
+
+**Hero grid — painel de sincronização** — quando o grid foi gravado pela última vez, a partir de
+quais fontes, e o ranking herói a herói com as componentes de meta e pessoal de cada nota.
+
+![Painel de sincronização do hero grid](docs/screenshots/hero-grid-panel.png)
+
+**Busca de jogador** — procura por SteamID32/64, vanity URL ou nome, com histórico e favoritos.
+Abre com `Ctrl K`.
+
+![Modal de busca de jogador](docs/screenshots/search.png)
+
+**Configurações** — idioma da interface, token da STRATZ, conta Steam ativa e a configuração do
+layout espelho, divididos em quatro abas.
+
+![Configurações da aplicação](docs/screenshots/settings.png)
+
+**Onboarding** — a primeira execução pede o idioma da interface (inglês por padrão) e o token da
+STRATZ. O Steam Account ID é detectado automaticamente a partir do próprio token.
 
 ![Tela de onboarding](docs/screenshots/onboarding.png)
 
@@ -90,8 +120,10 @@ O app se atualiza sozinho a partir das Releases deste repositório.
 
 ## Token da STRATZ
 
-O token é **opcional**. Sem ele o app abre em um dataset de demonstração (o badge no topo mostra
-`Demo` em vez de `Live`).
+A análise de partida **exige token** — ele é a única fonte dos detalhes de partida, e não há
+dataset de demonstração para cair. O antigo foi removido de propósito: ele abria o app na partida
+errada em vez de avisar que algo falhou. Sem token, a primeira execução abre o onboarding e a navbar
+mantém o selo **Sem Chave**, que leva às configurações.
 
 Para usar dados reais:
 
@@ -99,6 +131,9 @@ Para usar dados reais:
 2. Cole no onboarding da primeira execução, ou depois em **Settings → STRATZ API Token**.
 3. O Steam Account ID é extraído automaticamente do claim `SteamId` do próprio token — não precisa
    digitar.
+
+O layout espelho de heróis é a exceção: fecha inteiro sem token nenhum, porque a fonte primária de
+meta dele é a OpenDota, que é pública.
 
 > [!WARNING]
 > **O token pessoal da STRATZ não pode ser revogado.** Se ele vazar, permanece válido até a data de
@@ -171,6 +206,9 @@ Outros scripts:
 | `npm run test:watch` | Idem, em modo watch |
 | `npm run dist` | Empacota AppImage para Linux |
 | `npm run dist:all` | Empacota macOS + Windows + Linux |
+
+Os testes moram em [`tests/`](tests/), espelhando a árvore do código — não ficam junto dele. `src/` e
+`electron/` contêm só o que o app embarca.
 
 ### Identidade visual
 

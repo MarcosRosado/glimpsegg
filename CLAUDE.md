@@ -10,6 +10,31 @@ Convenção de idioma: documentação, comentários e mensagens de commit em pt-
 código em inglês. Os comentários existentes explicam *por que* algo é assim, muitas vezes citando o
 bug que a decisão substituiu — vale ler antes de "simplificar" um trecho.
 
+**A exceção é o README**, que é a porta de entrada do repositório e por isso tem o inglês como
+padrão: `README.md` em en-US e `README.pt-BR.md` em pt-BR, com link de idioma no topo dos dois.
+Os dois são espelho um do outro — mudança de conteúdo entra nos **dois**, ou eles divergem em
+silêncio (é o mesmo risco dos dois dicionários de `i18n/`, sem gate automático que o pegue).
+Todo o resto da documentação, `CLAUDE.md` e `docs/` inclusive, segue em pt-BR.
+
+## Mapa de pastas
+
+Cada pasta com mais de um arquivo tem um `CLAUDE.md` próprio: o que mora ali, quem consome, as
+armadilhas locais e uma seção **"Ao sair um patch"**. Este arquivo guarda a doutrina; os de pasta
+guardam a localização.
+
+| Camada | Onde |
+| --- | --- |
+| Renderer | [`src/`](src/CLAUDE.md) · [`components/`](src/components/CLAUDE.md) ([dashboard](src/components/dashboard/CLAUDE.md) · [match](src/components/match/CLAUDE.md) · [heroGrid](src/components/heroGrid/CLAUDE.md) · [layout](src/components/layout/CLAUDE.md) · [ui](src/components/ui/CLAUDE.md) · [brand](src/components/brand/CLAUDE.md)) |
+| Rede e cache | [`services/`](src/services/CLAUDE.md) · [`services/heroGrid/`](src/services/heroGrid/CLAUDE.md) · [`__fixtures__/`](src/services/__fixtures__/CLAUDE.md) |
+| Motores puros | [`utils/`](src/utils/CLAUDE.md) · [`insights/`](src/utils/insights/CLAUDE.md) · [`insights/rules/`](src/utils/insights/rules/CLAUDE.md) · [`utils/heroGrid/`](src/utils/heroGrid/CLAUDE.md) |
+| Dados e contratos | [`constants/`](src/constants/CLAUDE.md) · [`types/`](src/types/CLAUDE.md) · [`i18n/`](src/i18n/CLAUDE.md) · [`hooks/`](src/hooks/CLAUDE.md) |
+| Processo main | [`electron/`](electron/CLAUDE.md) · [`electron/heroGrid/`](electron/heroGrid/CLAUDE.md) |
+| Testes | [`tests/`](tests/CLAUDE.md) — a suíte inteira, espelhando `src/` e `electron/` |
+| Ferramentas e arte | [`scripts/`](scripts/CLAUDE.md) · [`public/`](public/CLAUDE.md) · [`build/`](build/CLAUDE.md) |
+
+**Patch novo do Dota:** [`docs/PATCH-CHECKLIST.md`](docs/PATCH-CHECKLIST.md) — a ordem de operação
+inteira, com o que se resolve sozinho e o que envelhece em silêncio.
+
 ## Comandos
 
 | Comando | Para quê |
@@ -29,14 +54,23 @@ bug que a decisão substituiu — vale ler antes de "simplificar" um trecho.
 Rodar um teste isolado:
 
 ```bash
-npx vitest run src/services/visionMapper.test.ts    # um arquivo
-npx vitest run -t "paridade dos dicionarios"        # por nome de describe/it
+npx vitest run tests/services/visionMapper.test.ts   # um arquivo
+npx vitest run tests/utils/heroGrid/                 # uma pasta
+npx vitest run -t "paridade dos dicionarios"         # por nome de describe/it
 ```
 
 `vitest.config.ts` é separado do `vite.config.ts` de propósito, com `environment: 'node'` e
-`include: ['src/**/*.test.ts']` — **não há ambiente de DOM**. Componentes `.tsx` não têm teste; a
-lógica testável foi extraída para funções puras em `src/utils/` e `src/services/`. Ao mexer em
-comportamento dentro de um componente, considere extrair a parte pura para conseguir testar.
+`include: ['tests/**/*.test.ts', 'tests/**/*.test.cjs']` — **não há ambiente de DOM**. Componentes
+`.tsx` não têm teste; a lógica testável foi extraída para funções puras em `src/utils/` e
+`src/services/`. Ao mexer em comportamento dentro de um componente, considere extrair a parte pura
+para conseguir testar.
+
+**Teste não fica junto do código.** `src/` e `electron/` contêm só o que o app embarca; a suíte
+inteira mora em [`tests/`](tests/CLAUDE.md), **espelhando a árvore** — `src/utils/heroGrid/ranking.ts`
+é testado por `tests/utils/heroGrid/ranking.test.ts`, e `tests/electron/` espelha `electron/`. As
+fixtures são a exceção deliberada: seguem em `src/services/__fixtures__/`, consumidas por import
+relativo. `tsconfig.app.json` inclui `["src", "tests"]`, então o `tsc -b` continua checando os testes
+`.ts`.
 
 ## Os dois caminhos de rede
 
@@ -59,7 +93,7 @@ de handler novo.
 
 `fetchMatchDetails(matchId, apiKey)` → `mapStratzMatch(m)` → `MatchDetails`.
 
-`mapStratzMatch` é exportada, pura e testada (`stratzGql.test.ts`) — é onde vive praticamente toda a
+`mapStratzMatch` é exportada, pura e testada (`tests/services/stratzGql.test.ts`) — é onde vive praticamente toda a
 tradução da resposta crua da STRATZ para o modelo do app, incluindo as funções `map*`/`normalize*`
 privadas do arquivo. Ela também chama `buildVisionData` e calcula
 `availability: MatchDataAvailability` via `computeAvailability`.
@@ -201,7 +235,7 @@ desaparecer quando não houver mais nenhum.
   para o norte, então toda conversão inverte o Y.
 - As constantes de calibração estão sustentadas por medições documentadas no topo do
   `mapGeometry.ts` (amostra de 544 wards reais, âncoras de runa) e verificadas em
-  `minimapCoords.test.ts`. Não alterar esses números sem refazer a calibração contra
+  `tests/utils/minimapCoords.test.ts`. Não alterar esses números sem refazer a calibração contra
   `public/minimap.png` — trocar a imagem do minimapa invalida `MAP_IMAGE_INSET`.
 
 ## Recomendação de build
@@ -238,8 +272,11 @@ afrouxadas** — com `strict: false` são praticamente a única rede de tipos di
 - `const _localeParity: Record<TranslationKey, string> = translations['en-US']` no fim de
   `translations.ts` — pega o caso inverso (chave que existe em pt-BR e falta em en-US), que antes
   caía silenciosamente no fallback em runtime.
-- `i18n/translations.test.ts` — paridade de chaves, nenhuma entrada vazia, mesmos placeholders nas
-  duas locales, e nenhuma chave órfã em `src/`.
+- `tests/i18n/translations.test.ts` — paridade de chaves, nenhuma entrada vazia, mesmos placeholders
+  nas duas locales, e nenhuma chave órfã em `src/`. O guard de órfã varre `collectSources('src')`, e
+  desde que a suíte saiu para `tests/` os próprios testes ficaram **fora** desse escopo: antes, chave
+  citada só num teste passava no guard; agora não passa mais. A mudança de pasta apertou o gate de
+  graça — hoje são zero órfãs entre as 766 chaves.
 
 ## Ícones e marca
 
@@ -301,8 +338,9 @@ mora em função pura sob `src/utils/heroGrid/` (`mirrorBuilder`, `ranking`, `so
 `syncScheduler`, `valveJson`), que o vitest alcança. A exceção deliberada é a **guarda de
 imutabilidade**, que roda no main porque é a última linha antes do disco e precisa validar
 exatamente os bytes que vão ser gravados, não um objeto que alguém prometeu ter serializado direito.
-Foi por causa dela que `vitest.config.ts` ganhou `electron/**/*.test.cjs` — e `globals: true`, porque
-o Vitest 4 recusa `require('vitest')` e um `import` num `.cjs` quebra o parse do oxlint.
+Foi por causa dela que o `include` do `vitest.config.ts` cobre `.test.cjs` (hoje
+`tests/**/*.test.cjs`, em `tests/electron/heroGrid/`) — e `globals: true`, porque o Vitest 4 recusa
+`require('vitest')` e um `import` num `.cjs` quebra o parse do oxlint.
 
 **A validação de caminho (`pathGuard.cjs`) é do main, não da ponte.** O renderer manda um `path`; sem
 validar, o processo privilegiado gravaria em qualquer arquivo do usuário, com backup e atomicidade e

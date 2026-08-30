@@ -31,8 +31,8 @@ duplicação artificial. Nada de dado inventado nesta fixture.
 
 O `.raw.txt` é o **texto** original (tabs de indentação, floats com 6 decimais, `[` em linha própria,
 sem newline final), com os mesmos nomes anonimizados e **nada mais** alterado. É o alvo do teste
-byte a byte de `valveJson.test.ts` (T014). `JSON.parse` do `.raw.txt` é igual em profundidade ao
-`.json` — verificado com `python3`.
+byte a byte de `tests/utils/heroGrid/valveJson.test.ts` (T014). `JSON.parse` do `.raw.txt` é igual
+em profundidade ao `.json` — verificado com `python3`.
 
 ### O que a fixture real NÃO cobre
 
