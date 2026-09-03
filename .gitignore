@@ -8,6 +8,12 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Dependencies and Build Outputs
+# O gerenciador do projeto e npm (package-lock.json). Lockfiles de outros
+# gerenciadores ficam fora para nao competir com ele.
+pnpm-lock.yaml
+pnpm-workspace.yaml
+yarn.lock
+bun.lockb
 node_modules
 dist
 dist-ssr
@@ -21,7 +27,9 @@ release
 .env*
 !.env.example
 
-# Editor and OS files
+# Editor, AI tooling and OS files
+.claude/
+.specify/
 .vscode/*
 !.vscode/extensions.json
 .idea
