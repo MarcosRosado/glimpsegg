@@ -113,5 +113,8 @@
     "vite": "^8.2.0",
     "vitest": "^4.1.11",
     "wait-on": "^9.1.0"
+  },
+  "allowScripts": {
+    "electron-winstaller@5.4.0": true
   }
 }
