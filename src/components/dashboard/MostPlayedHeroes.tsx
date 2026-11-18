@@ -1,6 +1,6 @@
 import React from 'react';
 import { Crown, Zap } from 'lucide-react';
-import { getHero } from '../../constants/heroes';
+import { getHero, NEW_HERO_IDS } from '../../constants/heroes';
 import { formatImpMarked, formatPercent, getImpColor } from '../../utils/dotaFormatters';
 import { handleHeroImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
@@ -51,13 +51,8 @@ export const MostPlayedHeroes: React.FC<MostPlayedHeroesProps> = ({ heroes, onFi
                 <div>
                   <div className="text-xs font-bold text-slate-200 group-hover:text-amber-400 transition flex items-center gap-1.5">
                     <span>{hero.displayName}</span>
-                    {h.heroId === 145 && (
+                    {NEW_HERO_IDS.has(h.heroId) && (
                       <span className="text-[9px] px-1 py-0.2 bg-amber-500/20 text-amber-300 rounded font-semibold border border-amber-500/30">
-                        NEW
-                      </span>
-                    )}
-                    {h.heroId === 131 && (
-                      <span className="text-[9px] px-1 py-0.2 bg-purple-500/20 text-purple-300 rounded font-semibold border border-purple-500/30">
                         NEW
                       </span>
                     )}

@@ -1276,6 +1276,15 @@ export const HEROES_MAP: Record<number, HeroMetadata> = {
 };
 
 /**
+ * Herois que recebem o selo NEW na lista de mais jogados.
+ *
+ * Era `heroId === 145` e `=== 131` cravados no JSX: Kez e Ringmaster seguiram "novos" por
+ * anos, e Largo (155) nunca ganhou o selo. Heroi novo: trocar o id aqui. Esvaziar o
+ * conjunto quando o mais recente deixar de ser novidade.
+ */
+export const NEW_HERO_IDS: ReadonlySet<number> = new Set([155]); // Largo
+
+/**
  * Returns hero metadata by ID, with dynamic fallback for unmapped or new upcoming heroes.
  */
 export function getHero(heroId: number): HeroMetadata {
