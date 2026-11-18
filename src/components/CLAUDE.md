@@ -38,7 +38,7 @@ As pastas sem CLAUDE.md próprio têm um arquivo só; a linha acima é a documen
 
 Três lugares na UI têm dado de Dota cravado, e nenhum deles quebra visivelmente quando envelhece:
 
-- `dashboard/MostPlayedHeroes.tsx` — badge `NEW` com os heroId **145** e **131** literais no JSX.
+- `dashboard/MostPlayedHeroes.tsx` — badge `NEW` lê `NEW_HERO_IDS` de `constants/heroes.ts`.
 - `match/ScoreboardTable.tsx` — `GENERIC_CONSUMABLES` (nomes `item_*`) e o corte `cost >= 1800`
   que define "item core".
 - `performance/PlayerPerformanceTab.tsx` — `deltaSec <= -45` / `>= 60` para item adiantado/atrasado.

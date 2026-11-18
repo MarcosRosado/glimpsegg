@@ -9,6 +9,7 @@ Primitivos compartilhados entre telas. Nada de domínio de Dota mora aqui — s�
 | `IconButton.tsx` | Botão de ícone padronizado do chrome | `Navbar` |
 | `ImpBadge.tsx` | Chip de IMP: cor e ícone por faixa, com destaque para valor extremo | `MatchList`, `ScoreboardTable` |
 | `Tooltip.tsx` | Tooltip posicionado por portal | `HeroGridMirrorScreen` |
+| `PatchTransitionNotice.tsx` | Aviso temporário (chip ou banner) de que os agregados de meta ainda misturam o patch anterior. Não renderiza nada fora da janela | `StatRail`, `CoachingInsightsTab`, `HeroGridTab` |
 
 ## Regras locais
 
@@ -19,6 +20,7 @@ Primitivos compartilhados entre telas. Nada de domínio de Dota mora aqui — s�
 
 ## Ao sair um patch
 
-Nada aqui muda por patch.
+Nada aqui se edita por patch. O `PatchTransitionNotice` liga e desliga por `PATCH_TRANSITION`
+em [`constants/gameVersion.ts`](../../constants/CLAUDE.md), não neste diretório.
 
 Ver também: [../CLAUDE.md](../CLAUDE.md)

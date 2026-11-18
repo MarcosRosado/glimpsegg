@@ -36,8 +36,8 @@ A home do jogador: o que aparece quando não há partida selecionada. Todos são
 
 ## Ao sair um patch
 
-- `MostPlayedHeroes.tsx` tem os heroId **145** e **131** cravados para o badge `NEW`. Herói novo
-  não ganha o selo, e esses dois seguem marcados como novos para sempre. Atualizar ou remover.
+- O badge `NEW` do `MostPlayedHeroes.tsx` sai de `NEW_HERO_IDS` (`constants/heroes.ts`). Herói
+  novo: trocar o id lá; esvaziar o conjunto quando ele deixar de ser novidade.
 - Reavaliar a taxa de disparo das tags do `MatchList.tsx` se a economia do jogo mudar — a
   inflação de GPM/patrimônio é exatamente o que matou o `750`.
 

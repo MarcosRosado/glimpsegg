@@ -7,7 +7,7 @@ e onde o dado envelhecido não quebra nada visivelmente, só empobrece a tela em
 
 | Arquivo | Papel | Como é mantido |
 | --- | --- | --- |
-| `items.ts` | `ITEMS_MAP` (id → nome, custo, ícone), `getItem`, `isNeutralItem` | **Gerado**: `node scripts/sync-items-full.cjs`, a partir das constantes da OpenDota |
+| `items.ts` | `ITEMS_MAP` (id → nome, custo, ícone), `getItem`, `isNeutralItem` | **Gerado**: `node scripts/sync-items-full.cjs`, a partir do datafeed da Valve (primário) e das constantes da OpenDota |
 | `heroes.ts` | `HEROES_MAP`, `getHero`, `registerDynamicHeroes` | **Manual**, herói a herói |
 | `abilities.ts` | `HERO_ABILITIES_MAP`, `getHeroAbilities` | **Manual** — só **13** heróis mapeados; o resto cai num fallback genérico Q/W/E/R montado pelo `shortName` |
 | `mapGeometry.ts` | Espaço de células da STRATZ, `MAP_IMAGE_INSET`, raios e duração de ward, `STRATZ_WARD_TYPE_INT` | Calibrado por medição documentada no topo do arquivo |
@@ -51,6 +51,9 @@ Não há gate automático sobre esta pasta — o roteiro é manual, nesta ordem:
    "patch 7.4x — um patch novo = uma edição aqui").
 4. **Mapa redesenhado**: recalibrar `MAP_IMAGE_INSET` antes de trocar `public/minimap.png`.
 5. `CURRENT_GAME_PATCH` é só o piso do fallback — não é onde o patch "entra" no app.
+6. **Transição**: preencher `PATCH_TRANSITION` (`gameVersion.ts`) no dia do patch e voltar para
+   `null` quando os agregados estabilizarem. `NEW_HERO_IDS` (`heroes.ts`) guarda quem leva o
+   selo `NEW`.
 
 Ver também: [../CLAUDE.md](../CLAUDE.md) · [../utils/CLAUDE.md](../utils/CLAUDE.md) ·
 [docs/PATCH-CHECKLIST.md](../../docs/PATCH-CHECKLIST.md)

@@ -24,13 +24,34 @@ higiene, não urgência.
 
 > Se pular: nada acontece. Este passo existe para você não sair procurando onde "trocar o patch".
 
+## 1b. Janela de transição — abrir no dia, fechar à mão
+
+Preencher `PATCH_TRANSITION` em `src/constants/gameVersion.ts` com o patch, o `patch_timestamp`
+do datafeed da Valve (em ISO, UTC) e o prazo em dias. Enquanto valer, o `PatchTransitionNotice`
+avisa no topbar, na aba de coaching e no layout espelho que os agregados ainda misturam o patch
+anterior.
+
+**Fechar:** voltar a constante para `null` quando `node scripts/check-patch-readiness.cjs` der
+`[ok]` em `itemFullPurchase` e `winWeek` (editar `PATCH`, `NEW_ITEM_IDS` e `REMOVED_ITEM_IDS` no
+topo do script antes). O prazo em dias é só a rede de segurança.
+
+> Se pular a abertura: o app rotula como patch novo um agregado que é quase todo do anterior.
+> Se pular o fechamento: o aviso some sozinho no fim do prazo, e a constante fica como lixo.
+
 ## 2. Catálogo de itens — tem script
 
 ```bash
-node scripts/sync-items-full.cjs   # busca a OpenDota e sobrescreve src/constants/items.ts
+node scripts/sync-items-full.cjs   # Valve + OpenDota + catálogo atual -> src/constants/items.ts
 ```
 
-Commitar o arquivo gerado.
+O script imprime itens novos, custos e tiers alterados; conferir contra as notas e commitar o
+arquivo gerado. A fonte primária é o **datafeed da Valve** (`dota2.com/datafeed/itemlist` e
+`itemdata`), porque a OpenDota atrasa: no 7.42, 13 horas depois do patch, ela ainda servia o catálogo
+do 7.41, e o sync antigo, que só lia a OpenDota, rodava sem mudar nada. Item removido do jogo
+fica no catálogo — partida antiga ainda o referencia.
+
+As notas completas do patch saem do mesmo datafeed, em JSON, sem precisar do site:
+`https://www.dota2.com/datafeed/patchnotes?version=<patch>&language=english`.
 
 > Se pular: `getItem` devolve fallback — item novo aparece como `Item #<id>` com ícone de receita e
 > `cost: 0`. **Sem erro.** E `cost: 0` derruba o corte `cost >= 1800` que o `ScoreboardTable`
@@ -51,7 +72,7 @@ conte com ele para registrar herói em runtime.
 
 | Onde | O quê | Sintoma de envelhecimento |
 | --- | --- | --- |
-| `src/components/dashboard/MostPlayedHeroes.tsx` | heroId `145` e `131` literais no JSX para o badge `NEW` | herói novo não ganha o selo; esses dois nunca deixam de ser "novos" |
+| `src/constants/heroes.ts` | `NEW_HERO_IDS`, lido pelo badge `NEW` do `MostPlayedHeroes.tsx` | herói novo não ganha o selo; o anterior nunca deixa de ser "novo" |
 | `src/components/match/ScoreboardTable.tsx` | `GENERIC_CONSUMABLES` (nomes `item_*`) e o corte `cost >= 1800` | consumível novo aparece como item de build |
 | `src/utils/performanceEnricher.ts` | `ITEM_BENCHMARKS`, `Record<itemId, segundos>` | item removido ou refeito deixa de ter timing de referência, sem aviso |
 | `src/constants/counterItems.ts` | itens de resposta por arquétipo de ameaça | item que deixou de ser resposta canônica continua sendo sugerido — mas o `buildAdvisor` filtra pelo winrate real, então corrige sozinho na maioria dos casos |

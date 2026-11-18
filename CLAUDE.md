@@ -312,7 +312,8 @@ manifesto na release marcada como `latest`. Criar a release antes da matriz faz 
 `src/constants/heroes.ts`, `items.ts` e `abilities.ts` são tabelas grandes com acesso por
 `getHero`/`getItem`/`getHeroAbilities`, que **sempre devolvem fallback** em vez de `undefined` — é o
 que permite exibir herói ou item de patch novo sem quebrar a tela. `scripts/sync-items-full.cjs`
-regenera o catálogo de itens a partir das constantes da OpenDota. Herói ou item novo entra aqui.
+regenera o catálogo de itens a partir do datafeed da Valve e das constantes da OpenDota. Herói ou
+item novo entra aqui.
 
 `constants/mapGeometry.ts`, `counterItems.ts`, `baselines.ts` e `ranks.ts` são constantes de domínio
 com justificativa no comentário de topo; `gameVersion.ts` guarda o patch de fallback.
