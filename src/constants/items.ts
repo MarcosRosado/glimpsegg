@@ -87,7 +87,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 10,
     "name": "item_quarterstaff",
     "displayName": "Quarterstaff",
-    "cost": 875,
+    "cost": 900,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/quarterstaff.png"
   },
@@ -647,7 +647,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "80": {
     "id": 80,
     "name": "item_recipe_vladmir",
-    "displayName": "Recipe Vladmir",
+    "displayName": "Vladmir's Offering Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -712,7 +712,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 91,
     "name": "item_recipe_urn_of_shadows",
     "displayName": "Urn of Shadows Recipe",
-    "cost": 320,
+    "cost": 370,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -720,7 +720,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 92,
     "name": "item_urn_of_shadows",
     "displayName": "Urn of Shadows",
-    "cost": 825,
+    "cost": 875,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/urn_of_shadows.png"
   },
@@ -808,7 +808,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 103,
     "name": "item_recipe_dagon",
     "displayName": "Dagon Recipe",
-    "cost": 1150,
+    "cost": 1100,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -816,7 +816,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 104,
     "name": "item_dagon",
     "displayName": "Dagon",
-    "cost": 3050,
+    "cost": 3000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/dagon.png"
   },
@@ -832,7 +832,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 106,
     "name": "item_necronomicon",
     "displayName": "Necronomicon",
-    "cost": 2050,
+    "cost": 2700,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/necronomicon.png"
   },
@@ -888,7 +888,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 113,
     "name": "item_recipe_heart",
     "displayName": "Heart of Tarrasque Recipe",
-    "cost": 600,
+    "cost": 800,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -896,7 +896,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 114,
     "name": "item_heart",
     "displayName": "Heart of Tarrasque",
-    "cost": 5100,
+    "cost": 5300,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/heart.png"
   },
@@ -928,7 +928,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 118,
     "name": "item_recipe_shivas_guard",
     "displayName": "Shiva's Guard Recipe",
-    "cost": 1350,
+    "cost": 1250,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -943,7 +943,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "120": {
     "id": 120,
     "name": "item_recipe_bloodstone",
-    "displayName": "Recipe Bloodstone",
+    "displayName": "Bloodstone Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -992,7 +992,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 126,
     "name": "item_recipe_blade_mail",
     "displayName": "Blade Mail Recipe",
-    "cost": 450,
+    "cost": 400,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1000,7 +1000,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 127,
     "name": "item_blade_mail",
     "displayName": "Blade Mail",
-    "cost": 2400,
+    "cost": 2350,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/blade_mail.png"
   },
@@ -1039,7 +1039,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "132": {
     "id": 132,
     "name": "item_recipe_rapier",
-    "displayName": "Recipe Rapier",
+    "displayName": "Divine Rapier Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -1071,7 +1071,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "136": {
     "id": 136,
     "name": "item_recipe_radiance",
-    "displayName": "Recipe Radiance",
+    "displayName": "Radiance Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -1096,7 +1096,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 139,
     "name": "item_butterfly",
     "displayName": "Butterfly",
-    "cost": 5450,
+    "cost": 5000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/butterfly.png"
   },
@@ -1104,7 +1104,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 140,
     "name": "item_recipe_greater_crit",
     "displayName": "Daedalus Recipe",
-    "cost": 900,
+    "cost": 1000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1112,7 +1112,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 141,
     "name": "item_greater_crit",
     "displayName": "Daedalus",
-    "cost": 5100,
+    "cost": 5200,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/greater_crit.png"
   },
@@ -1160,7 +1160,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 147,
     "name": "item_manta",
     "displayName": "Manta Style",
-    "cost": 4650,
+    "cost": 4550,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/manta.png"
   },
@@ -1216,14 +1216,14 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 154,
     "name": "item_sange_and_yasha",
     "displayName": "Sange and Yasha",
-    "cost": 4200,
+    "cost": 4000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/sange_and_yasha.png"
   },
   "155": {
     "id": 155,
     "name": "item_recipe_satanic",
-    "displayName": "Recipe Satanic",
+    "displayName": "Satanic Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -1255,7 +1255,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "159": {
     "id": 159,
     "name": "item_recipe_skadi",
-    "displayName": "Recipe Skadi",
+    "displayName": "Eye of Skadi Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -1272,7 +1272,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 161,
     "name": "item_recipe_sange",
     "displayName": "Sange Recipe",
-    "cost": 650,
+    "cost": 550,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1280,7 +1280,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 162,
     "name": "item_sange",
     "displayName": "Sange",
-    "cost": 2100,
+    "cost": 2000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/sange.png"
   },
@@ -1303,8 +1303,8 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "165": {
     "id": 165,
     "name": "item_recipe_maelstrom",
-    "displayName": "Recipe Maelstrom",
-    "cost": 0,
+    "displayName": "Maelstrom Recipe",
+    "cost": 900,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1336,7 +1336,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 169,
     "name": "item_recipe_yasha",
     "displayName": "Yasha Recipe",
-    "cost": 650,
+    "cost": 550,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1344,14 +1344,14 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 170,
     "name": "item_yasha",
     "displayName": "Yasha",
-    "cost": 2100,
+    "cost": 2000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/yasha.png"
   },
   "171": {
     "id": 171,
     "name": "item_recipe_mask_of_madness",
-    "displayName": "Recipe Mask Of Madness",
+    "displayName": "Mask of Madness Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -1360,7 +1360,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 172,
     "name": "item_mask_of_madness",
     "displayName": "Mask of Madness",
-    "cost": 1900,
+    "cost": 1800,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/mask_of_madness.png"
   },
@@ -1529,7 +1529,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 193,
     "name": "item_necronomicon_2",
     "displayName": "Necronomicon",
-    "cost": 3300,
+    "cost": 3950,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/necronomicon_2.png"
   },
@@ -1537,7 +1537,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 194,
     "name": "item_necronomicon_3",
     "displayName": "Necronomicon",
-    "cost": 4550,
+    "cost": 5200,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/necronomicon_3.png"
   },
@@ -1585,7 +1585,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 201,
     "name": "item_dagon_2",
     "displayName": "Dagon",
-    "cost": 4200,
+    "cost": 4100,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/dagon_2.png"
   },
@@ -1593,7 +1593,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 202,
     "name": "item_dagon_3",
     "displayName": "Dagon",
-    "cost": 5350,
+    "cost": 5200,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/dagon_3.png"
   },
@@ -1601,7 +1601,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 203,
     "name": "item_dagon_4",
     "displayName": "Dagon",
-    "cost": 6500,
+    "cost": 6300,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/dagon_4.png"
   },
@@ -1609,7 +1609,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 204,
     "name": "item_dagon_5",
     "displayName": "Dagon",
-    "cost": 7650,
+    "cost": 7400,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/dagon_5.png"
   },
@@ -1641,7 +1641,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 208,
     "name": "item_abyssal_blade",
     "displayName": "Abyssal Blade",
-    "cost": 6250,
+    "cost": 6150,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/abyssal_blade.png"
   },
@@ -1649,7 +1649,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 209,
     "name": "item_recipe_heavens_halberd",
     "displayName": "Heaven's Halberd Recipe",
-    "cost": 450,
+    "cost": 425,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1657,7 +1657,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 210,
     "name": "item_heavens_halberd",
     "displayName": "Heaven's Halberd",
-    "cost": 3400,
+    "cost": 2400,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/heavens_halberd.png"
   },
@@ -1680,7 +1680,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "213": {
     "id": 213,
     "name": "item_recipe_tranquil_boots",
-    "displayName": "Recipe Tranquil Boots",
+    "displayName": "Tranquil Boots Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -1761,14 +1761,14 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 223,
     "name": "item_meteor_hammer",
     "displayName": "Meteor Hammer",
-    "cost": 2850,
+    "cost": 2750,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/meteor_hammer.png"
   },
   "224": {
     "id": 224,
     "name": "item_recipe_nullifier",
-    "displayName": "Recipe Nullifier",
+    "displayName": "Nullifier Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -1793,7 +1793,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 227,
     "name": "item_recipe_solar_crest",
     "displayName": "Solar Crest Recipe",
-    "cost": 500,
+    "cost": 600,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1801,7 +1801,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 228,
     "name": "item_recipe_octarine_core",
     "displayName": "Octarine Core Recipe",
-    "cost": 200,
+    "cost": 400,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1817,7 +1817,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 230,
     "name": "item_recipe_guardian_greaves",
     "displayName": "Guardian Greaves Recipe",
-    "cost": 1175,
+    "cost": 1075,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1825,7 +1825,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 231,
     "name": "item_guardian_greaves",
     "displayName": "Guardian Greaves",
-    "cost": 4450,
+    "cost": 4350,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/guardian_greaves.png"
   },
@@ -1833,7 +1833,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 232,
     "name": "item_aether_lens",
     "displayName": "Aether Lens",
-    "cost": 2275,
+    "cost": 2100,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/aether_lens.png"
   },
@@ -1841,7 +1841,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 233,
     "name": "item_recipe_aether_lens",
     "displayName": "Aether Lens Recipe",
-    "cost": 775,
+    "cost": 600,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1849,7 +1849,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 234,
     "name": "item_recipe_dragon_lance",
     "displayName": "Dragon Lance Recipe",
-    "cost": 450,
+    "cost": 550,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1857,7 +1857,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 235,
     "name": "item_octarine_core",
     "displayName": "Octarine Core",
-    "cost": 4900,
+    "cost": 5100,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/octarine_core.png"
   },
@@ -1865,7 +1865,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 236,
     "name": "item_dragon_lance",
     "displayName": "Dragon Lance",
-    "cost": 1900,
+    "cost": 2000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/dragon_lance.png"
   },
@@ -1881,7 +1881,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 238,
     "name": "item_recipe_iron_talon",
     "displayName": "Iron Talon Recipe",
-    "cost": 125,
+    "cost": 1,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1921,7 +1921,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 243,
     "name": "item_recipe_crimson_guard",
     "displayName": "Crimson Guard Recipe",
-    "cost": 1050,
+    "cost": 625,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1937,7 +1937,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 245,
     "name": "item_recipe_bloodthorn",
     "displayName": "Bloodthorn Recipe",
-    "cost": 600,
+    "cost": 1350,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -1977,7 +1977,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 250,
     "name": "item_bloodthorn",
     "displayName": "Bloodthorn",
-    "cost": 6400,
+    "cost": 6250,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/bloodthorn.png"
   },
@@ -2041,7 +2041,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 258,
     "name": "item_recipe_kaya",
     "displayName": "Kaya Recipe",
-    "cost": 650,
+    "cost": 550,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -2049,7 +2049,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 259,
     "name": "item_kaya",
     "displayName": "Kaya",
-    "cost": 2100,
+    "cost": 2000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/kaya.png"
   },
@@ -2081,7 +2081,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 263,
     "name": "item_hurricane_pike",
     "displayName": "Hurricane Pike",
-    "cost": 4450,
+    "cost": 4550,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/hurricane_pike.png"
   },
@@ -2097,7 +2097,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 266,
     "name": "item_recipe_spirit_vessel",
     "displayName": "Spirit Vessel Recipe",
-    "cost": 900,
+    "cost": 850,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -2144,7 +2144,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "272": {
     "id": 272,
     "name": "item_recipe_kaya_and_sange",
-    "displayName": "Recipe Kaya And Sange",
+    "displayName": "Kaya and Sange Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -2153,14 +2153,14 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 273,
     "name": "item_kaya_and_sange",
     "displayName": "Kaya and Sange",
-    "cost": 4200,
+    "cost": 4000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/kaya_and_sange.png"
   },
   "274": {
     "id": 274,
     "name": "item_recipe_yasha_and_kaya",
-    "displayName": "Recipe Yasha And Kaya",
+    "displayName": "Yasha and Kaya Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -2185,7 +2185,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 277,
     "name": "item_yasha_and_kaya",
     "displayName": "Yasha and Kaya",
-    "cost": 4200,
+    "cost": 4000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/yasha_and_kaya.png"
   },
@@ -2247,12 +2247,12 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   },
   "292": {
     "id": 292,
-    "name": "item_desolator_2",
+    "name": "item_stygian_desolator",
     "displayName": "Stygian Desolator",
     "cost": 0,
     "isNeutral": true,
     "tier": 5,
-    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/desolator_2.png"
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/stygian_desolator.png"
   },
   "293": {
     "id": 293,
@@ -2380,6 +2380,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Mind Breaker",
     "cost": 0,
     "isNeutral": true,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/mind_breaker.png"
   },
   "310": {
@@ -2417,7 +2418,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "317": {
     "id": 317,
     "name": "item_recipe_fallen_sky",
-    "displayName": "Recipe Fallen Sky",
+    "displayName": "Recipe: Fallen Sky",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -2477,6 +2478,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Imp Claw",
     "cost": 0,
     "isNeutral": true,
+    "tier": 2,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/imp_claw.png"
   },
   "335": {
@@ -2485,6 +2487,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Flicker",
     "cost": 0,
     "isNeutral": true,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/flicker.png"
   },
   "336": {
@@ -2628,7 +2631,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 369,
     "name": "item_trident",
     "displayName": "Trident",
-    "cost": 6301,
+    "cost": 6001,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/trident.png"
   },
@@ -2638,7 +2641,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Book of the Dead",
     "cost": 0,
     "isNeutral": true,
-    "tier": 5,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/demonicon.png"
   },
   "371": {
@@ -2647,7 +2650,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Fallen Sky",
     "cost": 0,
     "isNeutral": true,
-    "tier": 5,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/fallen_sky.png"
   },
   "372": {
@@ -2696,7 +2699,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Minotaur Horn",
     "cost": 0,
     "isNeutral": true,
-    "tier": 5,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/minotaur_horn.png"
   },
   "378": {
@@ -2743,7 +2746,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 533,
     "name": "item_recipe_witch_blade",
     "displayName": "Witch Blade Recipe",
-    "cost": 300,
+    "cost": 650,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -2776,7 +2779,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 569,
     "name": "item_orb_of_corrosion",
     "displayName": "Orb of Corrosion",
-    "cost": 1050,
+    "cost": 880,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/orb_of_corrosion.png"
   },
@@ -2898,7 +2901,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "597": {
     "id": 597,
     "name": "item_recipe_mage_slayer",
-    "displayName": "Recipe Mage Slayer",
+    "displayName": "Mage Slayer Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -3026,7 +3029,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "640": {
     "id": 640,
     "name": "item_recipe_orb_of_corrosion",
-    "displayName": "Recipe Orb Of Corrosion",
+    "displayName": "Orb of Corrosion Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -3061,7 +3064,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Psychic Headband",
     "cost": 0,
     "isNeutral": true,
-    "tier": 3,
+    "tier": 2,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/psychic_headband.png"
   },
   "676": {
@@ -3070,6 +3073,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Ceremonial Robe",
     "cost": 0,
     "isNeutral": true,
+    "tier": 3,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/ceremonial_robe.png"
   },
   "677": {
@@ -3086,6 +3090,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Giant's Ring",
     "cost": 0,
     "isNeutral": true,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/giants_ring.png"
   },
   "679": {
@@ -3230,7 +3235,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Witchbane",
     "cost": 0,
     "isNeutral": true,
-    "tier": 5,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/heavy_blade.png"
   },
   "838": {
@@ -3255,7 +3260,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Tumbler's Toy",
     "cost": 0,
     "isNeutral": true,
-    "tier": 2,
+    "tier": 1,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/pogo_stick.png"
   },
   "849": {
@@ -3294,14 +3299,15 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 911,
     "name": "item_revenants_brooch",
     "displayName": "Revenant's Brooch",
-    "cost": 3300,
-    "isNeutral": false,
+    "cost": 0,
+    "isNeutral": true,
+    "tier": 3,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/revenants_brooch.png"
   },
   "930": {
     "id": 930,
     "name": "item_recipe_boots_of_bearing",
-    "displayName": "Recipe Boots Of Bearing",
+    "displayName": "Boots of Bearing Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -3344,7 +3350,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Seeds of Serenity",
     "cost": 0,
     "isNeutral": true,
-    "tier": 2,
+    "tier": 1,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/seeds_of_serenity.png"
   },
   "946": {
@@ -3634,7 +3640,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 1101,
     "name": "item_recipe_harpoon",
     "displayName": "Harpoon Recipe",
-    "cost": 1000,
+    "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -3690,7 +3696,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 1127,
     "name": "item_recipe_pavise",
     "displayName": "Pavise Recipe",
-    "cost": 675,
+    "cost": 575,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -3698,7 +3704,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 1128,
     "name": "item_pavise",
     "displayName": "Pavise",
-    "cost": 1350,
+    "cost": 1250,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/pavise.png"
   },
@@ -3724,6 +3730,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Safety Bubble",
     "cost": 0,
     "isNeutral": true,
+    "tier": 2,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/safety_bubble.png"
   },
   "1158": {
@@ -3796,13 +3803,13 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Rattlecage",
     "cost": 0,
     "isNeutral": true,
-    "tier": 4,
+    "tier": 3,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/rattlecage.png"
   },
   "1440": {
     "id": 1440,
     "name": "item_black_grimoire",
-    "displayName": "Black Grimoire\\n(Warlock)",
+    "displayName": "Black Grimoire (Warlock)",
     "cost": 0,
     "isNeutral": true,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/black_grimoire.png"
@@ -3829,13 +3836,13 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Claddish Spyglass",
     "cost": 0,
     "isNeutral": false,
-    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/spyglass.png"
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/claddish_spyglass.png"
   },
   "1565": {
     "id": 1565,
     "name": "item_recipe_gungir",
     "displayName": "Gleipnir Recipe",
-    "cost": 400,
+    "cost": 300,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -4072,7 +4079,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Gunpowder Gauntlet",
     "cost": 0,
     "isNeutral": true,
-    "tier": 3,
+    "tier": 2,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/gunpowder_gauntlets.png"
   },
   "1604": {
@@ -4174,7 +4181,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Jidi Pollen Bag",
     "cost": 0,
     "isNeutral": true,
-    "tier": 3,
+    "tier": 2,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/jidi_pollen_bag.png"
   },
   "1641": {
@@ -4191,7 +4198,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Dezun Bloodrite",
     "cost": 0,
     "isNeutral": true,
-    "tier": 5,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/dezun_bloodrite.png"
   },
   "1643": {
@@ -4209,7 +4216,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Divine Regalia",
     "cost": 0,
     "isNeutral": true,
-    "tier": 5,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/divine_regalia.png"
   },
   "1645": {
@@ -4279,7 +4286,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "1715": {
     "id": 1715,
     "name": "item_recipe_specialists_array",
-    "displayName": "Recipe Specialists Array",
+    "displayName": "Specialist's Array Recipe",
     "cost": 550,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -4308,7 +4315,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Riftshadow Prism",
     "cost": 0,
     "isNeutral": true,
-    "tier": 5,
+    "tier": 4,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/riftshadow_prism.png"
   },
   "1719": {
@@ -4317,7 +4324,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Metamorphic Mandible",
     "cost": 0,
     "isNeutral": true,
-    "tier": 4,
+    "tier": 2,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/metamorphic_mandible.png"
   },
   "1720": {
@@ -4326,7 +4333,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Idol of Scree'auk",
     "cost": 0,
     "isNeutral": true,
-    "tier": 4,
+    "tier": 3,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/idol_of_screeauk.png"
   },
   "1721": {
@@ -4397,7 +4404,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "1807": {
     "id": 1807,
     "name": "item_recipe_angels_demise",
-    "displayName": "Recipe Angels Demise",
+    "displayName": "Khanda Recipe",
     "cost": 0,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
@@ -4446,7 +4453,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 1851,
     "name": "item_recipe_essence_distiller",
     "displayName": "Essence Distiller Recipe",
-    "cost": 200,
+    "cost": 150,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -4493,8 +4500,8 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
   "1857": {
     "id": 1857,
     "name": "item_recipe_hydras_breath",
-    "displayName": "Recipe Hydras Breath",
-    "cost": 1100,
+    "displayName": "Hydra's Breath Recipe",
+    "cost": 1000,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
   },
@@ -4512,7 +4519,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Spellslinger",
     "cost": 0,
     "isNeutral": true,
-    "tier": 3,
+    "tier": 2,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/spellslinger.png"
   },
   "1860": {
@@ -4521,7 +4528,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Prophet's Pendulum",
     "cost": 0,
     "isNeutral": true,
-    "tier": 4,
+    "tier": 3,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/prophets_pendulum.png"
   },
   "1861": {
@@ -4539,7 +4546,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Enchanter's Bauble",
     "cost": 0,
     "isNeutral": true,
-    "tier": 4,
+    "tier": 3,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/enchanters_bauble.png"
   },
   "1863": {
@@ -4548,7 +4555,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Harmonizer",
     "cost": 0,
     "isNeutral": true,
-    "tier": 5,
+    "tier": 3,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/harmonizer.png"
   },
   "1864": {
@@ -4621,7 +4628,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "id": 1872,
     "name": "item_chasm_stone",
     "displayName": "Chasm Stone",
-    "cost": 800,
+    "cost": 900,
     "isNeutral": false,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/chasm_stone.png"
   },
@@ -4631,7 +4638,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Partisan's Brand",
     "cost": 0,
     "isNeutral": true,
-    "tier": 3,
+    "tier": 2,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/partisans_brand.png"
   },
   "1874": {
@@ -4649,6 +4656,195 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "cost": 0,
     "isNeutral": true,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/tidehunter_fish.png"
+  },
+  "1880": {
+    "id": 1880,
+    "name": "item_red_ledger",
+    "displayName": "Red Ledger",
+    "cost": 0,
+    "isNeutral": true,
+    "tier": 1,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/red_ledger.png"
+  },
+  "1881": {
+    "id": 1881,
+    "name": "item_berserkers_hood",
+    "displayName": "Berserker's Hood",
+    "cost": 0,
+    "isNeutral": true,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/berserkers_hood.png"
+  },
+  "1882": {
+    "id": 1882,
+    "name": "item_vile_phial",
+    "displayName": "Vile Phial",
+    "cost": 0,
+    "isNeutral": true,
+    "tier": 3,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/vile_phial.png"
+  },
+  "1883": {
+    "id": 1883,
+    "name": "item_nothl_sigil",
+    "displayName": "Nothl Sigil",
+    "cost": 0,
+    "isNeutral": true,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/nothl_sigil.png"
+  },
+  "1884": {
+    "id": 1884,
+    "name": "item_claszian_timepiece",
+    "displayName": "Claszian Timepiece",
+    "cost": 0,
+    "isNeutral": true,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/claszian_timepiece.png"
+  },
+  "1911": {
+    "id": 1911,
+    "name": "item_helm_of_the_hivemind",
+    "displayName": "Helm of the Hivemind",
+    "cost": 0,
+    "isNeutral": true,
+    "tier": 4,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/helm_of_the_hivemind.png"
+  },
+  "1916": {
+    "id": 1916,
+    "name": "item_brick",
+    "displayName": "Brick",
+    "cost": 0,
+    "isNeutral": true,
+    "tier": 2,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/brick.png"
+  },
+  "1917": {
+    "id": 1917,
+    "name": "item_balmhook",
+    "displayName": "Balmhook",
+    "cost": 0,
+    "isNeutral": true,
+    "tier": 3,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/balmhook.png"
+  },
+  "1941": {
+    "id": 1941,
+    "name": "item_recipe_bloodslinger",
+    "displayName": "Recipe Bloodslinger",
+    "cost": 420,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
+  },
+  "1942": {
+    "id": 1942,
+    "name": "item_bloodslinger",
+    "displayName": "Bloodslinger",
+    "cost": 925,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/bloodslinger.png"
+  },
+  "1943": {
+    "id": 1943,
+    "name": "item_recipe_ristuls_devotion",
+    "displayName": "Ristul's Devotion Recipe",
+    "cost": 0,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
+  },
+  "1944": {
+    "id": 1944,
+    "name": "item_ristuls_devotion",
+    "displayName": "Ristul's Devotion",
+    "cost": 3800,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/ristuls_devotion.png"
+  },
+  "1945": {
+    "id": 1945,
+    "name": "item_recipe_starforge",
+    "displayName": "Starforge Recipe",
+    "cost": 450,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
+  },
+  "1946": {
+    "id": 1946,
+    "name": "item_starforge",
+    "displayName": "Starforge",
+    "cost": 6000,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/starforge.png"
+  },
+  "1947": {
+    "id": 1947,
+    "name": "item_recipe_skypiercer",
+    "displayName": "Skypiercer Recipe",
+    "cost": 300,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
+  },
+  "1948": {
+    "id": 1948,
+    "name": "item_skypiercer",
+    "displayName": "Skypiercer",
+    "cost": 6000,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/skypiercer.png"
+  },
+  "1949": {
+    "id": 1949,
+    "name": "item_stone_of_recall",
+    "displayName": "Stone of Recall",
+    "cost": 0,
+    "isNeutral": true,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/stone_of_recall.png"
+  },
+  "1950": {
+    "id": 1950,
+    "name": "item_horn_of_battle",
+    "displayName": "Horn of Battle",
+    "cost": 0,
+    "isNeutral": true,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/horn_of_battle.png"
+  },
+  "1951": {
+    "id": 1951,
+    "name": "item_horn_of_battle_greater",
+    "displayName": "Greater Horn of Battle",
+    "cost": 0,
+    "isNeutral": true,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/horn_of_battle_greater.png"
+  },
+  "1952": {
+    "id": 1952,
+    "name": "item_recipe_berserkers_sabatons",
+    "displayName": "Recipe Berserkers Sabatons",
+    "cost": 2000,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
+  },
+  "1953": {
+    "id": 1953,
+    "name": "item_berserkers_sabatons",
+    "displayName": "Sabatons of Mordiggian",
+    "cost": 5950,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/berserkers_sabatons.png"
+  },
+  "1954": {
+    "id": 1954,
+    "name": "item_recipe_caduceus",
+    "displayName": "Caduceus Recipe",
+    "cost": 600,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/recipe.png"
+  },
+  "1955": {
+    "id": 1955,
+    "name": "item_caduceus",
+    "displayName": "Caduceus",
+    "cost": 5400,
+    "isNeutral": false,
+    "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/caduceus.png"
   },
   "2091": {
     "id": 2091,
@@ -4729,7 +4925,7 @@ export const ITEMS_MAP: Record<number, ItemMetadata> = {
     "displayName": "Dandelion Amulet",
     "cost": 0,
     "isNeutral": true,
-    "tier": 4,
+    "tier": 3,
     "imageUrl": "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/dandelion_amulet.png"
   },
   "2191": {

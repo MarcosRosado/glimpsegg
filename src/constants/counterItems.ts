@@ -40,7 +40,12 @@ export const COUNTER_ITEMS: Record<ThreatArchetype, number[]> = {
     112, // Assault Cuirass
     139, // Butterfly
     37, // Ghost Scepter
+    // 7.42: perdeu a evasao e metade da armadura; fica pelo disarm, que segue sendo a
+    // resposta canonica a carry de ataque. Se deixar de vencer, o win rate o tira.
     210, // Heaven's Halberd
+    // 7.42: upgrade do Halberd (disarm + 25% de evasao). So passa a ser sugerido quando
+    // o `itemFullPurchase` tiver amostra dele — ate la o buildAdvisor o ignora.
+    1948, // Skypiercer
     127, // Blade Mail
   ],
   // Lockdown longo: imunidade, dispel, quebra de alvo unico.

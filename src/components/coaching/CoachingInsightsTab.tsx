@@ -11,6 +11,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useBuildAdvice } from '../../hooks/useBuildAdvice';
 import { formatDuration } from '../../utils/dotaFormatters';
 import { handleHeroImageError, handleItemImageError } from '../../utils/imageFallback';
+import { PatchTransitionNotice } from '../ui/PatchTransitionNotice';
 
 interface CoachingInsightsTabProps {
   player: MatchPlayer;
@@ -181,6 +182,9 @@ export const CoachingInsightsTab: React.FC<CoachingInsightsTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Temporario: some sozinho fora da janela de PATCH_TRANSITION. */}
+      <PatchTransitionNotice variant="banner" />
 
       {/* Banner de partida nao parseada — diz o que NAO pode ser avaliado, em vez de
           preencher a lacuna com estimativa. */}

@@ -27,6 +27,7 @@ import type {
 import { handleHeroImageError } from '../../utils/imageFallback';
 import { CRITERION_LABEL, DAYS_SINCE_LABEL, metaSourceKey, NO_DATA_LABEL } from './labels';
 import { Chip, LayoutRef, Notice } from './primitives';
+import { PatchTransitionNotice } from '../ui/PatchTransitionNotice';
 import {
   describeDaysSince,
   formatRatioPercent,
@@ -525,6 +526,9 @@ export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid, onOpenMirr
             </div>
           </div>
         </div>
+
+        {/* Temporario: some sozinho fora da janela de PATCH_TRANSITION. */}
+        <PatchTransitionNotice variant="banner" />
 
         {/* Ultimo desfecho conhecido, com as fontes que entraram. */}
         {lastRecord && (

@@ -54,6 +54,9 @@ const GENERIC_CONSUMABLES = new Set([
   'item_great_famango',
   'item_greater_famango',
   'item_banana',
+  // 7.42: drop do Tormentor, consumivel de 1 carga (invoca onda de mega creeps).
+  'item_horn_of_battle',
+  'item_horn_of_battle_greater',
 ]);
 
 function isGenericConsumableOrRecipe(itemId: number): boolean {

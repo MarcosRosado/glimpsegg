@@ -5,6 +5,7 @@ import { computeRecentFormStats } from '../../utils/recentFormStats';
 import { formatPercent } from '../../utils/dotaFormatters';
 import { useGamePatch } from '../../hooks/useGamePatch';
 import { useLanguage } from '../../context/LanguageContext';
+import { PatchTransitionNotice } from '../ui/PatchTransitionNotice';
 
 interface StatRailProps {
   profile: PlayerProfileSummary;
@@ -59,6 +60,7 @@ export const StatRail: React.FC<StatRailProps> = ({ profile }) => {
       <div className="w-full max-w-[1850px] mx-auto px-4 sm:px-6 h-7 flex items-center gap-3 overflow-x-auto no-scrollbar text-[11px] font-mono text-slate-400">
         <RailStat label={t('gamePatch')} tooltip={`${t('gamePatchTooltip')} (${patch})`}>
           <span className="text-slate-300 font-semibold tabular-nums">{patch}</span>
+          <PatchTransitionNotice variant="chip" />
         </RailStat>
 
         <RailStat

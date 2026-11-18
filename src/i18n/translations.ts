@@ -37,6 +37,9 @@ export const translations = {
     railCareerTooltip: 'Taxa de vitória na carreira ({total} partidas)',
     gamePatch: 'Patch',
     gamePatchTooltip: 'Patch do Dota 2 usado como referência das análises',
+    patchTransitionChip: 'em transição',
+    patchTransitionTitle: 'Dados de meta em transição para o {patch}',
+    patchTransitionBody: 'O patch {patch} é recente: taxas de vitória, builds e médias de herói vindas da STRATZ e da OpenDota ainda incluem partidas do patch anterior. Itens novos podem não aparecer nas recomendações, e itens removidos ainda podem.',
     homeTooltip: 'Ir para o Painel',
     apiKeyMissing: 'Sem chave STRATZ — clique para configurar',
 
@@ -905,6 +908,9 @@ export const translations = {
     railCareerTooltip: 'Career win rate ({total} matches)',
     gamePatch: 'Patch',
     gamePatchTooltip: 'Dota 2 patch used as the baseline for the analyses',
+    patchTransitionChip: 'in transition',
+    patchTransitionTitle: 'Meta data in transition to {patch}',
+    patchTransitionBody: 'Patch {patch} is recent: win rates, builds and hero averages from STRATZ and OpenDota still include matches from the previous patch. New items may be missing from recommendations, and removed items may still show up.',
     homeTooltip: 'Go to Dashboard',
     apiKeyMissing: 'No STRATZ key — click to configure',
 
