@@ -86,6 +86,12 @@ export interface SteamResolveResult {
   personaname?: string;
   avatar?: string;
   error?: string;
+  /**
+   * Resultado da consulta do perfil público (`withOpenDotaProfile`), só no fluxo de confirmação:
+   * `FOUND` trouxe nome/foto; `NOT_FOUND` a OpenDota respondeu sem perfil (ID errado ou conta
+   * sem partidas registradas); `UNAVAILABLE` a consulta falhou (rede, limite de uso).
+   */
+  profileStatus?: 'FOUND' | 'NOT_FOUND' | 'UNAVAILABLE';
 }
 
 export interface ElectronApi {

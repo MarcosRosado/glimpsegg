@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { BrandMark } from '../brand/BrandMark';
 import { useLanguage } from '../../context/LanguageContext';
-import { resolveSteamId } from '../../services/steamResolver';
+import { resolveSteamId, withOpenDotaProfile } from '../../services/steamResolver';
 import type { SteamResolveResult } from '../../types/electron';
 
 interface OnboardingModalProps {
@@ -34,8 +34,9 @@ interface OnboardingModalProps {
  * O fluxo tem DOIS passos de proposito (buscar → confirmar). Um link de perfil com nome
  * personalizado é resolvido por busca de nome, e a busca devolve o primeiro resultado:
  * salvar direto abriria o app na conta de outra pessoa sem aviso. A conta resolvida
- * aparece antes do botao de salvar, com o ID sempre visivel e nome/avatar só quando o
- * resolver os devolve — ID numerico puro nao traz nome, e a tela nao inventa um.
+ * aparece antes do botao de salvar, com o ID sempre visivel e nome/avatar do perfil publico
+ * da OpenDota (`withOpenDotaProfile`). Sem perfil ou com a consulta falhando, o cartao diz
+ * isso e mostra só o ID — a tela nao inventa nome.
  */
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isOpen,
@@ -88,7 +89,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     setAvatarFailed(false);
 
     try {
-      const res = await resolveSteamId(input);
+      // Nome e foto do perfil público: sem eles, ID numérico confirmava só um número.
+      const res = await withOpenDotaProfile(await resolveSteamId(input));
       if (seq !== requestSeq.current) return;
       if (res.success && res.steamAccountId) {
         setResolved(res);
@@ -311,6 +313,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     </div>
                   )}
                 </div>
+                {/* Sem perfil na OpenDota o ID pode estar errado; consulta que falhou só diz que
+                    não deu para conferir. Os dois avisam em vez de deixar o cartão mudo. */}
+                {resolved.profileStatus === 'NOT_FOUND' && (
+                  <p className="text-[11px] text-amber-300">{t('onboardingProfileNotFound')}</p>
+                )}
+                {resolved.profileStatus === 'UNAVAILABLE' && (
+                  <p className="text-[11px] text-amber-300/90">{t('onboardingProfileUnavailable')}</p>
+                )}
                 <p className="text-[11px] text-slate-400">{t('onboardingConfirmHint')}</p>
               </div>
             )}
