@@ -25,24 +25,33 @@ não finge que consegue: a nota de impacto exibida aqui se chama **Glint**. Ela 
 
 ## Recursos
 
-**Dashboard do jogador**
-- Perfil, rank e forma recente
-- Lista de partidas com resumo por jogo
-- Heróis mais jogados e tendência de performance
-- Heatmap de atividade
-- Matriz de duplas
+Uma barra lateral com cinco seções — **Início**, **Partidas**, **Heróis**, **Conta** e o
+**Layout espelho** — que recolhe num trilho de ícones.
 
-**Análise de partida** — quatro abas por jogador
-- `OVERVIEW` — scoreboard, visão geral dos times, timeline de vantagem
-- `PERFORMANCE` — métricas contra baseline de herói/posição
-- `VISION` — wards reais no minimapa, com tempo de vida, autor, dewards e cobertura
-- `COACHING` — diagnóstico determinístico da partida, com forense de morte; todo card diz de onde
-  vem o número
+**Início** — a sua última partida primeiro, com o estado do replay e o botão "Pedir análise do
+replay" ali mesmo; depois forma recente, a tendência das últimas 100 partidas, heróis mais
+jogados, atividade e companheiros (clique num deles para abrir a conta).
+
+**Partidas, Heróis, Conta**
+- Lista de partidas que carrega além das 40 primeiras, com filtro de período e de patch
+- O seu desempenho em cada herói, por período e patch
+- Totais da carreira (cada um com a própria amostra), recordes e divisão por patch, fila, rota e lado
+
+**Análise de partida** — o estado do replay decide o layout
+- **Ainda não analisada:** a partida abre como placar, diz isso e oferece pedir a análise. A
+  OpenDota analisa replay a pedido, então este é o caso comum.
+- **Analisada:** cinco abas com um seletor de jogador só. As suas partidas abrem em Meu jogo.
+  - `RESUMO` — destaques, vantagem de ouro/xp, momento de virada, placar
+  - `MEU JOGO` — veredito de rota (patrimônio **e** xp aos 10 min, os dois à vista), eficiência
+    de rota, tempo dos itens e uso de item ativo, o custo das suas mortes, radar
+  - `LUTAS` — o que cada luta custou a cada lado e quais objetivos caíram depois dela
+  - `VISÃO` — wards reais no minimapa, com tempo de vida, autor, dewards e cobertura
+  - `COACHING` — diagnóstico determinístico; todo card diz de onde vem o número
 - **Glint** — a nota de impacto experimental, por jogador (veja [Por que existe](#por-que-existe))
 
 O que cada aba mostra depende do que a OpenDota tem daquela partida. Quando falta um dado, a seção
-é escondida — nunca estimada. A recomendação de build das versões anteriores está escondida por
-esse motivo: a OpenDota não tem volume para sustentá-la.
+é escondida — nunca estimada. A recomendação de build e o coaching minuto a minuto contra a média
+do herói estão escondidos por esse motivo: a OpenDota não tem volume para sustentá-los.
 
 **Layout espelho de heróis** — grava uma cópia do seu layout do Dota, reordenada por win rate
 - O seu layout **nunca é alterado**: o espelho é um elemento **novo** ao lado dele, e a gravação
@@ -263,7 +272,9 @@ correspondente simplesmente não aparece — nada é estimado para preencher a l
 
 Todo push na `main` incrementa a versão patch, cria a tag e publica uma release com os artefatos das
 três plataformas, via GitHub Actions. Os gates são `icons:check`, `npm test` e `npm run build`
-— um teste vermelho bloqueia a release.
+— um teste vermelho bloqueia a release. Uma versão major ou minor (como a 2.0.0) sai editando
+`version` no `package.json` uma vez, no commit da versão; o workflow passa a usá-la em vez de
+somar 1 ao patch. Se existir `docs/release-notes/v<versão>.md`, ele vira as notas da release.
 
 ## Contato
 

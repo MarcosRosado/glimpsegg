@@ -26,24 +26,34 @@ is neither STRATZ's IMP nor claimed to match it.
 
 ## Features
 
-**Player dashboard**
-- Profile, rank and recent form
-- Match list with a per-game summary
-- Most played heroes and performance trend
-- Activity heatmap
-- Teammate matrix
+A sidebar with five sections — **Home**, **Matches**, **Heroes**, **Account** and the **Hero
+grid** — that collapses into an icon rail.
 
-**Match analysis** — four tabs per player
-- `OVERVIEW` — scoreboard, team overview, advantage timeline
-- `PERFORMANCE` — metrics against the hero/position baseline
-- `VISION` — real wards on the minimap, with lifetime, placer, dewards and coverage
-- `COACHING` — deterministic diagnosis of the match, with death forensics; every card states where
-  its number comes from
+**Home** — your last match first, with its replay status and the "Request replay analysis" button
+right there; then recent form, the trend over your last 100 matches, most played heroes, activity
+and teammates (click one to open their account).
+
+**Matches, Heroes, Account**
+- Match list that loads past the first 40, filtered by period and patch
+- Your record on every hero, by period and patch
+- Career totals (each with its own sample size), records, and breakdowns by patch, queue, lane and side
+
+**Match analysis** — the replay's status decides the layout
+- **Not analyzed yet:** the match opens as a scoreboard, says so, and offers to request the
+  analysis. OpenDota parses replays on request, so this is the common case.
+- **Analyzed:** five tabs with one player picker. Your own matches open on My game.
+  - `SUMMARY` — highlights, gold/XP advantage, turning point, scoreboard
+  - `MY GAME` — lane verdict (net worth **and** XP at 10 min, both shown), lane efficiency,
+    item timings and active item usage, what your deaths cost, radar
+  - `FIGHTS` — what each team fight cost each side and which objectives fell after it
+  - `VISION` — real wards on the minimap, with lifetime, placer, dewards and coverage
+  - `COACHING` — deterministic diagnosis; every card states where its number comes from
 - **Glint** — the experimental per-player impact score (see [Why it exists](#why-it-exists))
 
 What each tab shows depends on what OpenDota has for that match. When a piece of data is missing,
-the section is hidden — it is never estimated. The build recommendation of earlier versions is
-hidden for that reason: OpenDota does not have the volume to back it.
+the section is hidden — it is never estimated. Build recommendations and minute-by-minute coaching
+against the hero average are hidden for that reason: OpenDota does not have the volume to back
+them.
 
 **Hero grid mirror** — writes a copy of your in-game hero layout, reordered by win rate
 - Your layout is never touched: the mirror is a **new entry** beside it, and the write aborts if
@@ -261,7 +271,10 @@ simply does not appear — nothing is estimated to fill the gap.
 
 Every push to `main` bumps the patch version, creates the tag and publishes a release with the
 artifacts for all three platforms, via GitHub Actions. The gates are `icons:check`, `npm test` and
-`npm run build` — a red test blocks the release.
+`npm run build` — a red test blocks the release. A major or minor release (such as 2.0.0) is made
+by setting `version` in `package.json` once, in the release commit; the workflow then uses it
+instead of bumping the patch. If `docs/release-notes/v<version>.md` exists, it becomes the release
+notes.
 
 ## Contact
 
