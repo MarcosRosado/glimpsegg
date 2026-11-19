@@ -45,10 +45,13 @@ export function isLaneLoss(result: PlayerLaneResult): boolean {
 /**
  * O que a tela mostra para a rota de um jogador, ou `null` para OMITIR a secao.
  *
- *  - Rota pareada com veredito: o rotulo do veredito e a diferenca de patrimonio DA ROTA aos
- *    10 min ao lado ("Rota vencida · +1,2k") — o veredito mostra a propria base (Fase 3).
- *  - Rota desigual: nunca "Rota vencida". Sai "Vantagem/Desvantagem aos 10 min" com a
- *    diferenca POR HEROI, que é o que a regra compara (`utils/laneVerdict.ts`).
+ *  - Rota pareada com veredito: o rotulo do veredito e as diferencas de patrimonio E de xp DA
+ *    ROTA aos 10 min ao lado ("+1,2k de patrimonio · +800 de xp") — o veredito mostra a
+ *    propria base (Fase 3), e a base sao as duas: mostrar so o ouro deixaria "ouro a frente"
+ *    ao lado de "Rota perdida" quando o xp decidiu.
+ *  - Rota desigual: nunca "Rota vencida". Sai "Vantagem/Desvantagem aos 10 min" com as
+ *    diferencas POR HEROI, que é o que a regra compara (`utils/laneVerdict.ts`), e o lado sai
+ *    do score da regra — nao do ouro sozinho.
  *  - Sem medida (partida nao parseada, serie curta, lado vazio): `null`. Nada de "Rota
  *    indefinida" ocupando o lugar do badge.
  */
@@ -59,6 +62,8 @@ export interface LaneVerdictView {
   hintKey: TranslationKey;
   /** Do lado do jogador, em ouro. */
   networthDiff: number;
+  /** Do lado do jogador, em xp. Mesma base de `networthDiff`. */
+  xpDiff: number;
   allies: number;
   enemies: number;
   tone: 'positive' | 'negative' | 'neutral';
@@ -67,7 +72,7 @@ export interface LaneVerdictView {
 export function laneVerdictView(stats: LaningStats | null | undefined): LaneVerdictView | null {
   const adv = stats?.laneAdvantage;
   if (!stats || !adv) return null;
-  const base = { networthDiff: adv.networthDiff, allies: adv.allies, enemies: adv.enemies };
+  const base = { networthDiff: adv.networthDiff, xpDiff: adv.xpDiff, allies: adv.allies, enemies: adv.enemies };
   if (adv.kind === 'VERDICT') {
     if (!hasLaneVerdict(stats.laneResult)) return null;
     return {
@@ -79,7 +84,7 @@ export function laneVerdictView(stats: LaningStats | null | undefined): LaneVerd
       tone: isLaneWin(stats.laneResult) ? 'positive' : isLaneLoss(stats.laneResult) ? 'negative' : 'neutral',
     };
   }
-  const tone = adv.networthDiff > 0 ? 'positive' : adv.networthDiff < 0 ? 'negative' : 'neutral';
+  const tone = adv.score > 0 ? 'positive' : adv.score < 0 ? 'negative' : 'neutral';
   return {
     ...base,
     kind: 'ADVANTAGE',

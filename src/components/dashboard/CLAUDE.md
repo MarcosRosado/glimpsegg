@@ -64,7 +64,7 @@ experimental, de 0 a 100.
   sobre o time, então não envelhece quando um patch infla a economia.
 - O veredito de rota vem de `utils/laneResult.ts` e só dele. A dashboard já teve um segundo sistema
   que decidia rota por `deaths >= 7 && !isVictory`; não recriar. Hoje a lista **não tem** badge de
-  rota: a regra própria (`utils/laneVerdict.ts`) precisa de `networth_t[10]`, que só vem no detalhe
+  rota: a regra própria (`utils/laneVerdict.ts`) precisa de `networth_t[10]` e `xp_t[10]`, que só vêm no detalhe
   da partida, e `laneResult` dos resumos fica `UNKNOWN` (Fase 6 do plano: badge só para partida já
   aberta, do cache).
 - `getHero`/`getItem` sempre devolvem fallback — herói de patch novo aparece como `Hero #<id>`,

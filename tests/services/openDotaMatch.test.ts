@@ -246,23 +246,32 @@ describe('mapOpenDotaMatch — o que a OpenDota nao tem fica desligado', () => {
     });
   });
 
-  it('veredito de rota sai so do patrimonio aos 10 min de quem estava na rota', () => {
-    // Conta a mao sobre `networth_t[10]` da fixture, media por heroi de cada lado:
-    //  top 2v2: Radiant (4639 + 2138) / 2 = 3388,5 x Dire (2048 + 4389) / 2 = 3218,5
-    //           => +170 / 3303,5 = +0,051, abaixo do empate (0,0751) => TIE
-    //  mid 1v1: 4728 x 5008 => -280 / 4868 = -0,058 => TIE
-    //  bot 2v2: Radiant (1152 + 2963) / 2 = 2057,5 x Dire (2379 + 4009) / 2 = 3194
-    //           => -1136,5 / 2625,75 = -0,4328, logo ABAIXO do atropelo (0,4332) => DIRE_VICTORY
-    expect(match.laneOutcomes).toEqual({ top: 'TIE', mid: 'TIE', bottom: 'DIRE_VICTORY' });
+  it('veredito de rota sai so do patrimonio e do xp aos 10 min de quem estava na rota', () => {
+    // Conta a mao sobre `networth_t[10]` e `xp_t[10]` da fixture, media por heroi de cada lado,
+    // diferenca relativa (a - b) / media dos dois, score = media das duas (mesmo peso):
+    //  top 2v2: patrimonio (4639 + 2138) / 2 = 3388,5 x (2048 + 4389) / 2 = 3218,5 => +0,0515
+    //           xp         (4052 + 2725) / 2 = 3388,5 x (1845 + 4168) / 2 = 3006,5 => +0,1195
+    //           score +0,0855, acima do empate (0,0665) => RADIANT_VICTORY
+    //           (so com patrimonio era TIE: o xp decidiu, e por isso o badge mostra os dois)
+    //  mid 1v1: patrimonio 4728 x 5008 => -0,0575; xp 5477 x 5064 => +0,0784
+    //           score +0,0104 => TIE (ouro e xp apontam para lados opostos)
+    //  bot 2v2: patrimonio (1152 + 2963) / 2 = 2057,5 x (2379 + 4009) / 2 = 3194 => -0,4328
+    //           xp         (1861 + 2696) / 2 = 2278,5 x (2145 + 3454) / 2 = 2799,5 => -0,2052
+    //           score -0,3190, abaixo do atropelo (0,3745) => DIRE_VICTORY
+    expect(match.laneOutcomes).toEqual({ top: 'RADIANT_VICTORY', mid: 'TIE', bottom: 'DIRE_VICTORY' });
     const bySlot = new Map(match.players.map((p) => [p.playerSlot, p]));
-    expect(bySlot.get(3)!.laningStats!.laneResult).toBe('LOST');
-    expect(bySlot.get(4)!.laningStats!.laneResult).toBe('LOST');
-    expect(bySlot.get(129)!.laningStats!.laneResult).toBe('WON');
-    expect(bySlot.get(131)!.laningStats!.laneResult).toBe('WON');
-    for (const slot of [0, 1, 2, 128, 130, 132]) expect(bySlot.get(slot)!.laningStats!.laneResult).toBe('TIE');
-    // O numero ao lado do badge é a diferenca DA ROTA, do lado do jogador.
-    expect(bySlot.get(3)!.laningStats!.laneAdvantage).toEqual({ kind: 'VERDICT', lane: 'bottom', networthDiff: -2273, perHero: false, allies: 2, enemies: 2 });
-    expect(bySlot.get(131)!.laningStats!.laneAdvantage!.networthDiff).toBe(2273);
+    for (const slot of [3, 4, 130, 132]) expect(bySlot.get(slot)!.laningStats!.laneResult, `slot ${slot}`).toBe('LOST');
+    for (const slot of [1, 2, 129, 131]) expect(bySlot.get(slot)!.laningStats!.laneResult, `slot ${slot}`).toBe('WON');
+    for (const slot of [0, 128]) expect(bySlot.get(slot)!.laningStats!.laneResult).toBe('TIE');
+    // Os numeros ao lado do badge sao as diferencas DA ROTA, do lado do jogador:
+    // patrimonio 4115 - 6388 = -2273; xp 4557 - 5599 = -1042.
+    expect(bySlot.get(3)!.laningStats!.laneAdvantage).toMatchObject({
+      kind: 'VERDICT', lane: 'bottom', networthDiff: -2273, xpDiff: -1042, perHero: false, allies: 2, enemies: 2,
+    });
+    expect(bySlot.get(3)!.laningStats!.laneAdvantage!.score).toBeCloseTo(-0.319, 3);
+    expect(bySlot.get(131)!.laningStats!.laneAdvantage).toMatchObject({ networthDiff: 2273, xpDiff: 1042 });
+    // mid empatado com sinais opostos: -280 de patrimonio e +413 de xp para o Radiant.
+    expect(bySlot.get(0)!.laningStats!.laneAdvantage).toMatchObject({ networthDiff: -280, xpDiff: 413 });
     // `lane_role` 3 com `lane` 1: o Dire offlaner na bot. A rota é a geografica, sem conversao safe/off.
     expect(bySlot.get(129)!.laningStats!.laneAdvantage!.lane).toBe('bottom');
   });
@@ -365,26 +374,33 @@ describe('mapOpenDotaMatch — rota desigual na fixture real', () => {
   const lane = (slot: number) => bySlot.get(slot)!.laningStats!;
 
   it('a rota pareada recebe veredito, as desiguais nao', () => {
-    // Conta a mao sobre `networth_t[10]`, media por heroi de cada lado:
-    //  bot 2v2: Radiant (5011 + 1862) / 2 = 3436,5 x Dire (2911 + 1798) / 2 = 2354,5
-    //           => +1082 / 2895,5 = +0,374, entre empate e atropelo => RADIANT_VICTORY
-    //  top 2v1: Radiant (5430 + 2437) / 2 = 3933,5 x Dire 3434 => desigual, sem outcome
-    //  mid 1v2: Radiant 3932 x Dire (3604 + 2769) / 2 = 3186,5 (o 2769 é um roamer, que a
-    //           regra conta na rota, como no ajuste) => desigual, sem outcome
-    expect(m.laneOutcomes).toEqual({ top: null, mid: null, bottom: 'RADIANT_VICTORY' });
-    expect(lane(0).laneResult).toBe('WON');
-    expect(lane(131).laneResult).toBe('LOST');
-    expect(lane(0).laneAdvantage).toEqual({ kind: 'VERDICT', lane: 'bottom', networthDiff: 2164, perHero: false, allies: 2, enemies: 2 });
+    // Conta a mao sobre `networth_t[10]` e `xp_t[10]`, media por heroi de cada lado:
+    //  bot 2v2: patrimonio (5011 + 1862) / 2 = 3436,5 x (2911 + 1798) / 2 = 2354,5 => +0,3737
+    //           xp         (5219 + 3513) / 2 = 4366   x (3255 + 1986) / 2 = 2620,5 => +0,4997
+    //           score +0,4367, acima do atropelo (0,3745) => RADIANT_STOMP
+    //  top 2v1: desigual, sem outcome
+    //  mid 1v2: desigual, sem outcome (o 2769 de patrimonio do Dire é um roamer, que a regra
+    //           conta na rota, como no ajuste)
+    expect(m.laneOutcomes).toEqual({ top: null, mid: null, bottom: 'RADIANT_STOMP' });
+    expect(lane(0).laneResult).toBe('STOMP_WON');
+    expect(lane(131).laneResult).toBe('STOMP_LOST');
+    // patrimonio 6873 - 4709 = +2164; xp 8732 - 5241 = +3491
+    expect(lane(0).laneAdvantage).toMatchObject({
+      kind: 'VERDICT', lane: 'bottom', networthDiff: 2164, xpDiff: 3491, perHero: false, allies: 2, enemies: 2,
+    });
   });
 
-  it('rota desigual sai UNKNOWN com a diferenca POR HEROI, igual dos dois lados', () => {
+  it('rota desigual sai UNKNOWN com as diferencas POR HEROI, iguais dos dois lados', () => {
     for (const slot of [1, 3, 129, 2, 128, 130]) expect(lane(slot).laneResult).toBe('UNKNOWN');
-    // top: 3933,5 - 3434 = +499,5 por heroi para o Radiant
-    expect(lane(1).laneAdvantage).toEqual({ kind: 'ADVANTAGE', lane: 'top', networthDiff: 500, perHero: true, allies: 2, enemies: 1 });
-    expect(lane(129).laneAdvantage).toEqual({ kind: 'ADVANTAGE', lane: 'top', networthDiff: -500, perHero: true, allies: 1, enemies: 2 });
-    // mid: 3932 - 3186,5 = +745,5 por heroi para o Radiant
-    expect(lane(2).laneAdvantage!.networthDiff).toBe(746);
-    expect(lane(128).laneAdvantage!.networthDiff).toBe(-746);
+    // top: patrimonio 3933,5 - 3434 = +499,5; xp (5809 + 3027) / 2 = 4418 - 4054 = +364
+    expect(lane(1).laneAdvantage).toMatchObject({ kind: 'ADVANTAGE', lane: 'top', networthDiff: 500, xpDiff: 364, perHero: true, allies: 2, enemies: 1 });
+    expect(lane(129).laneAdvantage).toMatchObject({ kind: 'ADVANTAGE', lane: 'top', networthDiff: -500, xpDiff: -364, perHero: true, allies: 1, enemies: 2 });
+    expect(lane(1).laneAdvantage!.score).toBeGreaterThan(0);
+    expect(lane(129).laneAdvantage!.score).toBe(-lane(1).laneAdvantage!.score);
+    // mid: patrimonio 3932 - 3186,5 = +745,5; xp 4828 - (4658 + 3049) / 2 = +974,5.
+    // Meio exato nos dois: arredonda do lado Radiant e so depois aplica o sinal.
+    expect(lane(2).laneAdvantage).toMatchObject({ networthDiff: 746, xpDiff: 975 });
+    expect(lane(128).laneAdvantage).toMatchObject({ networthDiff: -746, xpDiff: -975 });
   });
 
   it('nas rotas desiguais nenhuma regra de veredito de rota dispara', () => {

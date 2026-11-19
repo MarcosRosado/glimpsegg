@@ -99,14 +99,22 @@ describe('laneVerdictView — o que a tela mostra para a rota', () => {
     kills10: null,
     deaths10: null,
   });
-  const verdictAdv = (networthDiff: number) => ({ kind: 'VERDICT' as const, lane: 'bottom' as const, networthDiff, perHero: false, allies: 2, enemies: 2 });
-  const unevenAdv = (networthDiff: number) => ({ kind: 'ADVANTAGE' as const, lane: 'top' as const, networthDiff, perHero: true, allies: 2, enemies: 1 });
+  // `xpDiff` e `score` padrao acompanham o sinal do ouro; os testes de lados opostos os passam.
+  const verdictAdv = (networthDiff: number, xpDiff = networthDiff, score = Math.sign(networthDiff) * 0.1) =>
+    ({ kind: 'VERDICT' as const, lane: 'bottom' as const, networthDiff, xpDiff, score, perHero: false, allies: 2, enemies: 2 });
+  const unevenAdv = (networthDiff: number, xpDiff = networthDiff, score = Math.sign(networthDiff) * 0.1) =>
+    ({ kind: 'ADVANTAGE' as const, lane: 'top' as const, networthDiff, xpDiff, score, perHero: true, allies: 2, enemies: 1 });
 
   it('rota pareada: rotulo do veredito e a diferenca da rota ao lado', () => {
     const v = laneVerdictView(stats('WON', verdictAdv(1200)))!;
     expect(v).toMatchObject({ kind: 'VERDICT', labelKey: 'laneResultWon', detailKey: 'laneVerdictDetail', networthDiff: 1200, tone: 'positive' });
     expect(laneVerdictView(stats('STOMP_LOST', verdictAdv(-3000)))!.tone).toBe('negative');
     expect(laneVerdictView(stats('TIE', verdictAdv(150)))!.tone).toBe('neutral');
+  });
+
+  it('a view leva as DUAS diferencas: ouro a frente com "Rota perdida" fica explicado pelo xp', () => {
+    const v = laneVerdictView(stats('LOST', verdictAdv(300, -1500, -0.12)))!;
+    expect(v).toMatchObject({ networthDiff: 300, xpDiff: -1500, tone: 'negative' });
   });
 
   it('rota desigual nunca vira "Rota vencida"', () => {
@@ -116,6 +124,8 @@ describe('laneVerdictView — o que a tela mostra para a rota', () => {
     expect(Object.values(LANE_RESULT_KEY)).not.toContain(v.labelKey);
     expect(laneVerdictView(stats('UNKNOWN', unevenAdv(-400)))!.labelKey).toBe('laneAdvantageBehind');
     expect(laneVerdictView(stats('UNKNOWN', unevenAdv(0)))!.labelKey).toBe('laneAdvantageEven');
+    // O lado sai do score da regra (ouro e xp), nao do ouro sozinho.
+    expect(laneVerdictView(stats('UNKNOWN', unevenAdv(200, -900, -0.08)))!.labelKey).toBe('laneAdvantageBehind');
   });
 
   it('sem medida a secao some — nada de "Rota indefinida" no lugar do badge', () => {

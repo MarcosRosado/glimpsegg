@@ -22,11 +22,17 @@
  *     venceu, entao alargar o empate sobe a concordancia mecanicamente. A faixa é fixada por
  *     taxa, e a cobertura (fatia das rotas decididas pela STRATZ que a regra tambem decide)
  *     sai impressa ao lado de todo numero de concordancia.
- *  2. As variantes (so patrimonio ou patrimonio + xp; soma ou media por cabeca; diferenca
- *     relativa ou absoluta) sao escolhidas SO em 7.41, pela concordancia nas taxas acima.
- *     Empate na primeira casa decimal fica com a mais simples. O teste em 7.42 roda uma vez,
- *     depois da escolha — nao repete a falha que o cabecalho do Glint admite (variantes
- *     escolhidas olhando o teste).
+ *  2. As variantes (soma ou media por cabeca; diferenca relativa ou absoluta) sao escolhidas
+ *     SO em 7.41, pela concordancia nas taxas acima. Empate na primeira casa decimal fica com
+ *     a mais simples. O teste em 7.42 roda uma vez, depois da escolha — nao repete a falha que
+ *     o cabecalho do Glint admite (variantes escolhidas olhando o teste).
+ *
+ *     XP ENTRA POR DECISAO DO DONO, NAO POR DADO (D1, 2026-11-19): "o XP é tao importante
+ *     quanto o patrimonio". Ate entao as variantes so de patrimonio tambem concorriam, e a
+ *     escolhida foi `nw-head-rel` (99,2% no treino, cobertura 89,8%, contra 99,1% e 92,3% da
+ *     melhor com xp). Elas sairam da lista; o score é a media das diferencas de patrimonio e
+ *     de xp, com o mesmo peso. A escolha DENTRO das variantes com xp continua sendo por dado,
+ *     so no treino. A linha de base (so patrimonio) segue impressa para comparacao.
  *  3. Aceite (plano, Fase 3): direcao igual a da STRATZ em >= 90% das rotas em que as duas
  *     dizem que alguem venceu, nos pares de 7.41 e de 7.42. Resultado no limite conta como
  *     reprovacao: passa so se o limite INFERIOR do intervalo de Wilson de 95% ficar em 90% ou
@@ -79,12 +85,11 @@ const rel = (a, b) => (a + b > 0 ? (a - b) / ((a + b) / 2) : 0);
 const mean = (xs) => xs.reduce((s, v) => s + v, 0) / xs.length;
 const sum = (xs) => xs.reduce((s, v) => s + v, 0);
 
-/** As variantes candidatas. `simplicity` desempata (menor = mais simples). */
+/**
+ * As variantes candidatas — so as que usam xp (D1, decisao do dono; ver o cabecalho).
+ * `simplicity` desempata (menor = mais simples).
+ */
 const VARIANTS = [
-  { id: 'nw-sum-rel', xp: false, agg: 'sum', diff: 'rel', simplicity: 0 },
-  { id: 'nw-head-rel', xp: false, agg: 'head', diff: 'rel', simplicity: 1 },
-  { id: 'nw-sum-abs', xp: false, agg: 'sum', diff: 'abs', simplicity: 1 },
-  { id: 'nw-head-abs', xp: false, agg: 'head', diff: 'abs', simplicity: 2 },
   { id: 'nwxp-sum-rel', xp: true, agg: 'sum', diff: 'rel', simplicity: 2 },
   { id: 'nwxp-head-rel', xp: true, agg: 'head', diff: 'rel', simplicity: 3 },
   { id: 'nwxp-sum-abs', xp: true, agg: 'sum', diff: 'abs', simplicity: 3 },
@@ -251,7 +256,10 @@ async function checkAppParity(lanes, block, verdict) {
   const key = { bot: 'bottom', mid: 'mid', top: 'top' };
   let diff = 0;
   for (const l of lanes) {
-    const input = [...l.rad.map((p) => ({ lane: toId[l.lane], isRadiant: true, networth10: p.nw })), ...l.dire.map((p) => ({ lane: toId[l.lane], isRadiant: false, networth10: p.nw }))];
+    const input = [
+      ...l.rad.map((p) => ({ lane: toId[l.lane], isRadiant: true, networth10: p.nw, xp10: p.xp })),
+      ...l.dire.map((p) => ({ lane: toId[l.lane], isRadiant: false, networth10: p.nw, xp10: p.xp })),
+    ];
     const got = mod.measureLanes(input)[key[l.lane]]?.outcome ?? null;
     const o = verdict(l);
     const want = block.evenLaneOnly && !l.even ? null : o.dir === 0 ? 'TIE' : `${o.dir > 0 ? 'RADIANT' : 'DIRE'}_${o.stomp ? 'STOMP' : 'VICTORY'}`;
@@ -345,7 +353,7 @@ async function checkAppParity(lanes, block, verdict) {
     console.log(`     empate ${pct(r).padStart(6)}: concordancia ${pct(m.agreement).padStart(6)} | cobertura ${pct(m.coverage)}${r === TIE_RATE ? '  <= fixada' : ''}`);
   }
 
-  const baseV = VARIANTS[0];
+  const baseV = { id: 'nw-sum-rel', xp: false, agg: 'sum', diff: 'rel' };
   const baseTh = { tie: 0.1, stomp: Infinity };
   const baseVerdict = (l) => classify(score(baseV, l), baseTh);
   console.log('\n2. ACEITE — direcao igual a da STRATZ onde as duas dizem que alguem venceu');

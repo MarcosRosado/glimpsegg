@@ -227,6 +227,10 @@ export interface PlayerLaneAdvantage {
   kind: 'VERDICT' | 'ADVANTAGE';
   lane: LaneId;
   networthDiff: number;
+  /** Mesma base de `networthDiff` (rota ou por heroi), em xp. */
+  xpDiff: number;
+  /** Score da regra do lado do jogador (media das diferencas relativas). Positivo = a frente. */
+  score: number;
   perHero: boolean;
   allies: number;
   enemies: number;

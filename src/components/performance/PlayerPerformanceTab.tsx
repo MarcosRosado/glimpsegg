@@ -40,6 +40,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
 
   // Rota: regra propria (utils/laneVerdict.ts). Sem medida, a secao do veredito some.
   const laneView = laneVerdictView(player.laningStats);
+  // `formatGold` so abrevia (1,2k); serve igual para xp.
   const signedGold = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatGold(Math.abs(n))}`;
   const pctOf = (x: number) => (100 * x).toLocaleString(language, { maximumFractionDigits: 1 });
   const laneHintParams = (v: LaneVerdictView) => ({
@@ -433,7 +434,12 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               >
                 <span className="block text-xs font-bold">{t(laneView.labelKey)}</span>
                 <span className="block text-[10px] text-slate-400">
-                  {t(laneView.detailKey, { diff: signedGold(laneView.networthDiff), allies: laneView.allies, enemies: laneView.enemies })}
+                  {t(laneView.detailKey, {
+                    nwDiff: signedGold(laneView.networthDiff),
+                    xpDiff: signedGold(laneView.xpDiff),
+                    allies: laneView.allies,
+                    enemies: laneView.enemies,
+                  })}
                 </span>
               </span>
             )}

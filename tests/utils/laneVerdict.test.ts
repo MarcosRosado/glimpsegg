@@ -12,12 +12,15 @@ import {
 /**
  * A regra em si, com entradas minimas. O caminho de ponta a ponta (fixture real da OpenDota)
  * mora em `tests/services/openDotaMatch.test.ts`; aqui ficam as bordas que a fixture nao tem:
- * rota desigual, lado vazio, serie curta e os dois limiares.
+ * rota desigual, lado vazio, serie curta, xp ausente e os dois limiares.
+ *
+ * `xp` padrao = o proprio patrimonio: as duas diferencas relativas ficam iguais, e o score
+ * (media das duas) é exatamente a de cada uma — é o que permite mirar um limiar com `direFor`.
  */
-const R = (lane: number, nw: number | null): LaneVerdictInput => ({ lane, isRadiant: true, networth10: nw });
-const D = (lane: number, nw: number | null): LaneVerdictInput => ({ lane, isRadiant: false, networth10: nw });
+const R = (lane: number, nw: number | null, xp: number | null | undefined = nw): LaneVerdictInput => ({ lane, isRadiant: true, networth10: nw, xp10: xp });
+const D = (lane: number, nw: number | null, xp: number | null | undefined = nw): LaneVerdictInput => ({ lane, isRadiant: false, networth10: nw, xp10: xp });
 
-/** Patrimonio Dire que da exatamente o score pedido contra um Radiant de 4000 (1v1). */
+/** Valor Dire que da exatamente o score pedido contra um Radiant de 4000 (1v1). */
 const direFor = (score: number) => (4000 * (2 - score)) / (2 + score);
 
 describe('laneIdFromOpenDota — o campo geografico `lane`', () => {
@@ -45,6 +48,21 @@ describe('measureLanes — limiares', () => {
     expect(m.perHeroDiff).toBe(0);
     expect(m.outcome).toBe('TIE');
   });
+
+  it('xp pesa igual ao patrimonio: score é a media das duas diferencas relativas', () => {
+    // patrimonio empatado (0), xp com o dobro do limiar de empate => score = o limiar + folga
+    const xpScore = 2 * (LANE_VERDICT_MODEL.tieThreshold + 0.002);
+    const m = measureLanes([R(2, 4000, 4000), D(2, 4000, direFor(xpScore))]).mid!;
+    expect(m.perHeroDiff).toBe(0);
+    expect(m.score).toBeCloseTo(LANE_VERDICT_MODEL.tieThreshold + 0.002, 10);
+    expect(m.outcome).toBe('RADIANT_VICTORY');
+  });
+
+  it('ouro e xp em lados opostos se anulam', () => {
+    const m = measureLanes([R(2, 4000, direFor(0.3)), D(2, direFor(0.3), 4000)]).mid!;
+    expect(m.score).toBeCloseTo(0, 10);
+    expect(m.outcome).toBe('TIE');
+  });
 });
 
 describe('measureLanes — rota sem veredito', () => {
@@ -63,6 +81,13 @@ describe('measureLanes — rota sem veredito', () => {
   it('um jogador sem patrimonio aos 10 min derruba a rota inteira (nunca vira zero)', () => {
     expect(measureLanes([R(2, 4000), D(2, null)]).mid).toBeNull();
     expect(measureLanes([R(2, 4000), D(2, undefined)]).mid).toBeNull();
+  });
+
+  it('um jogador sem xp aos 10 min tambem derruba a rota inteira', () => {
+    expect(measureLanes([R(2, 4000, 4000), D(2, 3000, null)]).mid).toBeNull();
+    // `undefined` direto no objeto: no helper ele cairia no padrao (xp = patrimonio).
+    expect(measureLanes([{ lane: 2, isRadiant: true, networth10: 4000, xp10: undefined }, D(2, 3000, 3000)]).mid).toBeNull();
+    expect(measureLanes([R(2, 4000, Number.NaN), D(2, 3000, 3000)]).mid).toBeNull();
   });
 
   it('partida nao parseada: nenhuma rota medida', () => {
@@ -95,8 +120,23 @@ describe('resolvePlayerLaneResult — ponto de vista do jogador', () => {
 describe('playerLaneAdvantage — o numero ao lado do badge', () => {
   it('rota pareada: diferenca da ROTA, com o sinal do lado do jogador', () => {
     const m = measureLanes([R(1, 3000), R(1, 1500), D(1, 2000), D(1, 1000)]);
-    expect(playerLaneAdvantage(m, 1, true)).toEqual({ kind: 'VERDICT', lane: 'bottom', networthDiff: 1500, perHero: false, allies: 2, enemies: 2 });
-    expect(playerLaneAdvantage(m, 1, false)!.networthDiff).toBe(-1500);
+    expect(playerLaneAdvantage(m, 1, true)).toMatchObject({ kind: 'VERDICT', lane: 'bottom', networthDiff: 1500, xpDiff: 1500, perHero: false, allies: 2, enemies: 2 });
+    expect(playerLaneAdvantage(m, 1, false)).toMatchObject({ networthDiff: -1500, xpDiff: -1500 });
+    expect(playerLaneAdvantage(m, 1, false)!.score).toBe(-playerLaneAdvantage(m, 1, true)!.score);
+  });
+
+  it('mostra as DUAS diferencas, mesmo quando apontam para lados opostos', () => {
+    const m = measureLanes([R(2, 3000, 5000), D(2, 3400, 4000)]);
+    expect(playerLaneAdvantage(m, 2, true)).toMatchObject({ networthDiff: -400, xpDiff: 1000 });
+  });
+
+  it('meio exato arredonda igual dos dois lados (ouro e xp)', () => {
+    // 2v1 por heroi: patrimonio (1001 + 1000) / 2 - 1000 = +0,5; xp (2001 + 2000) / 2 - 2000 = +0,5
+    const m = measureLanes([R(3, 1001, 2001), R(3, 1000, 2000), D(3, 1000, 2000)]);
+    const rad = playerLaneAdvantage(m, 3, true)!;
+    const dire = playerLaneAdvantage(m, 3, false)!;
+    expect([rad.networthDiff, rad.xpDiff]).toEqual([1, 1]);
+    expect([dire.networthDiff, dire.xpDiff]).toEqual([-1, -1]);
   });
 
   it('rota desigual: diferenca POR HEROI, que nunca desmente o rotulo', () => {

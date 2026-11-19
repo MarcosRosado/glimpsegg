@@ -25,7 +25,7 @@ Toda a rede do app. Nada aqui renderiza: os módulos buscam, mapeiam e cacheiam.
 - A disponibilidade é calculada **uma vez**, dentro de `mapOpenDotaMatch`. Nunca é adivinhada
   depois — condição nova vira flag em `MatchDataAvailability`.
 - O veredito de rota é **chamado** daqui, não calculado: `mapOpenDotaMatch` passa ao
-  `utils/laneVerdict.ts` só o campo `lane`, o lado e `networth_t[10]` de cada jogador.
+  `utils/laneVerdict.ts` só o campo `lane`, o lado, `networth_t[10]` e `xp_t[10]` de cada jogador.
   `resolvePlayerLaneResult` recebe **só** rota, lado e outcomes. Não passar sinal de partida.
 - A visão sai de `obs_log`/`sen_log` com saída real (`PLAYBACK`) ou não sai (`NONE`). Ward sem
   linha de saída tem fim estimado e marcado em `expiryInferred`. Nunca inventar ward.

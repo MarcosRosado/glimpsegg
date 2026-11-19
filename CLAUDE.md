@@ -161,15 +161,19 @@ lacuna com estimativa não rotulada é regressão, mesmo que a tela fique mais b
 condição nova de disponibilidade → adicionar flag em `MatchDataAvailability`.
 
 **Veredito de rota vem só de dado dos 10 primeiros minutos de quem estava na rota.** Desde
-2026-11-19 a fonte é a regra própria de `utils/laneVerdict.ts` (Fase 3, D1): patrimônio aos 10
-min, média por herói de cada lado, diferença relativa contra limiares fixados por **taxa de
-disparo** (empate = 25% das rotas, atropelo = 10%). "Quem estava na rota" é o campo geográfico
-`lane` da OpenDota (1 bot, 2 mid, 3 top), sem conversão safe/off. Aceite medido contra a STRATZ:
-direção igual em 98,8% das rotas de 7.42 em que as duas dizem que alguém venceu (IC95
-97,3–99,5%, n=428), 99,2% em 7.41. **Rota desigual** (2v1, 1v2) não passou (84,5% no treino) e
-nunca vira "Rota vencida": sai `UNKNOWN` com "Vantagem aos 10 min" e a diferença **por herói**
-ao lado (`laneAdvantage.kind = 'ADVANTAGE'`). O veredito mostra a própria base: o badge leva a
-diferença de patrimônio da rota e o tooltip, a regra e a concordância. Limiar sai de
+2026-11-19 a fonte é a regra própria de `utils/laneVerdict.ts` (Fase 3, D1): patrimônio **e xp**
+aos 10 min, média por herói de cada lado, diferença relativa de cada um, e o score é a média das
+duas, com o mesmo peso — o xp entrou por **decisão do dono** ("o XP é tão importante quanto o
+patrimônio"), não por ganhar no dado. Limiares fixados por **taxa de disparo** (empate = 25% das
+rotas, atropelo = 10%). "Quem estava na rota" é o campo geográfico `lane` da OpenDota (1 bot,
+2 mid, 3 top), sem conversão safe/off; patrimônio ou xp faltando em qualquer jogador da rota a
+deixa sem medida. Aceite medido contra a STRATZ: direção igual em 99,1% das rotas de 7.42 em que
+as duas dizem que alguém venceu (IC95 97,7–99,6%, n=435), 98,7% em 7.41. **Rota desigual** (2v1,
+1v2) não passou (74,4% no treino) e nunca vira "Rota vencida": sai `UNKNOWN` com "Vantagem aos
+10 min" e as diferenças **por herói** ao lado (`laneAdvantage.kind = 'ADVANTAGE'`), com o lado
+dado pelo score da regra. O veredito mostra a própria base: o badge leva **as duas** diferenças
+da rota (patrimônio e xp — só o ouro deixaria "ouro à frente" ao lado de "Rota perdida" quando o
+xp decidiu) e o tooltip, a regra e a concordância. Limiar sai de
 `scripts/fit-lane-verdict.cjs`, nunca do olho — e o script confere, rota a rota, que a função
 do app reproduz a regra medida. IMP, KDA, mortes, last hits e vitória/derrota medem a
 **partida inteira** e não podem receber rótulo de rota — `resolvePlayerLaneResult` recebe

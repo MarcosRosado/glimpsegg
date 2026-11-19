@@ -441,10 +441,15 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
     (isRadiantOf(p) ? heroIdsBySide.radiant : heroIdsBySide.dire).add(heroId);
   }
 
-  // Veredito de rota: so `lane` geografico, lado e patrimonio aos 10 min — nada da partida
-  // inteira. Sem parse nao ha `networth_t`, e as tres rotas ficam sem medida.
+  // Veredito de rota: so `lane` geografico, lado, patrimonio e xp aos 10 min — nada da
+  // partida inteira. Sem parse nao ha `networth_t`/`xp_t`, e as tres rotas ficam sem medida.
   const laneMeasures = measureLanes(
-    rawPlayers.map((p) => ({ lane: p?.lane, isRadiant: isRadiantOf(p), networth10: p?.networth_t?.[10] })),
+    rawPlayers.map((p) => ({
+      lane: p?.lane,
+      isRadiant: isRadiantOf(p),
+      networth10: p?.networth_t?.[10],
+      xp10: p?.xp_t?.[10],
+    })),
   );
   const laneOutcomes = laneOutcomesFrom(laneMeasures);
 
