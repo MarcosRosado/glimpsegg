@@ -8,7 +8,7 @@ Os cards de perfil que as seções da 2.0 reaproveitam: Início, Partidas e Cont
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
 | `ProfileHeader.tsx` | Avatar, medalha, MMR (com chip de estimativa), KPIs de carreira e o botão do espelho de heróis. Usa `getRankTierInfo`. Na seção Conta | `App.tsx` |
-| `MatchList.tsx` | Lista de partidas com filtros e badges de destaque (`getAccumulatedMatchTags`). **Concentra os limiares calibrados da dashboard** | `App.tsx` |
+| `MatchList.tsx` | Lista de partidas com filtros e badges de destaque (`getAccumulatedMatchTags`). **Concentra os limiares calibrados da dashboard** | `matches/MatchesSection.tsx` |
 | `MatchContextCell.tsx` | Célula compacta com bracket médio, tamanho do grupo e tipo de fila | `MatchList.tsx` |
 | `RecentFormCard.tsx` | O cartão "Forma" do Início: sequência dos últimos jogos, Glint médio das partidas com nota, KDA e GPM (estes vieram da antiga `StatRail`), cada um com a amostra no tooltip | `App.tsx` |
 | `MostPlayedHeroes.tsx` | Top heróis com winrate e KDA (este some na linha com `avgKda` nulo). **Sem nota média por herói** — a lista não traz os insumos do Glint para todas as partidas | `App.tsx` |

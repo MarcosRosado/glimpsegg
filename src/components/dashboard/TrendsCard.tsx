@@ -847,40 +847,37 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
           </div>
         </div>
 
+        {/* Sem dado, o KPI some (nao diz "sem dado"). */}
+        {context.soloShare !== null && (
         <div>
           <div className="text-slate-500">{t('soloQueueShare')}</div>
           <div className="text-sm font-black text-white font-mono mt-0.5 flex items-center gap-1">
             <User className="w-3 h-3 text-slate-500" />
-            {context.soloShare === null ? (
-              <span className="text-slate-600 text-[11px] font-sans font-normal">{t('noData')}</span>
-            ) : (
-              `${context.soloShare}%`
-            )}
+            {`${context.soloShare}%`}
           </div>
         </div>
+        )}
 
+        {/* Sem dado, o KPI some (nao diz "sem dado"). */}
+        {context.groupShare !== null && (
         <div>
           <div className="text-slate-500">{t('groupQueueShare')}</div>
           <div className="text-sm font-black text-white font-mono mt-0.5 flex items-center gap-1">
             <Users className="w-3 h-3 text-slate-500" />
-            {context.groupShare === null ? (
-              <span className="text-slate-600 text-[11px] font-sans font-normal">{t('noData')}</span>
-            ) : (
-              `${context.groupShare}%`
-            )}
+            {`${context.groupShare}%`}
           </div>
         </div>
+        )}
 
+        {/* Sem dado, o KPI some (nao diz "sem dado"). */}
+        {context.unrankedShare !== null && (
         <div>
           <div className="text-slate-500">{t('unrankedShare')}</div>
           <div className="text-sm font-black text-white font-mono mt-0.5">
-            {context.unrankedShare === null ? (
-              <span className="text-slate-600 text-[11px] font-sans font-normal">{t('noData')}</span>
-            ) : (
-              `${context.unrankedShare}%`
-            )}
+            {`${context.unrankedShare}%`}
           </div>
         </div>
+        )}
       </div>
 
       {/* ------------------------------------------- distribuicao de rank */}

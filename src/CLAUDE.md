@@ -26,18 +26,19 @@ que recolhe em trilho (`layout/Sidebar.tsx`), Início com a última partida no t
 analisada em abas com um seletor de jogador só.
 
 - **`AppSection`** (`layout/Sidebar.tsx`) — sem partida aberta: `HOME` (Início) · `MATCHES`
-  (`MatchList`) · `HEROES` · `ACCOUNT` (`ProfileHeader` + a parte de conta do `TrendsCard`) ·
+  (`MatchesSection`) · `HEROES` (`HeroesSection`) · `ACCOUNT` (`ProfileHeader`, `AccountStats` e a
+  parte de conta do `TrendsCard`) ·
   `HERO_GRID`, só com a feature ligada, com `heroGridView` `PANEL` → `HeroGridTab` ou
   `MIRROR` → `HeroGridMirrorScreen`. Seção sem dado fica em `HIDDEN_SECTIONS` e some da barra
-  (hoje `HEROES`, até a lista por período e patch existir em `services/`).
+  (hoje vazia).
 - **Partida aberta** (`selectedMatch`) — duas formas, decididas por `availability.parsed`:
   - **sem análise, "modo placar"**: `ParseRequestCard`, `TeamOverviewCard variant="scoreboard"`
     (só os destaques de papel) e o `ScoreboardTable`. Sem abas, sem linha de vantagem, sem
     comparativo, sem "quem liderou" e sem melhor por posição (decisão 2 do dono);
   - **analisada**: `MatchTab` (`utils/navigation.ts`) — `SUMMARY` (`TeamOverviewCard` +
     `AdvantageTimeline` + `ScoreboardTable`) · `MY_GAME` (`PlayerPerformanceTab`) · `VISION`
-    (`WardMinimapTab`) · `COACHING` (`CoachingInsightsTab`); `FIGHTS` entra quando a métrica de
-    luta existir. As abas que existem estão em `ANALYZED_TABS`.
+    (`WardMinimapTab`) · `COACHING` (`CoachingInsightsTab`) e `FIGHTS` (`FightsTab`), esta só com
+    `availability.teamfights` (`analyzedTabs`).
 - **Aba inicial**: `initialMatchView` — "Meu jogo" só quando o slot achado é da conta
   configurada e a partida foi analisada; senão "Resumo". Vale também quando a análise chega
   durante a espera.

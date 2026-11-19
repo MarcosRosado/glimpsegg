@@ -7,7 +7,6 @@ import { TeammatesCard } from './components/dashboard/TeammatesCard';
 import { LOCAL_STORAGE_KEYS, migrateLegacyLocalStorage } from './utils/legacyStorage';
 import { RecentFormCard } from './components/dashboard/RecentFormCard';
 import { MostPlayedHeroes } from './components/dashboard/MostPlayedHeroes';
-import { MatchList } from './components/dashboard/MatchList';
 import { ProfileHeader } from './components/dashboard/ProfileHeader';
 import { ActivityHeatmap } from './components/dashboard/ActivityHeatmap';
 import { PerformanceTrendChart } from './components/dashboard/PerformanceTrendChart';
@@ -19,6 +18,9 @@ import { FightsTab } from './components/match/FightsTab';
 import { TurningPointNote } from './components/match/TurningPointNote';
 import { Sidebar, type AppSection } from './components/layout/Sidebar';
 import { LastMatchCard } from './components/home/LastMatchCard';
+import { MatchesSection } from './components/matches/MatchesSection';
+import { HeroesSection } from './components/heroes/HeroesSection';
+import { AccountStats } from './components/account/AccountStats';
 import { classifySearchInput, initialMatchView, type MatchTab } from './utils/navigation';
 import { ScoreboardTable } from './components/match/ScoreboardTable';
 import { AdvantageTimeline } from './components/match/AdvantageTimeline';
@@ -52,11 +54,10 @@ import { useHeroGridSync } from './hooks/useHeroGridSync';
 type HeroGridView = 'PANEL' | 'MIRROR';
 
 /**
- * Seções sem dado proprio ainda (docs/PROPOSTA-V2.md §3.5): ficam fora da barra ate a lista
- * completa por periodo e patch chegar de `services/`. Seção sem dado some — inclusive da
- * navegação.
+ * Seções sem dado proprio ainda ficam fora da barra — seção sem dado some, inclusive da
+ * navegação. Vazia desde que a lista por periodo e patch chegou de `services/`.
  */
-const HIDDEN_SECTIONS: AppSection[] = ['HEROES'];
+const HIDDEN_SECTIONS: AppSection[] = [];
 
 /**
  * Abas da partida analisada. `FIGHTS` só entra com `availability.teamfights`: aba sem dado não
@@ -674,12 +675,22 @@ function MainAppContent() {
     switch (section) {
       case 'MATCHES':
         return (
-          <MatchList
-            matches={p.recentMatches}
-            selectedMatchId={null}
+          <MatchesSection
+            steamAccountId={p.steamAccountId}
+            initialMatches={p.recentMatches}
             heroFilterId={heroFilterId}
             onClearHeroFilter={() => setHeroFilterId(null)}
             onSelectMatch={(id) => void handleSelectMatch(id)}
+          />
+        );
+      case 'HEROES':
+        return (
+          <HeroesSection
+            steamAccountId={p.steamAccountId}
+            onOpenHeroMatches={(heroId) => {
+              setHeroFilterId(heroId);
+              setSection('MATCHES');
+            }}
           />
         );
       case 'ACCOUNT':
@@ -695,6 +706,7 @@ function MainAppContent() {
                 setSection('HERO_GRID');
               }}
             />
+            <AccountStats steamAccountId={p.steamAccountId} onOpenMatch={(id) => void handleSelectMatch(id)} />
             <div className="max-w-2xl">
               <TrendsCard
                 part="account"
