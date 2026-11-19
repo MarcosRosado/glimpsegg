@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lobbyTypeKey, matchModeKey, resolveMatchType } from '../../src/utils/dotaFormatters';
+import { formatGold, lobbyTypeKey, matchModeKey, resolveMatchType } from '../../src/utils/dotaFormatters';
 import { translations } from '../../src/i18n/translations';
 import { referenceMatch } from '../support/fixtureMatches';
 
@@ -76,5 +76,20 @@ describe('matchModeKey / lobbyTypeKey — o motor escolhe a chave, a tela traduz
   it('aceita o enum em texto, como a lista de partidas guarda', () => {
     expect(matchModeKey('TURBO')!.key).toBe('gameModeTurbo');
     expect(matchModeKey('23')!.key).toBe('gameModeTurbo');
+  });
+});
+
+describe('formatGold — separador decimal do idioma', () => {
+  it('sem idioma, ponto (comportamento de sempre)', () => {
+    expect(formatGold(21700)).toBe('21.7k');
+    expect(formatGold(1250000)).toBe('1.3M');
+    expect(formatGold(940)).toBe('940');
+  });
+
+  it('pt-BR usa virgula; en-US, ponto', () => {
+    expect(formatGold(21700, 'pt-BR')).toBe('21,7k');
+    expect(formatGold(-2038, 'pt-BR')).toBe('-2,0k');
+    expect(formatGold(21700, 'en-US')).toBe('21.7k');
+    expect(formatGold(1250000, 'pt-BR')).toBe('1,3M');
   });
 });

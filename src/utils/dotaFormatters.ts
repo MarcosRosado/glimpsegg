@@ -7,20 +7,26 @@ export function formatDuration(seconds: number): string {
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
-export function formatGold(amount: number): string {
+/**
+ * Ouro abreviado: 21.7k / 1.2M. `locale` escolhe o separador decimal ("21,7k" em pt-BR); sem
+ * ele, ponto, como sempre foi — quem chama da tela passa o idioma da interface.
+ */
+export function formatGold(amount: number, locale?: string): string {
   if (isNaN(amount)) return '0';
+  const one = (v: number) =>
+    locale ? v.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : v.toFixed(1);
   if (Math.abs(amount) >= 1000000) {
-    return `${(amount / 1000000).toFixed(1)}M`;
+    return `${one(amount / 1000000)}M`;
   }
   if (Math.abs(amount) >= 1000) {
-    return `${(amount / 1000).toFixed(1)}k`;
+    return `${one(amount / 1000)}k`;
   }
-  return `${amount}`;
+  return locale ? amount.toLocaleString(locale) : `${amount}`;
 }
 
-export function formatSignedGold(amount: number): string {
+export function formatSignedGold(amount: number, locale?: string): string {
   const prefix = amount > 0 ? '+' : '';
-  return `${prefix}${formatGold(amount)}`;
+  return `${prefix}${formatGold(amount, locale)}`;
 }
 
 export function formatPercent(value: number): string {
