@@ -79,7 +79,7 @@ export interface LabelKey {
 }
 
 /**
- * Modo de jogo -> chave de traducao. Substitui `formatGameMode` na tela: aquele devolvia texto
+ * Modo de jogo -> chave de traducao. Substituiu o `formatGameMode` (apagado na 2.0), que devolvia texto
  * pronto em pt-BR ("All Pick Ranqueado", "Mutação") que aparecia igual na versao en-US, e
  * chutava "All Pick Ranqueado" quando a entrada vinha vazia. Aqui entrada vazia é `null` e a
  * tela omite; modo desconhecido sai com o proprio id, sem palpite.
@@ -147,90 +147,6 @@ export function lobbyTypeKey(rawLobby: string | number | null | undefined): Labe
 }
 
 /**
- * Human-friendly game mode formatter.
- *
- * LEGADO: texto fixo em pt-BR e palpite na entrada vazia. A tela usa `matchModeKey`; isto
- * fica so enquanto houver chamador (`MatchDetails.gameMode`).
- */
-export function formatGameMode(rawMode: string | number | undefined, rawLobby?: string | number | undefined): string {
-  if (!rawMode && !rawLobby) return 'Ranked All Pick';
-
-  const modeStr = String(rawMode || '').toUpperCase().trim();
-  const lobbyStr = String(rawLobby || '').toUpperCase().trim();
-
-  // If already formatted friendly string
-  if (modeStr === 'RANKED ALL PICK' || modeStr === 'ALL PICK RANKED' || modeStr === '22' || modeStr === 'ALL_PICK_RANKED') {
-    return 'All Pick Ranqueado';
-  }
-  if (modeStr === 'ALL_PICK' || modeStr === '1' || modeStr === 'NORMAL ALL PICK') {
-    return lobbyStr === '7' || lobbyStr.includes('RANKED') ? 'All Pick Ranqueado' : 'All Pick Casual';
-  }
-  if (modeStr === 'TURBO' || modeStr === '23') {
-    return 'Turbo';
-  }
-  if (modeStr === 'CAPTAINS_MODE' || modeStr === '2') {
-    return 'Captains Mode';
-  }
-  if (modeStr === 'RANDOM_DRAFT' || modeStr === '3') {
-    return 'Random Draft';
-  }
-  if (modeStr === 'SINGLE_DRAFT' || modeStr === '4') {
-    return 'Single Draft';
-  }
-  if (modeStr === 'ALL_RANDOM' || modeStr === '5') {
-    return 'All Random';
-  }
-  if (modeStr === 'ABILITY_DRAFT' || modeStr === '18') {
-    return 'Ability Draft';
-  }
-  if (modeStr === '1V1_MID' || modeStr === '21') {
-    return '1v1 Mid';
-  }
-  if (modeStr === 'MUTATION' || modeStr === '24') {
-    return 'Mutação';
-  }
-
-  // Clean raw enum format like "ALL_PICK_RANKED" -> "All Pick Ranked"
-  const cleaned = modeStr
-    .replace(/^RANKED MODE #/i, '')
-    .replace(/^LOBBY #/i, '')
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-
-  return cleaned || 'All Pick Ranqueado';
-}
-
-/**
- * Human-friendly lobby type formatter
- */
-export function formatLobbyType(rawLobby: string | number | undefined): string {
-  if (!rawLobby) return 'Ranqueada';
-  const lobbyStr = String(rawLobby).toUpperCase().trim();
-
-  if (lobbyStr === '7' || lobbyStr === 'RANKED' || lobbyStr === 'LOBBY_TYPE_RANKED') {
-    return 'Ranqueada';
-  }
-  if (lobbyStr === '0' || lobbyStr === 'UNRANKED' || lobbyStr === 'NORMAL' || lobbyStr === 'LOBBY_TYPE_NORMAL') {
-    return 'Casual (Normal)';
-  }
-  if (lobbyStr === '9' || lobbyStr === 'BATTLE_CUP' || lobbyStr === 'LOBBY_TYPE_BATTLE_CUP') {
-    return 'Battle Cup';
-  }
-  if (lobbyStr === '2' || lobbyStr === 'TOURNAMENT' || lobbyStr === 'LOBBY_TYPE_TOURNAMENT') {
-    return 'Torneio';
-  }
-  if (lobbyStr === '1' || lobbyStr === 'PRACTICE') {
-    return 'Prática';
-  }
-  if (lobbyStr === '4' || lobbyStr === 'COOP_BOT') {
-    return 'Co-op Bots';
-  }
-
-  return lobbyStr.replace(/^LOBBY #/i, '').replace(/_/g, ' ');
-}
-
-/**
  * Human-friendly role name formatter
  */
 export function formatRoleName(role: string): string {
@@ -295,7 +211,7 @@ export function formatMatchClock(seconds: number): string {
  * Codigo estavel do tipo de partida, para a lista da home.
  *
  * Nao devolve texto pronto de proposito: quem renderiza traduz via `t()`. E,
- * ao contrario de `formatLobbyType`, que cai em 'Ranqueada' quando nao sabe,
+ * ao contrario do antigo `formatLobbyType` (apagado na 2.0), que caia em 'Ranqueada',
  * aqui a falta de dado devolve `null` — a lista precisa poder omitir a etiqueta
  * em vez de rotular uma partida casual como ranqueada.
  */

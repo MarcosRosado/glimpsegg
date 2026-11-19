@@ -28,11 +28,11 @@ describe('mapOpenDotaMatch — campos de partida', () => {
     expect(match.firstBloodTime).toBe(raw.first_blood_time);
   });
 
-  it('modo e lobby numericos viram os mesmos rotulos do caminho STRATZ', () => {
+  it('modo e fila vao crus para o dominio; a traducao é da tela (`matchModeKey`)', () => {
     expect(raw.game_mode).toBe(22);
     expect(raw.lobby_type).toBe(7);
-    expect(match.gameMode).toBe('All Pick Ranqueado');
-    expect(match.lobbyType).toBe('Ranqueada');
+    expect(match.gameModeId).toBe(22);
+    expect(match.lobbyTypeId).toBe(7);
   });
 
   it('a curva de vantagem vem de radiant_gold_adv / radiant_xp_adv', () => {

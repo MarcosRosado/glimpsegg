@@ -67,9 +67,9 @@ Toda a rede do app. Nada aqui renderiza: os módulos buscam, mapeiam e cacheiam.
   `SAFE` produziria veredito errado), mas significa que um valor novo some sem sinal. Modo e fila
   vão crus para `MatchDetails.gameModeId`/`lobbyTypeId`, e a tela os traduz por
   `matchModeKey`/`lobbyTypeKey` (`utils/dotaFormatters.ts`): modo desconhecido sai como "Modo {id}"
-  e entrada vazia é `null`. Os textos legados `gameMode`/`lobbyType` (de `formatGameMode`/
-  `formatLobbyType`, fixos em pt-BR e com palpite na entrada vazia) só ficam até o último
-  chamador sair. Modo ou papel novo ⇒ conferir a tabela de `matchModeKey` e os dois dicionários.
+  e entrada vazia é `null`. Os antigos `formatGameMode`/`formatLobbyType` (texto fixo em pt-BR,
+  palpite na entrada vazia) saíram na 2.0. Modo ou papel novo ⇒ conferir a tabela de
+  `matchModeKey` e os dois dicionários.
 
 Ver também: [../CLAUDE.md](../CLAUDE.md) · [../types/CLAUDE.md](../types/CLAUDE.md) ·
 [../hooks/CLAUDE.md](../hooks/CLAUDE.md) ·

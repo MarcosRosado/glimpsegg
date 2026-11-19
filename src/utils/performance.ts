@@ -1,4 +1,4 @@
-import { MatchPlayer, RadarStats, Role } from '../types/dota';
+import { MatchPlayer, RadarStats } from '../types/dota';
 import { getRoleBaseline } from '../constants/baselines';
 
 /**

@@ -24,7 +24,6 @@ import {
 import { HEROES_MAP } from '../constants/heroes';
 import { ITEMS_MAP, getItem } from '../constants/items';
 import { WARD_DURATION_SEC } from '../constants/mapGeometry';
-import { formatGameMode, formatLobbyType } from '../utils/dotaFormatters';
 import { isStratzCell } from '../utils/minimapCoords';
 import { cumulativeAt, sumDeltas } from '../utils/insights/timeSeries';
 import { computeGlint, glintPercentilesFromMatch, glintRoleOf } from '../utils/glint';
@@ -681,8 +680,6 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
     didRadiantWin: !!m?.radiant_win,
     durationSeconds,
     startDateTime: num(m?.start_time),
-    gameMode: formatGameMode(m?.game_mode, m?.lobby_type),
-    lobbyType: formatLobbyType(m?.lobby_type),
     gameModeId: numOrNull(m?.game_mode),
     lobbyTypeId: numOrNull(m?.lobby_type),
     radiantScore: typeof m?.radiant_score === 'number' ? m.radiant_score : sumKills(true),
