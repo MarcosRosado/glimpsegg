@@ -7,7 +7,7 @@ nenhum número aparece na tela sem procedência (ver a doutrina em [../CLAUDE.md
 
 | Item | Papel |
 | --- | --- |
-| `App.tsx` | Orquestrador único. Guarda a conta Steam configurada, o perfil atual, histórico de perfis, partida e slot selecionados, aba ativa e `panelView`. Alterna dashboard ↔ partida ↔ hero grid e monta as quatro abas |
+| `App.tsx` | Orquestrador único. Guarda a conta Steam configurada, o perfil atual, histórico de perfis, partida e slot selecionados, aba ativa, `section` e `heroGridView`. Monta a moldura (barra lateral + topo), as seções e a partida |
 | `main.tsx` | Bootstrap do React (`createRoot` + `StrictMode`). Sem lógica de domínio |
 | `index.css` | Tema global: variáveis CSS, scrollbar, `.glass-card`, `.glow-*` |
 | `components/` | Toda a UI, agrupada por tela ([CLAUDE.md](components/CLAUDE.md)) |
@@ -19,13 +19,30 @@ nenhum número aparece na tela sem procedência (ver a doutrina em [../CLAUDE.md
 | `types/` | Contratos de domínio ([CLAUDE.md](types/CLAUDE.md)) |
 | `utils/` | Motores puros e testáveis ([CLAUDE.md](utils/CLAUDE.md)) |
 
-## Navegação em duas camadas (`App.tsx`)
+## Navegação (`App.tsx`, desde a 2.0)
 
-- **`PanelView`** — sem partida selecionada: `DASHBOARD` (padrão) · `HERO_GRID_PANEL` →
-  `HeroGridTab` · `HERO_GRID_MIRROR` → `HeroGridMirrorScreen`.
-- **`MatchTab`** — com `selectedMatch`: `OVERVIEW` (`TeamOverviewCard` + `AdvantageTimeline` +
-  `ScoreboardTable`) · `PERFORMANCE` (`PlayerPerformanceTab`) · `VISION` (`WardMinimapTab`) ·
-  `COACHING` (`CoachingInsightsTab`).
+A moldura é a de docs/PROPOSTA-V2.md §3, com as escolhas do dono de 2026-11-19: barra lateral
+que recolhe em trilho (`layout/Sidebar.tsx`), Início com a última partida no topo, partida
+analisada em abas com um seletor de jogador só.
+
+- **`AppSection`** (`layout/Sidebar.tsx`) — sem partida aberta: `HOME` (Início) · `MATCHES`
+  (`MatchList`) · `HEROES` · `ACCOUNT` (`ProfileHeader` + a parte de conta do `TrendsCard`) ·
+  `HERO_GRID`, só com a feature ligada, com `heroGridView` `PANEL` → `HeroGridTab` ou
+  `MIRROR` → `HeroGridMirrorScreen`. Seção sem dado fica em `HIDDEN_SECTIONS` e some da barra
+  (hoje `HEROES`, até a lista por período e patch existir em `services/`).
+- **Partida aberta** (`selectedMatch`) — duas formas, decididas por `availability.parsed`:
+  - **sem análise, "modo placar"**: `ParseRequestCard`, `TeamOverviewCard variant="scoreboard"`
+    (só os destaques de papel) e o `ScoreboardTable`. Sem abas, sem linha de vantagem, sem
+    comparativo, sem "quem liderou" e sem melhor por posição (decisão 2 do dono);
+  - **analisada**: `MatchTab` (`utils/navigation.ts`) — `SUMMARY` (`TeamOverviewCard` +
+    `AdvantageTimeline` + `ScoreboardTable`) · `MY_GAME` (`PlayerPerformanceTab`) · `VISION`
+    (`WardMinimapTab`) · `COACHING` (`CoachingInsightsTab`); `FIGHTS` entra quando a métrica de
+    luta existir. As abas que existem estão em `ANALYZED_TABS`.
+- **Aba inicial**: `initialMatchView` — "Meu jogo" só quando o slot achado é da conta
+  configurada e a partida foi analisada; senão "Resumo". Vale também quando a análise chega
+  durante a espera.
+- **Busca (Ctrl+K)**: `classifySearchInput` — link de partida ou id acima de 32 bits abre a
+  partida; número que cabe em 32 bits busca a conta e o modal oferece a partida ao lado.
 
 Os três modais (`OnboardingModal`, `SearchPlayerModal`, `SettingsModal`) também são montados aqui.
 

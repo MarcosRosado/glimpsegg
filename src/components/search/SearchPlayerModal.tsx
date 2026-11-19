@@ -16,6 +16,7 @@ import { ProfileHistoryItem } from '../../types/dota';
 import { useLanguage } from '../../context/LanguageContext';
 import { handleAvatarError } from '../../utils/imageFallback';
 import { getRankTierInfo } from '../../constants/ranks';
+import { classifySearchInput } from '../../utils/navigation';
 
 interface SearchPlayerModalProps {
   isOpen: boolean;
@@ -30,6 +31,12 @@ interface SearchPlayerModalProps {
   onRemoveHistory: (steamAccountId: string) => void;
   onClearHistory: () => void;
   onReturnToConfigured: () => void;
+  /**
+   * Abre uma partida pelo id. A busca aceita conta OU partida (§3.1 da proposta da 2.0):
+   * link de partida ou id acima de 32 bits já sai como partida pelo `onSearch`; este é o
+   * caminho da opção explícita no caso ambíguo.
+   */
+  onOpenMatch: (matchId: string) => void;
   isLoading?: boolean;
 }
 
@@ -46,6 +53,7 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
   onRemoveHistory,
   onClearHistory,
   onReturnToConfigured,
+  onOpenMatch,
   isLoading = false,
 }) => {
   const { t, language } = useLanguage();
@@ -114,6 +122,7 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
   };
 
   const isViewingDifferentAccount = currentSteamId !== configuredSteamId;
+  const intent = classifySearchInput(searchInput);
   const favorites = profileHistory.filter((p) => p.isFavorite);
   const recentHistory = profileHistory.filter((p) => !p.isFavorite);
 
@@ -189,8 +198,25 @@ export const SearchPlayerModal: React.FC<SearchPlayerModalProps> = ({
             </button>
           </form>
           <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1 font-mono">
-            <span>{t('searchExampleHint')}</span>
+            <span>
+              {intent.kind === 'MATCH' ? t('searchWillOpenMatch', { id: intent.matchId }) : t('searchExampleHint')}
+            </span>
           </div>
+          {/* Número que cabe em 32 bits pode ser conta ou partida antiga: o Enter busca a
+              conta, e a partida fica oferecida aqui — nunca adivinhada. */}
+          {intent.kind === 'AMBIGUOUS' && (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenMatch(intent.matchId);
+                onClose();
+              }}
+              className="mt-2 inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 hover:border-cyan-500/50 hover:text-cyan-200 px-3 py-1.5 text-xs text-slate-300 transition"
+            >
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+              {t('searchOpenAsMatch', { id: intent.matchId })}
+            </button>
+          )}
         </div>
 
         {/* Scrollable Content Body */}

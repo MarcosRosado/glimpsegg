@@ -251,16 +251,29 @@ interface TeamOverviewCardProps {
   match: MatchDetails;
   selectedPlayerSlot: number;
   onSelectPlayer: (playerSlot: number) => void;
+  /**
+   * `scoreboard` = partida sem análise ("modo placar", decisão 2 do dono): só os destaques de
+   * papel. Ficam fora de propósito, mesmo existindo sem análise, a lista de quem liderou cada
+   * categoria, o melhor de cada posição e o comparativo de times — o recorte menor que o dono
+   * confirmou em 2026-11-19. Sem destaque nenhum, o card inteiro some.
+   */
+  variant?: 'full' | 'scoreboard';
 }
 
 export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
   match,
   selectedPlayerSlot,
   onSelectPlayer,
+  variant = 'full',
 }) => {
   const { t } = useLanguage();
-  const { awards, superlatives, positions, aggregates, scoreKind } = computeMatchAwards(match);
+  const computed = computeMatchAwards(match);
+  const { awards, aggregates, scoreKind } = computed;
+  const scoreboardOnly = variant === 'scoreboard';
+  const superlatives = scoreboardOnly ? [] : computed.superlatives;
+  const positions = scoreboardOnly ? [] : computed.positions;
   const glintHint = useGlintHint();
+  if (scoreboardOnly && awards.length === 0) return null;
 
   const totalGoldCombined = (aggregates.radiantNetworth + aggregates.direNetworth) || 1;
   const radGoldPct = Math.round((aggregates.radiantNetworth / totalGoldCombined) * 100);
@@ -376,6 +389,7 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
       </div>
 
       {/* Comparative Team Statistics Dashboard */}
+      {!scoreboardOnly && (
       <div className="glass-card rounded-2xl p-5 border border-slate-800 bg-[#0f1624] shadow-xl">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
@@ -507,6 +521,7 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

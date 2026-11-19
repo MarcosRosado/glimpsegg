@@ -6,9 +6,14 @@ import { useLanguage } from '../../context/LanguageContext';
 
 interface TeammatesCardProps {
   peers?: PeerTeammate[];
+  /**
+   * Abre a conta do companheiro. Na 1.0 a linha tinha cara de clicável (cursor, hover) e o
+   * clique não fazia nada — o inventário da proposta da 2.0 achou isso.
+   */
+  onOpenPeer?: (accountId: string) => void;
 }
 
-export const TeammatesCard: React.FC<TeammatesCardProps> = ({ peers = [] }) => {
+export const TeammatesCard: React.FC<TeammatesCardProps> = ({ peers = [], onOpenPeer }) => {
   const { t } = useLanguage();
 
   if (peers.length === 0) {
@@ -45,9 +50,13 @@ export const TeammatesCard: React.FC<TeammatesCardProps> = ({ peers = [] }) => {
           const matchVolumePercent = Math.min(100, Math.round((peer.withGames / maxMatches) * 100));
 
           return (
-            <div
+            <button
+              type="button"
               key={peer.accountId}
-              className="flex items-center justify-between gap-3 text-xs font-mono group cursor-pointer hover:bg-slate-900/40 p-1.5 rounded-xl transition"
+              onClick={() => onOpenPeer?.(String(peer.accountId))}
+              disabled={!onOpenPeer}
+              title={t('openPeerAccount', { name: peer.name })}
+              className="w-full text-left flex items-center justify-between gap-3 text-xs font-mono group hover:bg-slate-900/40 p-1.5 rounded-xl transition disabled:cursor-default"
             >
               {/* Left: Avatar & Name */}
               <div className="flex items-center gap-3 min-w-0 w-36">
@@ -89,7 +98,7 @@ export const TeammatesCard: React.FC<TeammatesCardProps> = ({ peers = [] }) => {
                   />
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

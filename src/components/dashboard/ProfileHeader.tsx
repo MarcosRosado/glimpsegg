@@ -11,6 +11,8 @@ import { useGlintHint } from '../ui/GlintBadge';
 import { describeDaysSince } from '../../utils/heroGrid/tabFormat';
 import { DAYS_SINCE_LABEL } from '../heroGrid/labels';
 
+import { EstimateChip } from '../ui/EstimateChip';
+
 interface ProfileHeaderProps {
   profile: PlayerProfileSummary;
   /**
@@ -121,8 +123,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <Award className="w-4 h-4" />
                 <span>{rankInfo.fullName}</span>
               </div>
-              <div className="text-xs font-mono font-medium text-slate-300 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
-                Est. <span className="text-amber-400 font-bold">{rankInfo.approxMmr.toLocaleString()}</span> MMR
+              {/* MMR por tabela fixa a partir da medalha (`constants/ranks.ts`): estimativa,
+                  e rotulada como tal. */}
+              <div className="flex items-center gap-1.5 text-xs font-mono font-medium text-slate-300 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
+                <span>
+                  ~<span className="text-amber-400 font-bold">{rankInfo.approxMmr.toLocaleString()}</span> MMR
+                </span>
+                <EstimateChip hint={t('mmrEstimateHint')} />
               </div>
 
               {/* Entrada para a replica do layout espelho. O `title` traz a data da ultima

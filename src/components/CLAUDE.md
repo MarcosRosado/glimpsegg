@@ -10,12 +10,13 @@ o que precisa ser verificado vira função pura em `utils/`.
 | `auth/` | `OnboardingModal.tsx` — primeira execução: escolhe idioma e informa a conta Steam (ID ou link do perfil, via `resolveSteamId`), com confirmação da conta resolvida antes de salvar. Sem token. No modo `guide`, é a ajuda "como encontrar sua conta" | — |
 | `brand/` | Marca in-app: monograma e wordmark | [ver](brand/CLAUDE.md) |
 | `coaching/` | `CoachingInsightsTab.tsx` — aba `COACHING`. Renderiza `CoachingInsight[]` com chip de procedência. A recomendação de build está **escondida** desde 2026-11-19 (vinha da STRATZ; ver o comentário no componente e a Fase 5 de `docs/PLANO-OPENDOTA.md`) | — |
-| `dashboard/` | A home do jogador: perfil, lista de partidas, heróis, tendências | [ver](dashboard/CLAUDE.md) |
+| `dashboard/` | Os cards de perfil que Início, Partidas e Conta reaproveitam: lista de partidas, forma, heróis, tendências, companheiros | [ver](dashboard/CLAUDE.md) |
 | `heroGrid/` | Painel e réplica do layout espelho de heróis | [ver](heroGrid/CLAUDE.md) |
-| `layout/` | Chrome do app: `Navbar` e `StatRail` | [ver](layout/CLAUDE.md) |
-| `match/` | Aba `OVERVIEW` da partida | [ver](match/CLAUDE.md) |
-| `performance/` | `PlayerPerformanceTab.tsx` — aba `PERFORMANCE`: radar de 5 eixos, stats de combate e farm, timeline de itens, habilidades, objetivos | — |
-| `search/` | `SearchPlayerModal.tsx` — busca de jogador (Ctrl+K), histórico e favoritos | — |
+| `home/` | `LastMatchCard.tsx` — o topo do Início: última partida, estado do replay e o "Pedir análise" (que abre a partida e dispara o pedido). O resto do Início reaproveita cards de `dashboard/` | — |
+| `layout/` | A moldura: `Sidebar` (seções) e `Navbar` (topo) | [ver](layout/CLAUDE.md) |
+| `match/` | Cabeçalho, abas, seletor de jogador, modo placar e a aba Resumo da partida | [ver](match/CLAUDE.md) |
+| `performance/` | `PlayerPerformanceTab.tsx` — aba `MY_GAME` ("Meu jogo"): radar de 5 eixos, stats de combate e farm, timeline de itens, habilidades, objetivos | — |
+| `search/` | `SearchPlayerModal.tsx` — busca (Ctrl+K) de conta **ou partida** (`classifySearchInput`; o número ambíguo ganha a opção "abrir como partida"), histórico e favoritos | — |
 | `settings/` | `SettingsModal.tsx` — o maior componente do projeto: conta Steam, idioma e toda a configuração do hero grid | — |
 | `ui/` | Primitivos compartilhados | [ver](ui/CLAUDE.md) |
 | `vision/` | `WardMinimapTab.tsx` — aba `VISION`: wards sobre o minimapa, filtros, cobertura | — |

@@ -6,15 +6,20 @@ O chrome do app — a moldura que não pertence a nenhuma tela.
 
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
-| `Navbar.tsx` | Topbar: marca, identidade do jogador, busca, configurações, toggle do hero grid | `App.tsx` |
-| `StatRail.tsx` | Segunda faixa: forma recente, Glint médio (experimental; some sem partida com nota), KDA, farm e **a versão do patch** (via `useGamePatch`) | `Navbar.tsx` |
+| `Sidebar.tsx` | Barra lateral da 2.0: marca, as seções (`AppSection`) e a entrada do hero grid (só com a feature ligada; desativada com o motivo quando a conta vista é outra). Recolhe em trilho de ícones; a escolha fica em `sidebarCollapsed` (config do Electron) ou `glimpsegg_sidebar_collapsed` (browser), e janela com menos de 1024 px recolhe sozinha sem gravar | `App.tsx` |
+| `Navbar.tsx` | Topo: conta (avatar, medalha, MMR com chip de **estimativa**), voltar à conta configurada, **a versão do patch** (via `useGamePatch`), busca, atualizar, configurações | `App.tsx` |
+
+A antiga segunda faixa (`StatRail`) saiu na 2.0: forma, Glint, KDA e GPM foram para o cartão
+"Forma" do Início (`dashboard/RecentFormCard.tsx`), e o patch ficou no topo.
 
 ## Regras locais
 
-- O `StatRail` exibe o patch (o `SettingsModal` é o outro consumidor de `useGamePatch`). O valor vem
+- O `Navbar` exibe o patch (o `SettingsModal` é o outro consumidor de `useGamePatch`). O valor vem
   do hook, nunca de constante — `CURRENT_GAME_PATCH` é só o piso do fallback de
   `services/gameVersionService.ts`.
-- A cor do Glint médio vem de `getGlintColor` (`utils/glint.ts`), a mesma dos chips — não há mais corte de cor próprio aqui.
+- **O MMR do topo é estimativa** (tabela fixa por medalha em `constants/ranks.ts`) e sai sempre com
+  o `EstimateChip`. Sem o selo, é o número sem procedência que a proposta da 2.0 apontou.
+- Estado da barra pode falhar ao ler ou gravar (janela privada, store fora): ela só não lembra.
 
 ## Ao sair um patch
 

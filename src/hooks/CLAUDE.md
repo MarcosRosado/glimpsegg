@@ -7,7 +7,7 @@ Os dois hooks com estado assíncrono do app. Nenhum deles é testado (o vitest r
 
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
-| `useGamePatch.ts` | Envolve `gameVersionService`: devolve `{ patch, isLoading, isDynamic, refreshPatch }`, assina `subscribeToPatchUpdates` e dispara um refresh silencioso na montagem | `layout/StatRail.tsx`, `settings/SettingsModal.tsx` |
+| `useGamePatch.ts` | Envolve `gameVersionService`: devolve `{ patch, isLoading, isDynamic, refreshPatch }`, assina `subscribeToPatchUpdates` e dispara um refresh silencioso na montagem | `layout/Navbar.tsx`, `settings/SettingsModal.tsx` |
 | `useHeroGridSync.ts` | Orquestra a sincronização inteira do layout espelho: preferências, agendamento, as duas buscas de winrate (meta da OpenDota e histórico pessoal), construção do espelho e escrita pela ponte. Expõe `UseHeroGridSyncResult` (fases, `blocker`, `scores`, `groups`, `mirrorSnapshot`, `syncNow`, `removeMirrorNow`, `restoreLatestBackup`…) | `App.tsx` (cria) → prop `sync` de `heroGrid/HeroGridTab.tsx` e `heroGrid/HeroGridMirrorScreen.tsx`; o `settings/SettingsModal.tsx` só recebe callbacks presos a ela |
 
 ## Regras locais
@@ -36,7 +36,7 @@ Os dois hooks com estado assíncrono do app. Nenhum deles é testado (o vitest r
 ## Ao sair um patch
 
 - `useGamePatch` é o **consumidor** da virada de patch: `subscribeToPatchUpdates` empurra o valor
-  novo e o `StatRail` passa a exibi-lo sem recarregar o app. Nada a ajustar aqui.
+  novo e o `Navbar` passa a exibi-lo sem recarregar o app. Nada a ajustar aqui.
 - `useHeroGridSync` lê a meta através do `statsCache`, que invalida duro
   quando o patch muda — a meta velha cai sozinha, sem passo manual. O que **não** invalida por patch
   é o cache pessoal de 1h do `personalWinrates.ts`, e isso é deliberado.

@@ -12,7 +12,12 @@ import { ProfileHeader } from './components/dashboard/ProfileHeader';
 import { ActivityHeatmap } from './components/dashboard/ActivityHeatmap';
 import { PerformanceTrendChart } from './components/dashboard/PerformanceTrendChart';
 import { MatchHeader } from './components/match/MatchHeader';
-import { ParsePendingBanner, PARSE_POLL_DELAYS_MS, type ParseState } from './components/match/ParsePendingBanner';
+import { ParseRequestCard, PARSE_POLL_DELAYS_MS, type ParseState } from './components/match/ParseRequestCard';
+import { MatchTabs } from './components/match/MatchTabs';
+import { MatchPlayerPicker } from './components/match/MatchPlayerPicker';
+import { Sidebar, type AppSection } from './components/layout/Sidebar';
+import { LastMatchCard } from './components/home/LastMatchCard';
+import { classifySearchInput, initialMatchView, type MatchTab } from './utils/navigation';
 import { ScoreboardTable } from './components/match/ScoreboardTable';
 import { AdvantageTimeline } from './components/match/AdvantageTimeline';
 import { TeamOverviewCard } from './components/match/TeamOverviewCard';
@@ -31,29 +36,28 @@ import { fetchOpenDotaMatchDetails, requestOpenDotaParse } from './services/open
 import { resolveSteamId } from './services/steamResolver';
 import { configuredProfileTier } from './utils/heroGrid/sourcePrecedence';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
-import {
-  Layers,
-  Sparkles,
-  BarChart2,
-  Eye,
-  Lightbulb,
-  DownloadCloud,
-  UserX,
-} from 'lucide-react';
+import { Sparkles, DownloadCloud, UserX } from 'lucide-react';
 
 import { useHeroGridSync } from './hooks/useHeroGridSync';
 
-type MatchTab = 'OVERVIEW' | 'PERFORMANCE' | 'VISION' | 'COACHING';
-
 /**
- * As views de nivel de painel, mutuamente exclusivas.
+ * As duas telas do layout espelho, dentro da seção `HERO_GRID` da barra lateral.
  *
  * Uniao fechada e nao um booleano por tela: com dois booleanos existiria o estado "painel e
  * replica abertos ao mesmo tempo", que o ternario resolveria por ordem de escrita em vez de
- * por intencao — e a terceira tela reintroduziria o mesmo problema. Com `strict: false`, um
- * `Record`/uniao literal é praticamente a unica rede de tipos disponivel aqui.
+ * por intencao. Com `strict: false`, uniao literal é praticamente a unica rede de tipos aqui.
  */
-type PanelView = 'DASHBOARD' | 'HERO_GRID_PANEL' | 'HERO_GRID_MIRROR';
+type HeroGridView = 'PANEL' | 'MIRROR';
+
+/**
+ * Seções sem dado proprio ainda (docs/PROPOSTA-V2.md §3.5): ficam fora da barra ate a lista
+ * completa por periodo e patch chegar de `services/`. Seção sem dado some — inclusive da
+ * navegação.
+ */
+const HIDDEN_SECTIONS: AppSection[] = ['HEROES'];
+
+/** Abas da partida analisada que existem hoje. `FIGHTS` entra quando a metrica de luta existir. */
+const ANALYZED_TABS: MatchTab[] = ['SUMMARY', 'MY_GAME', 'VISION', 'COACHING'];
 
 function MainAppContent() {
   const { t } = useLanguage();
@@ -73,12 +77,15 @@ function MainAppContent() {
   const [profileHistory, setProfileHistory] = useState<ProfileHistoryItem[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MatchDetails | null>(null);
   const [selectedPlayerSlot, setSelectedPlayerSlot] = useState<number>(0);
-  const [activeMatchTab, setActiveMatchTab] = useState<MatchTab>('OVERVIEW');
+  const [activeMatchTab, setActiveMatchTab] = useState<MatchTab>('SUMMARY');
   /**
    * As telas do layout espelho sao views de nivel de painel, nao abas de partida: nao
    * dependem de partida selecionada nenhuma. Visiveis so com a feature ativa (T036).
    */
-  const [panelView, setPanelView] = useState<PanelView>('DASHBOARD');
+  const [section, setSection] = useState<AppSection>('HOME');
+  const [heroGridView, setHeroGridView] = useState<HeroGridView>('PANEL');
+  /** Partida aberta pelo "Pedir análise" do Início: o pedido sai assim que ela abrir. */
+  const [pendingParseFor, setPendingParseFor] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
@@ -148,14 +155,14 @@ function MainAppContent() {
   /**
    * Feature desligada fecha as telas dela, venha o desligamento de onde vier.
    *
-   * O handler das configuracoes ja faz `setPanelView('DASHBOARD')`, mas ele cobre so aquele
+   * O handler das configuracoes ja manda para o Início, mas ele cobre so aquele
    * caminho: `preferences` tambem é relida do config, e um `enabled` que vire `false` por
-   * fora deixaria `panelView` preso numa tela que o render nao mostra mais — e reativar a
+   * fora deixaria `section` presa numa tela que o render nao mostra mais — e reativar a
    * feature devolveria o jogador à replica sem ele ter pedido. Aqui a categoria inteira
    * fecha, em vez de o buraco conhecido ser tapado.
    */
   useEffect(() => {
-    if (!heroGridEnabled) setPanelView('DASHBOARD');
+    if (!heroGridEnabled) setSection((s) => (s === 'HERO_GRID' ? 'HOME' : s));
   }, [heroGridEnabled]);
 
   // Helper to persist profile history in store or localStorage
@@ -331,7 +338,15 @@ function MainAppContent() {
     }
   };
 
-  const handleSelectMatch = async (matchId: string) => {
+  /**
+   * Abre uma partida. `keepView` (atualizar a partida aberta) mantém aba e jogador;
+   * `requestParse` (o "Pedir análise" do Início) dispara o pedido assim que ela abrir — e só
+   * se ela de fato estiver sem análise.
+   */
+  const handleSelectMatch = async (
+    matchId: string,
+    opts: { keepView?: boolean; requestParse?: boolean } = {},
+  ) => {
     setIsLoading(true);
     try {
       const match = await fetchOpenDotaMatchDetails(matchId);
@@ -343,12 +358,14 @@ function MainAppContent() {
         return;
       }
       setSelectedMatch(match);
-      // Auto select the primary user player slot if found
-      const userPlayer = match.players.find(
-        (p) => p.steamAccountId === currentSteamId || p.steamAccountId === profile?.steamAccountId
-      );
-      setSelectedPlayerSlot(userPlayer ? userPlayer.playerSlot : match.players[0]?.playerSlot || 0);
-      setActiveMatchTab('OVERVIEW');
+      if (!opts.keepView) {
+        // Slot e aba inicial: "Meu jogo" só quando o slot achado é da conta configurada e a
+        // partida foi analisada; senão "Resumo" (decisão do dono, 2026-11-19).
+        const view = initialMatchView(match, configuredSteamId, currentSteamId);
+        setSelectedPlayerSlot(view.slot);
+        setActiveMatchTab(view.tab);
+      }
+      if (opts.requestParse && !match.availability.parsed) setPendingParseFor(match.id);
     } catch (err) {
       console.error('Error loading match details:', err);
       showToast(t('matchLoadError'));
@@ -357,7 +374,18 @@ function MainAppContent() {
     }
   };
 
+  /**
+   * A busca (Ctrl+K) aceita conta OU partida. Id que só pode ser partida (acima de 32 bits)
+   * ou link de partida abre a partida; o resto vai para o resolvedor de conta. O caso
+   * ambíguo (número que cabe em 32 bits) é conta aqui, e o modal oferece "abrir como
+   * partida" ao lado — ver `classifySearchInput`.
+   */
   const handleSearchSteamId = async (input: string) => {
+    const intent = classifySearchInput(input);
+    if (intent.kind === 'MATCH') {
+      await handleSelectMatch(intent.matchId);
+      return;
+    }
     setIsLoading(true);
     try {
       const res = await resolveSteamId(input);
@@ -450,9 +478,19 @@ function MainAppContent() {
     setParseState('idle');
   }, [selectedMatch?.id]);
 
-  const handleRequestParse = async () => {
-    if (!selectedMatch) return;
-    const matchId = selectedMatch.id;
+  // Declarado DEPOIS do efeito acima de propósito: os dois rodam no mesmo commit quando a
+  // partida abre, e o reset tem de vir antes do pedido — na ordem inversa ele cancelaria a
+  // espera que acabou de começar.
+  useEffect(() => {
+    if (!pendingParseFor || selectedMatch?.id !== pendingParseFor) return;
+    setPendingParseFor(null);
+    void handleRequestParse(pendingParseFor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingParseFor, selectedMatch?.id]);
+
+  const handleRequestParse = async (matchIdOverride?: string) => {
+    const matchId = matchIdOverride ?? selectedMatch?.id;
+    if (!matchId) return;
     const run = ++parseRunRef.current;
     setParseState('requesting');
     const res = await requestOpenDotaParse(matchId);
@@ -469,6 +507,9 @@ function MainAppContent() {
       if (parseRunRef.current !== run) return;
       if (fresh && fresh.availability.parsed) {
         setSelectedMatch(fresh);
+        // A partida virou "analisada": a aba inicial passa a valer como se tivesse aberto
+        // agora — "Meu jogo" se o jogador em foco é a conta configurada.
+        setActiveMatchTab(initialMatchView(fresh, configuredSteamId, currentSteamId).tab);
         showToast(t('parseReadyToast'));
         return;
       }
@@ -495,6 +536,12 @@ function MainAppContent() {
 
   const activeMatchPlayer = selectedMatch?.players.find((p) => p.playerSlot === selectedPlayerSlot) || selectedMatch?.players[0];
 
+  // Trocar de seção, de partida ou de conta começa do topo: a rolagem da tela anterior
+  // deixava a conta de um companheiro abrir no meio da página.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [section, selectedMatch?.id, currentSteamId]);
+
   // Fullscreen Initial Splash Loader
   if (isAppInitializing) {
     return (
@@ -518,86 +565,263 @@ function MainAppContent() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#070a10] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
-      {/* Auto Update Notification Banner */}
-      {downloadedUpdateVersion && (
-        <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-cyan-950 border-b border-emerald-500/50 px-4 py-2 text-xs flex items-center justify-between text-emerald-200 z-50 animate-in slide-in-from-top duration-300">
-          <div className="flex items-center gap-2">
-            <DownloadCloud className="w-4 h-4 text-emerald-400 animate-bounce" />
-            <span>
-              {t('updateDownloaded')} (<strong>v{downloadedUpdateVersion}</strong>)
-            </span>
-          </div>
-          <button
-            onClick={handleRestartAndInstallUpdate}
-            className="px-3 py-1 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black text-xs transition shadow-md shadow-emerald-950/40"
-          >
-            {t('restartAndInstall')}
-          </button>
-        </div>
-      )}
+  const navigate = (next: AppSection) => {
+    setSelectedMatch(null);
+    if (next === 'HERO_GRID' && section !== 'HERO_GRID') setHeroGridView('PANEL');
+    setSection(next);
+  };
 
-      {/* Top Navbar with Integrated Profile Header & Statuses */}
-      <Navbar
-        profile={profile}
-        isLoading={isLoading}
-        isViewingDifferentAccount={isViewingDifferentAccount}
-        configuredSteamId={configuredSteamId}
-        configuredProfileName={currentSteamId === configuredSteamId ? profile?.name : undefined}
-        onGoHome={() => {
-          setSelectedMatch(null);
-          setPanelView('DASHBOARD');
-        }}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenSearch={() => setIsSearchOpen(true)}
+  /** Partida aberta: sem análise é o "modo placar" — outra forma de tela, não um aviso por cima. */
+  const isScoreboardMode = !!selectedMatch && !selectedMatch.availability.parsed;
+  const lastMatch = profile?.recentMatches?.[0] ?? null;
+
+  const renderMatch = (match: MatchDetails) => (
+    <div className="space-y-5 animate-in fade-in duration-200">
+      <MatchHeader match={match} onBack={() => setSelectedMatch(null)} />
+
+      {isScoreboardMode ? (
+        /* MODO PLACAR (decisão 2 do dono): aviso + pedido de análise, destaques que só
+           dependem do placar, Glint beta e o placar completo. Sem abas, sem linha de
+           vantagem, sem comparativo, sem "quem liderou" e sem melhor por posição. */
+        <>
+          <ParseRequestCard state={parseState} onRequest={() => void handleRequestParse()} />
+          <TeamOverviewCard
+            match={match}
+            variant="scoreboard"
+            selectedPlayerSlot={selectedPlayerSlot}
+            onSelectPlayer={setSelectedPlayerSlot}
+          />
+          <ScoreboardTable
+            players={match.players}
+            selectedPlayerSlot={selectedPlayerSlot}
+            onSelectPlayer={setSelectedPlayerSlot}
+            didRadiantWin={match.didRadiantWin}
+          />
+        </>
+      ) : (
+        <>
+          <MatchTabs
+            tabs={ANALYZED_TABS}
+            active={activeMatchTab}
+            onChange={setActiveMatchTab}
+            trailing={
+              activeMatchTab !== 'SUMMARY' ? (
+                <MatchPlayerPicker
+                  match={match}
+                  selectedSlot={selectedPlayerSlot}
+                  onSelect={setSelectedPlayerSlot}
+                  configuredSteamId={configuredSteamId}
+                />
+              ) : null
+            }
+          />
+
+          {activeMatchTab === 'SUMMARY' && (
+            <div className="space-y-6">
+              <TeamOverviewCard
+                match={match}
+                selectedPlayerSlot={selectedPlayerSlot}
+                onSelectPlayer={setSelectedPlayerSlot}
+              />
+              <AdvantageTimeline timeline={match.advantageTimeline} />
+              <ScoreboardTable
+                players={match.players}
+                selectedPlayerSlot={selectedPlayerSlot}
+                onSelectPlayer={setSelectedPlayerSlot}
+                onNavigateToPerformance={(slot) => {
+                  setSelectedPlayerSlot(slot);
+                  setActiveMatchTab('MY_GAME');
+                }}
+                didRadiantWin={match.didRadiantWin}
+              />
+            </div>
+          )}
+
+          {activeMatchTab === 'MY_GAME' && activeMatchPlayer && (
+            <PlayerPerformanceTab player={activeMatchPlayer} match={match} />
+          )}
+
+          {activeMatchTab === 'VISION' && activeMatchPlayer && (
+            <WardMinimapTab player={activeMatchPlayer} match={match} />
+          )}
+
+          {activeMatchTab === 'COACHING' && activeMatchPlayer && (
+            <CoachingInsightsTab player={activeMatchPlayer} match={match} />
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  const renderSection = (p: PlayerProfileSummary) => {
+    switch (section) {
+      case 'MATCHES':
+        return (
+          <MatchList
+            matches={p.recentMatches}
+            selectedMatchId={null}
+            heroFilterId={heroFilterId}
+            onClearHeroFilter={() => setHeroFilterId(null)}
+            onSelectMatch={(id) => void handleSelectMatch(id)}
+          />
+        );
+      case 'ACCOUNT':
+        return (
+          <div className="space-y-6">
+            <ProfileHeader
+              profile={p}
+              heroGridEnabled={heroGridEnabled}
+              lastMirrorSyncAt={heroGridSync.mirrorSnapshot?.at ?? null}
+              isViewingDifferentAccount={isViewingDifferentAccount}
+              onOpenHeroGridMirror={() => {
+                setHeroGridView('MIRROR');
+                setSection('HERO_GRID');
+              }}
+            />
+            <div className="max-w-2xl">
+              <TrendsCard
+                part="account"
+                matches={p.recentMatches}
+                seasonRank={p.seasonRank}
+                leaderboardRank={p.leaderboardRank}
+                onSelectMatch={(id) => void handleSelectMatch(id)}
+              />
+            </div>
+          </div>
+        );
+      case 'HOME':
+      default:
+        /* Início, opção A dos wireframes: última partida no topo, depois forma e tendência,
+           por último os cards menores (docs/PROPOSTA-V2.md §3.2). */
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-stretch">
+              <div className="xl:col-span-3 [&>*]:h-full">
+                {lastMatch && (
+                  <LastMatchCard
+                    match={lastMatch}
+                    onOpen={(id) => void handleSelectMatch(id)}
+                    onOpenAndRequestParse={(id) => void handleSelectMatch(id, { requestParse: true })}
+                  />
+                )}
+              </div>
+              <div className="xl:col-span-2">
+                <RecentFormCard
+                  recentMatches={p.recentMatches}
+                  onSelectMatch={(id) => void handleSelectMatch(id)}
+                />
+              </div>
+            </div>
+
+            {/* Tendência: a curva por partida na largura inteira — ela é a leitura de
+                "estou melhorando?" e espremida perde o eixo. */}
+            {p.recentMatches.length > 1 && (
+              <PerformanceTrendChart
+                matches={p.recentMatches}
+                onSelectMatch={(id) => void handleSelectMatch(id)}
+              />
+            )}
+
+            {/* Os cards menores, em colunas que acomodam alturas diferentes sem buraco. */}
+            <div className="columns-1 lg:columns-2 2xl:columns-3 gap-6 [&>*]:mb-6 [&>*]:break-inside-avoid">
+              <TrendsCard
+                part="trend"
+                matches={p.recentMatches}
+                seasonRank={p.seasonRank}
+                leaderboardRank={p.leaderboardRank}
+                onSelectMatch={(id) => void handleSelectMatch(id)}
+              />
+              <MostPlayedHeroes
+                heroes={p.mostPlayedHeroes}
+                onFilterHero={(heroId) => {
+                  // O clique no herói abre Partidas já filtrada por ele.
+                  setHeroFilterId(heroId);
+                  setSection('MATCHES');
+                }}
+              />
+              {p.activityDays && p.activityDays.length > 0 && <ActivityHeatmap activityDays={p.activityDays} />}
+              {p.peers && p.peers.length > 0 && (
+                <TeammatesCard
+                  peers={p.peers}
+                  onOpenPeer={(accountId) => void handleSelectProfileFromHistory(accountId)}
+                />
+              )}
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#070a10] text-slate-100 flex font-sans selection:bg-cyan-500 selection:text-black">
+      <Sidebar
+        section={section}
+        onNavigate={navigate}
         heroGridEnabled={heroGridEnabled}
-        isHeroGridOpen={panelView === 'HERO_GRID_PANEL'}
-        onToggleHeroGrid={() =>
-          setPanelView((view) => (view === 'HERO_GRID_PANEL' ? 'DASHBOARD' : 'HERO_GRID_PANEL'))
-        }
-        onReturnToConfiguredAccount={handleReturnToConfigured}
-        onRefresh={() => {
-          if (selectedMatch) handleSelectMatch(selectedMatch.id);
-          else if (currentSteamId || configuredSteamId) loadProfileData(currentSteamId || configuredSteamId);
-        }}
+        heroGridDisabledReason={isViewingDifferentAccount ? t('heroGridOtherAccountBody') : null}
+        hiddenSections={HIDDEN_SECTIONS}
       />
 
-      {/* Main Content Area (Fluid Widescreen Layout up to 1920px) */}
-      <main className="flex-1 w-full max-w-[1850px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-6">
-        {/* Toast alert */}
-        {statusMessage && (
-          <div className="fixed bottom-5 right-5 z-50 bg-[#0e1726] border border-cyan-500/50 text-cyan-200 text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-2 duration-200">
-            <Sparkles className="w-4 h-4 text-cyan-400" />
-            <span>{statusMessage}</span>
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Auto Update Notification Banner */}
+        {downloadedUpdateVersion && (
+          <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-cyan-950 border-b border-emerald-500/50 px-4 py-2 text-xs flex items-center justify-between text-emerald-200 z-50 animate-in slide-in-from-top duration-300">
+            <div className="flex items-center gap-2">
+              <DownloadCloud className="w-4 h-4 text-emerald-400 animate-bounce" />
+              <span>
+                {t('updateDownloaded')} (<strong>v{downloadedUpdateVersion}</strong>)
+              </span>
+            </div>
+            <button
+              onClick={handleRestartAndInstallUpdate}
+              className="px-3 py-1 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black text-xs transition shadow-md shadow-emerald-950/40"
+            >
+              {t('restartAndInstall')}
+            </button>
           </div>
         )}
 
-        {panelView === 'HERO_GRID_PANEL' && heroGridEnabled ? (
-          /* =========================================================================
-             HERO GRID PANEL — sincronizacao, diagnostico e ranking em lista
-             ========================================================================= */
-          <div className="animate-in fade-in duration-200 space-y-4">
-            {heroGridOtherAccountNotice}
-            <HeroGridTab
-              sync={heroGridSync}
-              onOpenMirror={() => setPanelView('HERO_GRID_MIRROR')}
-            />
-          </div>
-        ) : panelView === 'HERO_GRID_MIRROR' && heroGridEnabled ? (
-          /* =========================================================================
-             HERO GRID MIRROR — a replica do que esta gravado na colecao do jogador
-             ========================================================================= */
-          <div className="animate-in fade-in duration-200 space-y-4">
-            {heroGridOtherAccountNotice}
-            <HeroGridMirrorScreen
-              sync={heroGridSync}
-              onOpenSettings={() => setIsSettingsOpen(true)}
-              onOpenPanel={() => setPanelView('HERO_GRID_PANEL')}
-            />
-          </div>
-        ) : !selectedMatch ? (
-          !profile ? (
+        <Navbar
+          profile={profile}
+          isLoading={isLoading}
+          isViewingDifferentAccount={isViewingDifferentAccount}
+          configuredSteamId={configuredSteamId}
+          configuredProfileName={currentSteamId === configuredSteamId ? profile?.name : undefined}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenSearch={() => setIsSearchOpen(true)}
+          onReturnToConfiguredAccount={handleReturnToConfigured}
+          onRefresh={() => {
+            if (selectedMatch) void handleSelectMatch(selectedMatch.id, { keepView: true });
+            else if (currentSteamId || configuredSteamId) loadProfileData(currentSteamId || configuredSteamId);
+          }}
+        />
+
+        <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-6">
+          {/* Toast alert */}
+          {statusMessage && (
+            <div className="fixed bottom-5 right-5 z-50 bg-[#0e1726] border border-cyan-500/50 text-cyan-200 text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-2 duration-200">
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <span>{statusMessage}</span>
+            </div>
+          )}
+
+          {selectedMatch ? (
+            renderMatch(selectedMatch)
+          ) : section === 'HERO_GRID' && heroGridEnabled ? (
+            /* HERO GRID — painel (sincronização, diagnóstico, ranking) ou réplica do layout */
+            <div className="animate-in fade-in duration-200 space-y-4">
+              {heroGridOtherAccountNotice}
+              {heroGridView === 'MIRROR' ? (
+                <HeroGridMirrorScreen
+                  sync={heroGridSync}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onOpenPanel={() => setHeroGridView('PANEL')}
+                />
+              ) : (
+                <HeroGridTab sync={heroGridSync} onOpenMirror={() => setHeroGridView('MIRROR')} />
+              )}
+            </div>
+          ) : !profile ? (
             /* Empty Setup State when no profile is loaded yet */
             <div className="flex flex-col items-center justify-center py-28 text-center space-y-5 animate-in fade-in duration-300">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-950 via-slate-900 to-emerald-950 border border-cyan-500/40 flex items-center justify-center shadow-2xl shadow-cyan-950/60">
@@ -618,235 +842,10 @@ function MainAppContent() {
               </button>
             </div>
           ) : (
-            /* =========================================================================
-               DASHBOARD VIEW (FULL-SCREEN FLUID ASYMMETRIC GRID)
-               ========================================================================= */
-            <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Identidade, rank e KPIs de carreira */}
-              <ProfileHeader
-                profile={profile}
-                heroGridEnabled={heroGridEnabled}
-                lastMirrorSyncAt={heroGridSync.mirrorSnapshot?.at ?? null}
-                isViewingDifferentAccount={isViewingDifferentAccount}
-                onOpenHeroGridMirror={() => setPanelView('HERO_GRID_MIRROR')}
-              />
-
-              {/* Top Grid: Main Stage (Match History) + Right Sidebar (Forma, Tendências, Heróis,
-                  Atividade, Evolução e Companheiros) */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* Left 7/8 cols: Main Stage - Detailed Recent Match History */}
-                <div className="lg:col-span-7 xl:col-span-8 space-y-6">
-                  {/* `selectedMatchId` e sempre null aqui: a dashboard so
-                      existe quando nenhuma partida esta aberta. */}
-                  {profile && (
-                    <MatchList
-                      matches={profile.recentMatches}
-                      selectedMatchId={null}
-                      heroFilterId={heroFilterId}
-                      onClearHeroFilter={() => setHeroFilterId(null)}
-                      onSelectMatch={handleSelectMatch}
-                    />
-                  )}
-                </div>
-
-                {/* Right 5/4 cols: Side Widgets */}
-                <div className="lg:col-span-5 xl:col-span-4 space-y-5">
-                  {/* 1. Forma Recente (10 Matches Sequence - Posicionado antes do gráfico) */}
-                  {profile && (
-                    <RecentFormCard
-                      recentMatches={profile.recentMatches}
-                      onSelectMatch={handleSelectMatch}
-                    />
-                  )}
-
-                  {/* 2. Tendências Card (Sunburst + Bipolar Up/Down Equalizer + Lane History) */}
-                  {profile && (
-                    <TrendsCard
-                      matches={profile.recentMatches}
-                      seasonRank={profile.seasonRank}
-                      leaderboardRank={profile.leaderboardRank}
-                      onSelectMatch={handleSelectMatch}
-                    />
-                  )}
-
-                  {/* 3. Heróis Mais Jogados */}
-                  {profile && (
-                    <MostPlayedHeroes
-                      heroes={profile.mostPlayedHeroes}
-                      onFilterHero={(heroId) =>
-                        setHeroFilterId((current) => (current === heroId ? null : heroId))
-                      }
-                    />
-                  )}
-
-                  {/* 4. Atividade dos ultimos 30 dias. Ficava embaixo da lista de
-                      partidas, que e longa — na pratica so aparecia depois de rolar a
-                      pagina inteira. */}
-                  {profile && profile.activityDays && profile.activityDays.length > 0 && (
-                    <ActivityHeatmap activityDays={profile.activityDays} />
-                  )}
-
-                  {/* 5. Leitura temporal que o sunburst nao da: evolucao ao longo da
-                      janela, nao composicao. Mesmo motivo da mudanca acima. */}
-                  {profile && profile.recentMatches.length > 1 && (
-                    <PerformanceTrendChart
-                      matches={profile.recentMatches}
-                      onSelectMatch={handleSelectMatch}
-                    />
-                  )}
-
-                  {/* 6. Companheiros de Equipe (Na lateral direita, abaixo dos outros campos) */}
-                  {profile && profile.peers && profile.peers.length > 0 && (
-                    <TeammatesCard peers={profile.peers} />
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        ) : (
-          /* =========================================================================
-             MATCH ANALYSIS VIEW (POST-GAME BREAKDOWN)
-             ========================================================================= */
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Match Header & Score Banner */}
-            <MatchHeader
-              match={selectedMatch}
-              onBack={() => setSelectedMatch(null)}
-            />
-
-            {selectedMatch.availability.parsePending && (
-              <ParsePendingBanner state={parseState} onRequest={handleRequestParse} />
-            )}
-
-            {/* Match View Sub-Navigation Tabs */}
-            <div className="flex border border-cyan-500/20 bg-[#090d16]/90 backdrop-blur-md rounded-xl p-1.5 gap-1.5 overflow-x-auto shadow-lg shadow-black/40">
-              <button
-                onClick={() => setActiveMatchTab('OVERVIEW')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition shrink-0 ${
-                  activeMatchTab === 'OVERVIEW'
-                    ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-black shadow-md shadow-cyan-950/50'
-                    : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800/60'
-                }`}
-              >
-                <Layers className="w-4 h-4" />
-                <span>{t('tabOverview')}</span>
-              </button>
-
-              <button
-                onClick={() => setActiveMatchTab('PERFORMANCE')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition shrink-0 ${
-                  activeMatchTab === 'PERFORMANCE'
-                    ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-black shadow-md shadow-cyan-950/50'
-                    : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800/60'
-                }`}
-              >
-                <BarChart2 className="w-4 h-4" />
-                <span>{t('tabPerformance')}</span>
-              </button>
-
-              <button
-                onClick={() => setActiveMatchTab('VISION')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition shrink-0 ${
-                  activeMatchTab === 'VISION'
-                    ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-black shadow-md shadow-cyan-950/50'
-                    : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800/60'
-                }`}
-              >
-                <Eye className="w-4 h-4" />
-                <span>{t('tabVision')}</span>
-              </button>
-
-              <button
-                onClick={() => setActiveMatchTab('COACHING')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition shrink-0 ${
-                  activeMatchTab === 'COACHING'
-                    ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-black shadow-md shadow-cyan-950/50'
-                    : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800/60'
-                }`}
-              >
-                <Lightbulb className="w-4 h-4" />
-                <span>{t('tabCoaching')}</span>
-              </button>
-            </div>
-
-            {/* Tab 1: Overview & Scoreboard & Team Awards */}
-            {activeMatchTab === 'OVERVIEW' && (
-              <div className="space-y-6">
-                {/* Team Awards Podium & Comparative Dashboard */}
-                <TeamOverviewCard
-                  match={selectedMatch}
-                  selectedPlayerSlot={selectedPlayerSlot}
-                  onSelectPlayer={(slot) => {
-                    setSelectedPlayerSlot(slot);
-                  }}
-                />
-
-                {/* Advantage Gold/XP Curve */}
-                <AdvantageTimeline timeline={selectedMatch.advantageTimeline} />
-
-                {/* Scoreboard Table with in-place inspection and dedicated performance redirect */}
-                <ScoreboardTable
-                  players={selectedMatch.players}
-                  selectedPlayerSlot={selectedPlayerSlot}
-                  onSelectPlayer={(slot) => {
-                    setSelectedPlayerSlot(slot);
-                  }}
-                  onNavigateToPerformance={(slot) => {
-                    setSelectedPlayerSlot(slot);
-                    setActiveMatchTab('PERFORMANCE');
-                  }}
-                  didRadiantWin={selectedMatch.didRadiantWin}
-                />
-              </div>
-            )}
-
-            {/* Tab 2: Player Performance & 5-Axis Radar */}
-            {activeMatchTab === 'PERFORMANCE' && activeMatchPlayer && (
-              <div className="space-y-6">
-                {/* Player Quick Switcher */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  <span className="text-xs text-slate-400 font-mono">{t('inspectingLabel')}</span>
-                  {selectedMatch.players.map((p) => (
-                    <button
-                      key={p.playerSlot}
-                      onClick={() => setSelectedPlayerSlot(p.playerSlot)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border shrink-0 ${
-                        p.playerSlot === selectedPlayerSlot
-                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-sm shadow-cyan-950/30'
-                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
-                      }`}
-                    >
-                      <span>{p.name}</span>
-                      <span className="text-[10px] opacity-75 font-mono">({p.role.replace('POSITION_', 'Pos ')})</span>
-                    </button>
-                  ))}
-                </div>
-
-                <PlayerPerformanceTab
-                  player={activeMatchPlayer}
-                  match={selectedMatch}
-                />
-              </div>
-            )}
-
-            {/* Tab 3: Vision & Minimap Tracker */}
-            {activeMatchTab === 'VISION' && activeMatchPlayer && (
-              <WardMinimapTab
-                player={activeMatchPlayer}
-                match={selectedMatch}
-              />
-            )}
-
-            {/* Tab 4: Coaching determinístico (motor de regras + dados do patch) */}
-            {activeMatchTab === 'COACHING' && activeMatchPlayer && (
-              <CoachingInsightsTab
-                player={activeMatchPlayer}
-                match={selectedMatch}
-              />
-            )}
-          </div>
-        )}
-      </main>
+            <div className="animate-in fade-in duration-200">{renderSection(profile)}</div>
+          )}
+        </main>
+      </div>
 
       {/* Onboarding e ajuda de conta Steam */}
       <OnboardingModal
@@ -871,6 +870,7 @@ function MainAppContent() {
         onRemoveHistory={handleRemoveHistoryProfile}
         onClearHistory={handleClearHistory}
         onReturnToConfigured={handleReturnToConfigured}
+        onOpenMatch={(id) => void handleSelectMatch(id)}
         isLoading={isLoading}
       />
 
@@ -886,7 +886,7 @@ function MainAppContent() {
           void heroGridSync.reloadPreferences();
           // Desmarcar fecha a aba: deixa-la aberta mostraria o estado DISABLED sem que o
           // jogador tenha pedido para ver isso.
-          if (!enabled) setPanelView('DASHBOARD');
+          if (!enabled) setSection((s) => (s === 'HERO_GRID' ? 'HOME' : s));
         }}
         onHeroGridSyncRequest={(request) => heroGridSync.syncNow({ mirrorName: request.mirrorName })}
         onHeroGridRemoveMirror={() => heroGridSync.removeMirrorNow()}

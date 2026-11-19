@@ -30,7 +30,11 @@ interface ScoreboardTableProps {
   players: MatchPlayer[];
   selectedPlayerSlot: number;
   onSelectPlayer: (playerSlot: number) => void;
-  onNavigateToPerformance: (playerSlot: number) => void;
+  /**
+   * Leva à aba "Meu jogo" do jogador. Ausente no "modo placar" (partida sem análise): lá a
+   * aba não existe, e o botão prometeria uma tela que não abre.
+   */
+  onNavigateToPerformance?: (playerSlot: number) => void;
   didRadiantWin: boolean;
 }
 
@@ -244,10 +248,13 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
                       {/* Role */}
                       <td className="py-2.5 px-2 text-center">
-                        <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-purple-300">
-                          {/* Sem posicao (partida nao parseada) a celula fica vazia: 'UNKNOWN' nao é rotulo. */}
-                          {player.role === 'UNKNOWN' ? '' : player.role.replace('POSITION_', 'Pos ')}
-                        </span>
+                        {/* Sem posicao (partida nao parseada) a celula fica vazia — sem nem a
+                            caixinha: 'UNKNOWN' nao é rotulo, e moldura vazia parece dado faltando. */}
+                        {player.role !== 'UNKNOWN' && (
+                          <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-purple-300">
+                            {player.role.replace('POSITION_', 'Pos ')}
+                          </span>
+                        )}
                       </td>
 
                       {/* K / D / A */}
@@ -360,9 +367,12 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-sm font-black text-white">{player.name}</span>
                                     <span className="text-xs text-cyan-400 font-mono font-bold">({hero.displayName})</span>
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 font-mono">
-                                      {formatRoleName(player.role)} • {formatLaneName(player.lane)}
-                                    </span>
+                                    {player.role !== 'UNKNOWN' && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 font-mono">
+                                        {formatRoleName(player.role)}
+                                        {player.lane !== 'UNKNOWN' && ` • ${formatLaneName(player.lane)}`}
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-xs text-slate-400 font-mono mt-0.5 flex items-center gap-2 flex-wrap">
                                     <span>
@@ -383,6 +393,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                               </div>
 
                               {/* Dedicated Redirect Button to Deep Performance Tab */}
+                              {onNavigateToPerformance && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -393,9 +404,13 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                 <span>{t('viewFullPerformance')}</span>
                                 <ArrowRight className="w-4 h-4" />
                               </button>
+                              )}
                             </div>
 
-                            {/* Section 1: Ordem e Tempo dos Itens Comprados (Sem Consumíveis, Flex-Wrap) */}
+                            {/* Section 1: Ordem e Tempo dos Itens Comprados (Sem Consumíveis, Flex-Wrap).
+                                Sem log de compras (partida sem análise) a seção some inteira: "0 itens"
+                                pareceria que o jogador não comprou nada. */}
+                            {(player.itemTimings?.length ?? 0) > 0 && (
                             <div>
                               <div className="flex items-center justify-between gap-2 mb-2.5">
                                 <div className="flex items-center gap-2">
@@ -478,6 +493,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                 </div>
                               )}
                             </div>
+                            )}
 
                             {/* Section 2: Outros Detalhes Importantes (Combate, Laning e Estruturas) */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-800/80">

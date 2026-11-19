@@ -18,6 +18,12 @@ interface TrendsCardProps {
   /** Rank do proprio jogador, para destacar o tier dele na distribuicao. */
   seasonRank?: number;
   leaderboardRank?: number;
+  /**
+   * A 2.0 divide o card em dois lugares (docs/PROPOSTA-V2.md §5): `trend` (posições e o
+   * equalizador de Glint) vai para o Início, `account` (KPIs de fila e ranque, distribuição
+   * de medalhas) vai para a seção Conta. Sem a prop, o card inteiro, como na 1.0.
+   */
+  part?: 'trend' | 'account';
 }
 
 const VALVE_RANK_IMG_BASE = 'https://www.opendota.com/assets/images/dota2/rank_icons';
@@ -91,8 +97,11 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
   onSelectMatch,
   seasonRank,
   leaderboardRank,
+  part,
 }) => {
   const { t } = useLanguage();
+  const showTrend = part !== 'account';
+  const showAccount = part !== 'trend';
   const glintHint = useGlintHint();
   const [range, setRange] = useState<25 | 100>(25);
   const [focus, setFocus] = useState<Focus>(null);
@@ -426,7 +435,7 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
       {/* ---------------------------------------------------------- cabecalho */}
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-base font-black text-slate-100 tracking-wide flex items-center gap-2">
-          <span>{t('trendsCardTitle')}</span>
+          <span>{part === 'account' ? t('queueRankTitle') : t('trendsCardTitle')}</span>
           <Sparkles className="w-4 h-4 text-cyan-400" />
         </h3>
 
@@ -450,7 +459,7 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
       {/* Donut de posicoes: so com partida que TENHA posicao. Na lista da OpenDota
           `role` vem 'UNKNOWN' em todas, e a secao inteira some — agrupar por outra coisa
           sob o rotulo "Pos N" seria afirmar posicao que ninguem mediu. */}
-      {showPositions && (
+      {showTrend && showPositions && (
       <>
       <p className="text-[11px] text-slate-500 mb-1">{t('positionShareHint')}</p>
 
@@ -654,7 +663,7 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
       {/* ------------------------------------------------- equalizador Glint
           Some inteiro quando nenhuma partida da janela tem nota: sobraria uma linha
           de base vazia com o titulo de uma metrica que nao foi medida. */}
-      {hasAnyGlint && (
+      {showTrend && hasAnyGlint && (
       <div className="mt-3 pt-3 border-t border-slate-800/80">
         <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
           <span title={glintHint} className="cursor-help">
@@ -779,6 +788,8 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
       )}
 
       {/* --------------------------------------------------------------- KPIs */}
+      {showAccount && (
+      <>
       <div className="grid grid-cols-3 gap-x-3 gap-y-3 mt-3 pt-3 border-t border-slate-800/80 text-[11px]">
         <div>
           <div className="text-slate-500">{t('winRate')}</div>
@@ -922,6 +933,8 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 };

@@ -1,13 +1,13 @@
 import React from 'react';
-import { Settings, Search, RefreshCw, ArrowLeft, LayoutGrid } from 'lucide-react';
+import { Settings, Search, RefreshCw, ArrowLeft } from 'lucide-react';
 import { PlayerProfileSummary } from '../../types/dota';
 import { getRankTierInfo } from '../../constants/ranks';
 import { handleAvatarError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
-import { BrandMark } from '../brand/BrandMark';
-import { BrandLockup } from '../brand/BrandLockup';
+import { useGamePatch } from '../../hooks/useGamePatch';
 import { IconButton } from '../ui/IconButton';
-import { StatRail } from './StatRail';
+import { EstimateChip } from '../ui/EstimateChip';
+import { PatchTransitionNotice } from '../ui/PatchTransitionNotice';
 
 interface NavbarProps {
   profile: PlayerProfileSummary | null;
@@ -15,24 +15,18 @@ interface NavbarProps {
   isViewingDifferentAccount?: boolean;
   configuredSteamId?: string;
   configuredProfileName?: string;
-  onGoHome: () => void;
   onOpenSettings: () => void;
   onOpenSearch: () => void;
   onReturnToConfiguredAccount?: () => void;
   onRefresh: () => void;
-  /** T036: o acesso a aba do layout espelho existe SO com a feature ativa. */
-  heroGridEnabled?: boolean;
-  isHeroGridOpen?: boolean;
-  onToggleHeroGrid?: () => void;
 }
 
 /**
- * Topbar em duas faixas de hierarquia distinta:
- *   faixa 1 (h-11) chrome  — marca, identidade do jogador, ações
- *   faixa 2 (h-7)  contexto — StatRail com as métricas
+ * Topo da moldura da 2.0: conta, patch, busca e ações. Nada além disso.
  *
- * As duas vivem no MESMO container sticky de propósito: como faixas irmãs, a
- * segunda precisaria de um `top-[48px]` acoplado à altura da primeira.
+ * A marca e a navegação foram para a `Sidebar`, e a antiga segunda faixa (`StatRail`: forma,
+ * Glint, KDA, GPM) virou o cartão "Forma" do Início — docs/PROPOSTA-V2.md §3.1: "menos ruído
+ * nas outras telas". O patch ficou aqui porque vale para todas as telas.
  */
 export const Navbar: React.FC<NavbarProps> = ({
   profile,
@@ -40,124 +34,105 @@ export const Navbar: React.FC<NavbarProps> = ({
   isViewingDifferentAccount = false,
   configuredSteamId,
   configuredProfileName,
-  onGoHome,
   onOpenSettings,
   onOpenSearch,
   onReturnToConfiguredAccount,
   onRefresh,
-  heroGridEnabled = false,
-  isHeroGridOpen = false,
-  onToggleHeroGrid,
 }) => {
   const { t } = useLanguage();
+  const { patch } = useGamePatch();
   const rankInfo = profile ? getRankTierInfo(profile.seasonRank, profile.leaderboardRank) : null;
 
   return (
     <header className="sticky top-0 z-40 bg-[#080c14]/95 backdrop-blur-md border-b border-slate-800/80">
-      {/* ---------------------------------------------------------- faixa 1 */}
-      <div className="w-full max-w-[1850px] mx-auto px-4 sm:px-6 h-11 flex items-center gap-3">
-        {/* `min-w-0` é o que permite o nome truncar em vez de empurrar as ações
-            para fora da tela. */}
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={onGoHome}
-            title={t('homeTooltip')}
-            aria-label={t('homeTooltip')}
-            className="flex items-center gap-2.5 cursor-pointer group select-none transition-all transform active:scale-95 shrink-0"
-          >
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-950 via-slate-900 to-violet-950 flex items-center justify-center shadow-md shadow-cyan-950/50 border border-cyan-500/40 group-hover:border-cyan-400 group-hover:scale-105 transition duration-200">
-              <BrandMark className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_6px_rgba(34,211,238,0.6)]" />
-            </div>
-            <BrandLockup className="hidden sm:flex items-center gap-0.5 font-black tracking-wider text-sm text-white group-hover:text-cyan-200 transition font-sans" />
-          </button>
+      <div className="w-full px-4 sm:px-6 h-12 flex items-center gap-3">
+        {/* `min-w-0` é o que permite o nome truncar em vez de empurrar as ações para fora. */}
+        {profile && rankInfo && (
+          <div className="flex items-center gap-2.5 min-w-0">
+            {isViewingDifferentAccount && onReturnToConfiguredAccount && (
+              <IconButton
+                icon={ArrowLeft}
+                label={`${t('returnToConfigured')}: ${configuredProfileName || configuredSteamId}`}
+                onClick={onReturnToConfiguredAccount}
+                variant="accent"
+                className="p-1"
+                iconClassName="w-3.5 h-3.5 text-cyan-400"
+              />
+            )}
 
-          {profile && rankInfo && (
-            <div className="flex items-center gap-2.5 min-w-0 pl-3 border-l border-slate-800">
-              {isViewingDifferentAccount && onReturnToConfiguredAccount && (
-                <IconButton
-                  icon={ArrowLeft}
-                  label={`${t('returnToConfigured')}: ${configuredProfileName || configuredSteamId}`}
-                  onClick={onReturnToConfiguredAccount}
-                  variant="accent"
-                  className="p-1"
-                  iconClassName="w-3.5 h-3.5 text-cyan-400"
-                />
+            <div className="relative shrink-0">
+              <img
+                src={profile.avatar}
+                alt={profile.name}
+                className="w-7 h-7 rounded-lg border border-slate-700 object-cover shadow-sm"
+                onError={handleAvatarError}
+              />
+              {profile.leaderboardRank && (
+                <div className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-[9px] font-black px-1 rounded-full">
+                  #{profile.leaderboardRank}
+                </div>
               )}
+            </div>
 
-              <div className="relative shrink-0">
-                <img
-                  src={profile.avatar}
-                  alt={profile.name}
-                  className="w-7 h-7 rounded-lg border border-slate-700 object-cover shadow-sm"
-                  onError={handleAvatarError}
-                />
-                {profile.leaderboardRank && (
-                  <div className="absolute -bottom-1 -right-1 bg-amber-500 text-black text-[9px] font-black px-1 rounded-full">
-                    #{profile.leaderboardRank}
-                  </div>
-                )}
-              </div>
-
-              {/* Uma linha só. Era o MMR numa segunda linha que fazia o topbar
-                  crescer; trazê-lo para cá é o que paga a faixa 2. */}
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span
-                  className="text-xs font-black text-white truncate max-w-[9rem]"
-                  title={`${profile.name} · ID ${profile.steamAccountId}`}
-                >
-                  {profile.name}
-                </span>
-                <span
-                  className="text-[10px] font-bold px-1.5 py-[1px] rounded border shrink-0"
-                  style={{
-                    backgroundColor: `${rankInfo.color}15`,
-                    borderColor: `${rankInfo.color}40`,
-                    color: rankInfo.color,
-                  }}
-                >
-                  {rankInfo.fullName}
-                </span>
-                <span className="hidden md:inline text-[10px] font-mono text-amber-400/90 tabular-nums shrink-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                className="text-xs font-black text-white truncate max-w-[9rem]"
+                title={`${profile.name} · ID ${profile.steamAccountId}`}
+              >
+                {profile.name}
+              </span>
+              <span
+                className="text-[10px] font-bold px-1.5 py-[1px] rounded border shrink-0"
+                style={{
+                  backgroundColor: `${rankInfo.color}15`,
+                  borderColor: `${rankInfo.color}40`,
+                  color: rankInfo.color,
+                }}
+              >
+                {rankInfo.fullName}
+              </span>
+              {/* O MMR sai da medalha por tabela fixa (`constants/ranks.ts`), não de medida:
+                  tem de vir rotulado como estimativa. */}
+              <span className="hidden md:inline-flex items-center gap-1 shrink-0">
+                <span className="text-[10px] font-mono text-amber-400/90 tabular-nums">
                   ~{rankInfo.approxMmr.toLocaleString()} MMR
                 </span>
-              </div>
+                <EstimateChip hint={t('mmrEstimateHint')} />
+              </span>
             </div>
-          )}
+          </div>
+        )}
+
+        <div
+          className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-slate-400 shrink-0 pl-3 border-l border-slate-800"
+          title={`${t('gamePatchTooltip')} (${patch})`}
+        >
+          <span className="text-slate-500">{t('gamePatch')}</span>
+          <span className="text-slate-300 font-semibold tabular-nums">{patch}</span>
+          <PatchTransitionNotice variant="chip" />
         </div>
 
         <div className="ml-auto flex items-center gap-1.5 shrink-0">
-          {/* Layout espelho de heróis. Renderizado só com a feature ativa: um botão
-              permanente para algo desligado por padrão só ensinaria a ignorá-lo. */}
-          {heroGridEnabled && onToggleHeroGrid && (
-            /* Vendo outra conta, o botao fica DESATIVADO com a explicacao no label, e nao
-               escondido: sumir faria a pessoa achar que a feature quebrou. O espelho é da
-               conta configurada, e a tela fala em "seu winrate". */
-            <IconButton
-              icon={LayoutGrid}
-              label={
-                isViewingDifferentAccount
-                  ? `${t('heroGridTabTitle')} — ${t('heroGridOtherAccountBody')}`
-                  : t('heroGridTabTitle')
-              }
-              onClick={onToggleHeroGrid}
-              disabled={isViewingDifferentAccount}
-              variant={isHeroGridOpen ? 'accent' : undefined}
-              className="p-1.5"
-              iconClassName={`w-3.5 h-3.5 ${isHeroGridOpen ? 'text-cyan-300' : 'text-slate-400'}`}
-            />
-          )}
-
-          {/* O atalho global já existe (App.tsx); mostrá-lo ensina, o label não. */}
+          {/* Parece campo e abre a busca: aceita conta OU id de partida (Ctrl+K). */}
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            aria-label={`${t('searchBarPlaceholder')} (${t('searchShortcut')})`}
+            className="hidden md:flex items-center gap-6 rounded-lg border border-slate-700/70 bg-slate-900/60 hover:border-slate-600 px-3 py-1.5 text-xs text-slate-500 transition"
+          >
+            <span className="flex items-center gap-2">
+              <Search className="w-3.5 h-3.5 text-cyan-400" aria-hidden />
+              {t('searchBarPlaceholder')}
+            </span>
+            <kbd className="text-[10px] font-mono text-slate-500">{t('searchShortcut')}</kbd>
+          </button>
           <IconButton
             icon={Search}
-            label={`${t('searchBtn')} (${t('searchShortcut')})`}
+            label={`${t('searchBarPlaceholder')} (${t('searchShortcut')})`}
             onClick={onOpenSearch}
+            className="md:hidden"
             iconClassName="text-cyan-400"
-          >
-            <kbd className="hidden md:inline text-[10px] font-mono text-slate-500">
-              {t('searchShortcut')}
-            </kbd>
-          </IconButton>
+          />
 
           <IconButton
             icon={RefreshCw}
@@ -170,9 +145,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           <IconButton icon={Settings} label={t('settings')} onClick={onOpenSettings} />
         </div>
       </div>
-
-      {/* ---------------------------------------------------------- faixa 2 */}
-      {profile && <StatRail profile={profile} />}
     </header>
   );
 };

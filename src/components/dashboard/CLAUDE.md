@@ -1,21 +1,21 @@
 # src/components/dashboard/
 
-A home do jogador: o que aparece quando não há partida selecionada. Todos são montados pelo
-`App.tsx`, exceto onde indicado.
+Os cards de perfil que as seções da 2.0 reaproveitam: Início, Partidas e Conta (ver a navegação em
+[../../CLAUDE.md](../../CLAUDE.md)). Todos são montados pelo `App.tsx`, exceto onde indicado.
 
 ## Arquivos
 
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
-| `ProfileHeader.tsx` | Avatar, medalha, KPIs de carreira e o botão do espelho de heróis. Usa `getRankTierInfo` | `App.tsx` |
+| `ProfileHeader.tsx` | Avatar, medalha, MMR (com chip de estimativa), KPIs de carreira e o botão do espelho de heróis. Usa `getRankTierInfo`. Na seção Conta | `App.tsx` |
 | `MatchList.tsx` | Lista de partidas com filtros e badges de destaque (`getAccumulatedMatchTags`). **Concentra os limiares calibrados da dashboard** | `App.tsx` |
 | `MatchContextCell.tsx` | Célula compacta com bracket médio, tamanho do grupo e tipo de fila | `MatchList.tsx` |
-| `RecentFormCard.tsx` | Sequência dos últimos jogos (avatar do herói + resultado) e Glint médio das partidas com nota | `App.tsx` |
+| `RecentFormCard.tsx` | O cartão "Forma" do Início: sequência dos últimos jogos, Glint médio das partidas com nota, KDA e GPM (estes vieram da antiga `StatRail`), cada um com a amostra no tooltip | `App.tsx` |
 | `MostPlayedHeroes.tsx` | Top heróis com winrate e KDA (este some na linha com `avgKda` nulo). **Sem nota média por herói** — a lista não traz os insumos do Glint para todas as partidas | `App.tsx` |
 | `PerformanceTrendChart.tsx` | Tendência de Glint/winrate/GPM com média móvel (`recharts`). A métrica de Glint (botão e gráfico) some quando nenhuma partida da janela tem nota | `App.tsx` |
 | `ActivityHeatmap.tsx` | Heatmap de 30 dias, partidas/dia com winrate | `App.tsx` |
-| `TrendsCard.tsx` | Sunburst de heróis por posição, equalizer de Glint e histórico de rota (`echarts`). O sunburst e o histórico de rota **hoje não aparecem** (ver *Glint e o que a lista não traz*). Era `StratzTrendsCard` até a 2.0 | `App.tsx` |
-| `TeammatesCard.tsx` | Top companheiros com winrate junto. Era `StratzTeammatesCard` até a 2.0 | `App.tsx` |
+| `TrendsCard.tsx` | Sunburst de heróis por posição, equalizer de Glint e histórico de rota (`echarts`), mais KPIs de fila/ranque e distribuição de medalhas. `part="trend"` (Início) e `part="account"` (Conta) dividem o card como o §5 da proposta da 2.0 pede. O sunburst e o histórico de rota **hoje não aparecem** (ver *Glint e o que a lista não traz*). Era `StratzTrendsCard` até a 2.0 | `App.tsx` |
+| `TeammatesCard.tsx` | Top companheiros com winrate junto; o clique abre a conta do companheiro (`onOpenPeer`) — na 1.0 a linha parecia clicável e não fazia nada. Era `StratzTeammatesCard` até a 2.0 | `App.tsx` |
 
 ## Glint e o que a lista não traz (desde 2026-11-19)
 
@@ -29,8 +29,8 @@ experimental, de 0 a 100.
   arquivo estreita para `number | null` uma vez e guarda toda comparação. `|| 0` também não: Glint
   0 é nota.
 - **Média só das partidas com nota**, e a tela diz de quantas (`avgGlint` + `glintCount` de
-  `computeRecentFormStats`). Sem nenhuma, a métrica some de `ProfileHeader`, `RecentFormCard`,
-  `StatRail` e `PerformanceTrendChart`.
+  `computeRecentFormStats`). Sem nenhuma, a métrica some de `ProfileHeader`, `RecentFormCard` e
+  `PerformanceTrendChart`.
 - **A procedência fica a um hover.** `GlintBadge` já carrega o tooltip; onde a nota é texto, o
   rótulo leva `t('glintBeta')` e `title={useGlintHint()}`. Nunca escrever "IMP" na tela.
 - **O centro da escala é `GLINT_THRESHOLDS.neutral` (48), não 50 nem 0** — linha de referência

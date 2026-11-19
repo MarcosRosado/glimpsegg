@@ -1,14 +1,17 @@
 # src/components/match/
 
-A aba `OVERVIEW` da análise de partida. Todos montados pelo `App.tsx` quando há `selectedMatch`.
+A partida aberta: cabeçalho, as duas formas (modo placar e analisada) e a aba Resumo. Todos
+montados pelo `App.tsx` quando há `selectedMatch`.
 
 ## Arquivos
 
 | Arquivo | Papel |
 | --- | --- |
 | `MatchHeader.tsx` | Cabeçalho: placar, duração e o veredito de forma da partida (`analysisOutcome`, que a OpenDota não tem — some quando nulo) |
-| `ParsePendingBanner.tsx` | Aviso de partida não parseada com o botão "Pedir análise do replay", e `PARSE_POLL_DELAYS_MS` (recuo e teto da espera). Montado pelo `App.tsx` quando `availability.parsePending` |
-| `TeamOverviewCard.tsx` | Pódio de destaques (MVP, melhor core, melhor suporte, superlativos) e comparativo entre times |
+| `ParseRequestCard.tsx` | O cartão do **modo placar**: o que a análise libera (só o que de fato aparece depois), o botão "Pedir análise do replay" e o estado da espera ao lado. Guarda `ParseState` e `PARSE_POLL_DELAYS_MS` (recuo e teto). Substituiu o `ParsePendingBanner`, que ficava por cima da tela analisada |
+| `MatchTabs.tsx` | A fileira de abas da partida analisada. Recebe só as abas que existem: aba sem dado não aparece desabilitada |
+| `MatchPlayerPicker.tsx` | O seletor de jogador único, fixo ao lado das abas (`<select>` nativo, agrupado por lado, "(você)" na conta configurada) |
+| `TeamOverviewCard.tsx` | Pódio de destaques (MVP, melhor core, melhor suporte, superlativos), melhor por posição e comparativo entre times. `variant="scoreboard"` mostra só os destaques de papel |
 | `AdvantageTimeline.tsx` | Curva de vantagem de ouro e XP (`recharts`) |
 | `ScoreboardTable.tsx` | Tabela dos 10 jogadores com itens e tempo de compra |
 
@@ -25,6 +28,10 @@ A aba `OVERVIEW` da análise de partida. Todos montados pelo `App.tsx` quando h�
   (`useGlintHint`) acompanha a nota; a coluna do placar só existe quando a partida tem nota.
 - **Lista de destaques vazia é resultado válido.** Superlativo exige margem sobre o segundo
   colocado; "o primeiro de uma lista empatada" não é destaque.
+- **Modo placar é recorte, não aviso.** Sem análise, `TeamOverviewCard` sai em `scoreboard` e o
+  placar perde o botão "Ver análise completa" (`onNavigateToPerformance` ausente): a aba que ele
+  abriria não existe. No placar, posição `UNKNOWN` e log de compras vazio somem — nem a moldura
+  da célula fica.
 - `ScoreboardTable.tsx` filtra consumível por `GENERIC_CONSUMABLES` (conjunto de nomes `item_*`)
   mais qualquer `item_recipe_*`, e trata `cost >= 1800` como "item core".
 
