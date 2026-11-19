@@ -106,6 +106,7 @@ export function playerMatchesEndpoint(
   const params: string[] = [];
   if (opts.limit !== undefined) params.push(`limit=${Math.max(1, Math.floor(opts.limit))}`);
   if (opts.offset) params.push(`offset=${Math.max(0, Math.floor(opts.offset))}`);
+  if (opts.heroId !== undefined && opts.heroId > 0) params.push(`hero_id=${Math.floor(opts.heroId)}`);
   const server = opts.patch ? patchServerQuery(opts.patch, nowSeconds) : {};
   if (server.patchId !== undefined) params.push(`patch=${server.patchId}`);
   const days = [server.days, opts.days].filter((d): d is number => typeof d === 'number' && d > 0);

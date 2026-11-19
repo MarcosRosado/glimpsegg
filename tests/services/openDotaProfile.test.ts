@@ -226,6 +226,10 @@ describe('filtro de patch: o servidor nao conhece o patch novo logo depois da vi
     );
     // Patch e periodo juntos: vale o menor periodo.
     expect(playerMatchesEndpoint(7, ['hero_id'], { patch: w742, days: 1 }, now)).toContain('date=1&');
+    // Heroi no servidor, junto com o patch atual (que vai por `date`).
+    expect(playerMatchesEndpoint(7, ['hero_id'], { limit: 40, heroId: 71, patch: w742 }, now)).toBe(
+      'players/7/matches?limit=40&hero_id=71&date=2&project=hero_id&project=start_time',
+    );
     // Sem filtro: so paginacao e campos, sem `offset=0`.
     expect(playerMatchesEndpoint(7, ['hero_id'], { limit: 40, offset: 0 }, now)).toBe('players/7/matches?limit=40&project=hero_id');
   });

@@ -721,6 +721,12 @@ export interface PlayerMatchFilters {
   patch?: PatchWindow;
   /** So as partidas dos ultimos N dias (`?date=` da OpenDota). */
   days?: number;
+  /**
+   * So as partidas com este heroi (`?hero_id=`, no servidor — combina com `date` e `patch`,
+   * conferido em 2026-11-19). Filtrar local sobre as 40 carregadas dizia "nenhuma partida" para
+   * heroi jogado ha dois meses.
+   */
+  heroId?: number;
 }
 
 export interface ProfileHistoryItem {
