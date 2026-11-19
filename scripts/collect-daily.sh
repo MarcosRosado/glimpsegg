@@ -7,13 +7,21 @@
 #
 #   GABARITO_UNTIL=2026-12-03   ultimo dia em que a rotina ainda colhe (obrigatorio)
 #   WINDOW_MINUTES=180          teto de duracao da coleta do dia (padrao 180)
+#   UNTIL_TIME=20:57            hora local em que a coleta tem de PARAR (opcional)
+#
+# UNTIL_TIME existe para a rotina rodar no fim do dia e gastar so a SOBRA da cota: a OpenDota
+# zera o contador a meia-noite UTC (21h de Brasilia), e coleta que passasse disso comecaria a
+# gastar a cota do dia seguinte, a do app. Com ele, a janela vai de agora ate essa hora; fora
+# de (0, WINDOW_MINUTES] minutos a rotina nao colhe (maquina ligada de manha nao dispara uma
+# coleta de doze horas sobre a cota nova).
 #
 # A JANELA TEM FIM DE PROPOSITO. Depois de GABARITO_UNTIL o script nao colhe mais nada e
 # so escreve isso no log: coleta que roda para sempre sem ninguem olhar gasta cota de
 # terceiros e enche o disco. Para continuar, alguem tem de decidir e mudar a data.
 #
 # A cota do dia (3.000 chamadas da OpenDota) é dividida entre as duas trilhas: a 7.41 para
-# quando o saldo chega em 1.500, a 7.42 leva o resto. Cada uma tem metade da janela de tempo.
+# quando o saldo chega em 1.500, a 7.42 leva o resto. A 7.41 tem no maximo metade da janela
+# de tempo; a 7.42 vai ate o fim dela (com UNTIL_TIME, a hora de parada).
 # `timeout -s INT` encerra como um Ctrl+C: o coletor termina a partida atual e grava o indice.
 #
 # O token da STRATZ nao passa por aqui: o coletor o le do config do app, como sempre.
@@ -35,11 +43,26 @@ if [[ "$(date +%F)" > "$GABARITO_UNTIL" ]]; then
   exit 0
 fi
 
-HALF=$(( ${WINDOW_MINUTES:-180} / 2 ))
-echo "--- trilha 7.41 (ate ${HALF} min, ate o saldo do dia chegar em 1500) ---"
-timeout -s INT -k 120 "${HALF}m" node scripts/collect-pairs.cjs --lane 7.41 --reserve 1500
-echo "--- trilha 7.42 (ate ${HALF} min) ---"
-timeout -s INT -k 120 "${HALF}m" node scripts/collect-pairs.cjs
+MAX_MIN=${WINDOW_MINUTES:-180}
+if [ -n "${UNTIL_TIME:-}" ]; then
+  END=$(date -d "today $UNTIL_TIME" +%s) || { echo "UNTIL_TIME invalido: $UNTIL_TIME"; exit 1; }
+  LEFT_MIN=$(( (END - $(date +%s)) / 60 ))
+  if [ "$LEFT_MIN" -le 0 ] || [ "$LEFT_MIN" -gt "$MAX_MIN" ]; then
+    echo "fora da janela: faltam ${LEFT_MIN} min ate $UNTIL_TIME (aceito: 1 a $MAX_MIN). Nada foi colhido."
+    exit 0
+  fi
+else
+  END=$(( $(date +%s) + MAX_MIN * 60 ))
+fi
+# Segundos ate o fim da janela, nunca negativo. A 7.41 leva no maximo metade; a 7.42 vai ate o fim.
+secs_left() { local s=$(( END - $(date +%s) )); [ "$s" -gt 0 ] && echo "$s" || echo 0; }
+
+HALF_S=$(( $(secs_left) / 2 ))
+echo "--- trilha 7.41 (ate $(( HALF_S / 60 )) min, ate o saldo do dia chegar em 1500) ---"
+[ "$HALF_S" -gt 0 ] && timeout -s INT -k 60 "${HALF_S}s" node scripts/collect-pairs.cjs --lane 7.41 --reserve 1500
+REST_S=$(secs_left)
+echo "--- trilha 7.42 (ate $(( REST_S / 60 )) min) ---"
+[ "$REST_S" -gt 0 ] && timeout -s INT -k 60 "${REST_S}s" node scripts/collect-pairs.cjs
 echo "--- aceite da Fase 1 ---"
 node scripts/accept-phase1.cjs | sed -n '/^POR FAIXA/,/^acertos/p;/^VEREDITO/,$p'
 echo "--- criterio de corte ---"

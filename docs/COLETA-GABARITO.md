@@ -52,26 +52,41 @@ depois do mesmo ponto.
    é gravada só com a metade OpenDota em `.gabarito/matches/`. Quando as células de par enchem,
    a cota inteira do dia vira volume, que é o que alimenta os benchmarks próprios (Fase 2).
 
-## Agendamento (a rotina sozinha, todo dia às 15h)
+## Agendamento (a rotina sozinha, todo dia às 20h45)
 
 `scripts/collect-daily.sh` faz a rotina acima sem ninguém: colhe 7.41 até o saldo do dia chegar
 em 1.500 chamadas, colhe 7.42 com o resto, roda o aceite e o critério de corte, e grava tudo em
-`.gabarito/logs/AAAA-MM-DD.log`. Dois limites, os dois de propósito:
+`.gabarito/logs/AAAA-MM-DD.log`. Três limites, todos de propósito:
 
-- **`WINDOW_MINUTES`** (padrão 180): teto de duração por dia, metade para cada trilha. O
-  encerramento é um Ctrl+C: o coletor termina a partida atual e grava o índice.
+- **`UNTIL_TIME`** (opcional; no agendamento, `20:57`): hora local em que a coleta **para**. A
+  rotina roda às 20h45 para gastar só a **sobra** da cota do dia, logo antes de ela zerar (meia-
+  noite UTC = 21h): de dia a cota fica para o app, e o que ele não usou vira coleta. O coletor já
+  lê o saldo nos cabeçalhos e para na reserva; o horário existe porque, passada a virada, o saldo
+  volta a 3.000 e a coleta começaria a gastar a cota do dia seguinte. A trilha 7.41 tem no máximo
+  metade da janela; a 7.42 vai até a hora de parada. Decisão do dono em 2026-11-19, depois de um
+  dia em que coleta, medições e conferência do app no mesmo IP esgotaram a cota às 17h.
+- **`WINDOW_MINUTES`** (no agendamento, `20`): a maior janela aceita. Com `UNTIL_TIME`, a rotina
+  que começar a mais de `WINDOW_MINUTES` minutos da hora de parada (ou depois dela) não colhe —
+  máquina ligada de manhã nunca dispara uma coleta de doze horas sobre a cota nova. Sem
+  `UNTIL_TIME`, é a duração da coleta (padrão 180). O encerramento é um Ctrl+C: o coletor termina
+  a partida atual e grava o índice.
 - **`GABARITO_UNTIL`** (obrigatório): último dia em que ainda colhe. Depois dele o script só
   escreve no log que a janela acabou. Coleta sem data de fim gasta cota de terceiros e enche o
   disco sem ninguém olhar — continuar tem de ser decisão, não inércia.
 
 Quem dispara é um temporizador de usuário do systemd, que mora **fora do repositório**, em
 `~/.config/systemd/user/glimpsegg-gabarito.{service,timer}` (instalado em 2026-11-19, com
-`GABARITO_UNTIL=2026-12-03`). O `.service` leva o caminho do repositório e o do `node`, então é
+`GABARITO_UNTIL=2026-12-03`; às 20h45, com `UNTIL_TIME=20:57` e `WINDOW_MINUTES=20`, desde o
+mesmo dia — antes era às 15h). O `.service` leva o caminho do repositório e o do `node`, então é
 arquivo da máquina, não do projeto.
+
+**Quanto rende:** pares andam a ~11 chamadas por minuto (o freio de 4,5 s entre pares é o limite
+horário do token da STRATZ), então 12 minutos colhem ~130 chamadas de pares; volume (célula de par
+já cheia) é mais rápido. Com a sobra grande, a janela é que limita, não a cota.
 
 ```bash
 systemctl --user list-timers glimpsegg-gabarito.timer     # próxima execução
-systemctl --user start glimpsegg-gabarito.service         # rodar agora
+systemctl --user start glimpsegg-gabarito.service         # rodar agora (só colhe entre 20h37 e 20h57)
 journalctl --user -u glimpsegg-gabarito.service -n 20     # se o serviço nem chegou a escrever log
 tail -40 .gabarito/logs/$(date +%F).log                   # o que a rotina fez hoje
 systemctl --user edit --full glimpsegg-gabarito.service   # mudar GABARITO_UNTIL ou a janela
@@ -79,7 +94,8 @@ systemctl --user disable --now glimpsegg-gabarito.timer   # desligar
 ```
 
 Três coisas para saber: o temporizador só roda com a sessão do usuário aberta (não há *linger*);
-com a máquina desligada às 15h, ele roda uma vez ao ligar (`Persistent=true`); e se o `node`
+com a máquina desligada às 20h45, **não** roda ao ligar (sem `Persistent`: seria sobre a cota
+nova, a do app); e se o `node`
 mudar de versão pelo fnm, o `PATH` do `.service` precisa ser atualizado. Se já houver um coletor
 rodando à mão, o agendado se recusa a abrir o segundo e segue para os relatórios.
 
