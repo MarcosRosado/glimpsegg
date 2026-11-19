@@ -1,0 +1,412 @@
+{
+  "_note": "Respostas 200 REAIS da OpenDota para uma conta publica, capturadas em 2026-11-19: /players/{id}/totals, /players/{id}/counts e duas linhas de /players/{id}/matches?sort=<campo>&limit=1. Anonimizadas: as respostas de totals e counts nao trazem identificador; o match_id dos recordes foi trocado por um id ficticio. Nenhum numero foi editado.",
+  "totals": [
+    {
+      "field": "kills",
+      "n": 6445,
+      "sum": 50545
+    },
+    {
+      "field": "deaths",
+      "n": 6445,
+      "sum": 37226
+    },
+    {
+      "field": "assists",
+      "n": 6445,
+      "sum": 88487
+    },
+    {
+      "field": "kda",
+      "n": 6445,
+      "sum": 27822.649999999998
+    },
+    {
+      "field": "gold_per_min",
+      "n": 6445,
+      "sum": 3175767
+    },
+    {
+      "field": "xp_per_min",
+      "n": 6445,
+      "sum": 4123648
+    },
+    {
+      "field": "last_hits",
+      "n": 6445,
+      "sum": 1279654
+    },
+    {
+      "field": "denies",
+      "n": 6445,
+      "sum": 38102
+    },
+    {
+      "field": "lane_efficiency_pct",
+      "n": 240,
+      "sum": 15122
+    },
+    {
+      "field": "duration",
+      "n": 6445,
+      "sum": 15053734
+    },
+    {
+      "field": "level",
+      "n": 6445,
+      "sum": 138164
+    },
+    {
+      "field": "hero_damage",
+      "n": 6439,
+      "sum": 168351453
+    },
+    {
+      "field": "tower_damage",
+      "n": 6439,
+      "sum": 16631996
+    },
+    {
+      "field": "hero_healing",
+      "n": 6439,
+      "sum": 4279741
+    },
+    {
+      "field": "stuns",
+      "n": 240,
+      "sum": 8005.15086781
+    },
+    {
+      "field": "tower_kills",
+      "n": 240,
+      "sum": 159
+    },
+    {
+      "field": "neutral_kills",
+      "n": 240,
+      "sum": 9127
+    },
+    {
+      "field": "courier_kills",
+      "n": 240,
+      "sum": 49
+    },
+    {
+      "field": "purchase_tpscroll",
+      "n": 198,
+      "sum": 742
+    },
+    {
+      "field": "purchase_ward_observer",
+      "n": 212,
+      "sum": 1160
+    },
+    {
+      "field": "purchase_ward_sentry",
+      "n": 161,
+      "sum": 969
+    },
+    {
+      "field": "purchase_gem",
+      "n": 0,
+      "sum": 0
+    },
+    {
+      "field": "purchase_rapier",
+      "n": 1,
+      "sum": 1
+    },
+    {
+      "field": "pings",
+      "n": 231,
+      "sum": 5492
+    },
+    {
+      "field": "throw",
+      "n": 117,
+      "sum": 306127
+    },
+    {
+      "field": "comeback",
+      "n": 76,
+      "sum": 164654
+    },
+    {
+      "field": "stomp",
+      "n": 76,
+      "sum": 1365953
+    },
+    {
+      "field": "loss",
+      "n": 117,
+      "sum": 2376800
+    },
+    {
+      "field": "actions_per_min",
+      "n": 240,
+      "sum": 111172
+    }
+  ],
+  "counts": {
+    "leaver_status": {
+      "0": {
+        "games": 6184,
+        "win": 3217
+      },
+      "1": {
+        "games": 174,
+        "win": 7
+      },
+      "2": {
+        "games": 36,
+        "win": 9
+      },
+      "3": {
+        "games": 44,
+        "win": 2
+      },
+      "4": {
+        "games": 7,
+        "win": 2
+      }
+    },
+    "game_mode": {
+      "1": {
+        "games": 4,
+        "win": 2
+      },
+      "2": {
+        "games": 159,
+        "win": 51
+      },
+      "3": {
+        "games": 1255,
+        "win": 604
+      },
+      "4": {
+        "games": 208,
+        "win": 109
+      },
+      "16": {
+        "games": 1,
+        "win": 1
+      },
+      "22": {
+        "games": 4818,
+        "win": 2470
+      }
+    },
+    "lobby_type": {
+      "0": {
+        "games": 1135,
+        "win": 616
+      },
+      "1": {
+        "games": 193,
+        "win": 68
+      },
+      "7": {
+        "games": 5117,
+        "win": 2553
+      }
+    },
+    "lane_role": {
+      "0": {
+        "games": 6205,
+        "win": 3142
+      },
+      "1": {
+        "games": 35,
+        "win": 18
+      },
+      "2": {
+        "games": 126,
+        "win": 43
+      },
+      "3": {
+        "games": 79,
+        "win": 34
+      }
+    },
+    "region": {
+      "5": {
+        "games": 207,
+        "win": 106
+      },
+      "12": {
+        "games": 137,
+        "win": 82
+      },
+      "13": {
+        "games": 1816,
+        "win": 898
+      },
+      "17": {
+        "games": 109,
+        "win": 54
+      },
+      "18": {
+        "games": 248,
+        "win": 107
+      },
+      "19": {
+        "games": 75,
+        "win": 48
+      },
+      "20": {
+        "games": 2940,
+        "win": 1491
+      },
+      "25": {
+        "games": 807,
+        "win": 410
+      },
+      "NaN": {
+        "games": 106,
+        "win": 41
+      }
+    },
+    "patch": {
+      "26": {
+        "games": 4,
+        "win": 3
+      },
+      "28": {
+        "games": 4,
+        "win": 2
+      },
+      "29": {
+        "games": 4,
+        "win": 1
+      },
+      "39": {
+        "games": 333,
+        "win": 152
+      },
+      "40": {
+        "games": 648,
+        "win": 327
+      },
+      "41": {
+        "games": 139,
+        "win": 69
+      },
+      "42": {
+        "games": 79,
+        "win": 39
+      },
+      "43": {
+        "games": 278,
+        "win": 142
+      },
+      "44": {
+        "games": 140,
+        "win": 74
+      },
+      "45": {
+        "games": 163,
+        "win": 88
+      },
+      "46": {
+        "games": 228,
+        "win": 119
+      },
+      "47": {
+        "games": 281,
+        "win": 151
+      },
+      "48": {
+        "games": 192,
+        "win": 95
+      },
+      "49": {
+        "games": 76,
+        "win": 34
+      },
+      "50": {
+        "games": 506,
+        "win": 256
+      },
+      "51": {
+        "games": 920,
+        "win": 464
+      },
+      "52": {
+        "games": 111,
+        "win": 60
+      },
+      "53": {
+        "games": 440,
+        "win": 240
+      },
+      "54": {
+        "games": 840,
+        "win": 423
+      },
+      "55": {
+        "games": 509,
+        "win": 250
+      },
+      "56": {
+        "games": 340,
+        "win": 171
+      },
+      "57": {
+        "games": 37,
+        "win": 15
+      },
+      "58": {
+        "games": 47,
+        "win": 12
+      },
+      "59": {
+        "games": 11,
+        "win": 5
+      },
+      "60": {
+        "games": 113,
+        "win": 44
+      },
+      "61": {
+        "games": 2,
+        "win": 1
+      }
+    },
+    "is_radiant": {
+      "0": {
+        "games": 3240,
+        "win": 1555
+      },
+      "1": {
+        "games": 3205,
+        "win": 1682
+      }
+    }
+  },
+  "recordKills": [
+    {
+      "match_id": "2000000101",
+      "player_slot": 130,
+      "radiant_win": true,
+      "duration": 3832,
+      "game_mode": 22,
+      "lobby_type": 0,
+      "kills": 42,
+      "hero_id": 65,
+      "start_time": 1670057066
+    }
+  ],
+  "recordGpm": [
+    {
+      "match_id": "2000000102",
+      "player_slot": 1,
+      "radiant_win": true,
+      "duration": 1910,
+      "game_mode": 3,
+      "lobby_type": 7,
+      "gold_per_min": 1151,
+      "hero_id": 73,
+      "start_time": 1581224145
+    }
+  ]
+}
