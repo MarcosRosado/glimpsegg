@@ -66,8 +66,85 @@ export function formatTimeAgo(timestampSec: number): TimeAgo {
     : { key: 'timeAgoMonths', params: { n: months } };
 }
 
+/** Texto traduzivel com parametros: o motor escolhe a chave, a UI chama `t()`. */
+export interface LabelKey {
+  key: TranslationKey;
+  params?: Record<string, string | number>;
+}
+
 /**
- * Human-friendly game mode formatter
+ * Modo de jogo -> chave de traducao. Substitui `formatGameMode` na tela: aquele devolvia texto
+ * pronto em pt-BR ("All Pick Ranqueado", "Mutação") que aparecia igual na versao en-US, e
+ * chutava "All Pick Ranqueado" quando a entrada vinha vazia. Aqui entrada vazia é `null` e a
+ * tela omite; modo desconhecido sai com o proprio id, sem palpite.
+ *
+ * Aceita o id numerico da OpenDota (`game_mode`) ou o enum em texto. All Pick (1) é ranqueado
+ * so quando a fila (`lobby_type`) é 7; sem a fila, sai "All Pick", sem afirmar ranqueado nem
+ * casual.
+ */
+export function matchModeKey(rawMode: string | number | null | undefined, rawLobby?: string | number | null): LabelKey | null {
+  if (rawMode === null || rawMode === undefined || rawMode === '') return null;
+  const mode = String(rawMode).toUpperCase().trim();
+  const lobby = rawLobby === null || rawLobby === undefined ? '' : String(rawLobby).toUpperCase().trim();
+  if (mode === '22' || mode === 'ALL_PICK_RANKED' || mode === 'RANKED ALL PICK') return { key: 'gameModeAllPickRanked' };
+  if (mode === '1' || mode === 'ALL_PICK') {
+    if (lobby === '7' || lobby === 'RANKED' || lobby === 'LOBBY_TYPE_RANKED') return { key: 'gameModeAllPickRanked' };
+    return { key: 'gameModeAllPick' };
+  }
+  const byMode: Record<string, TranslationKey> = {
+    '23': 'gameModeTurbo',
+    TURBO: 'gameModeTurbo',
+    '2': 'gameModeCaptainsMode',
+    CAPTAINS_MODE: 'gameModeCaptainsMode',
+    '3': 'gameModeRandomDraft',
+    RANDOM_DRAFT: 'gameModeRandomDraft',
+    '4': 'gameModeSingleDraft',
+    SINGLE_DRAFT: 'gameModeSingleDraft',
+    '5': 'gameModeAllRandom',
+    ALL_RANDOM: 'gameModeAllRandom',
+    '18': 'gameModeAbilityDraft',
+    ABILITY_DRAFT: 'gameModeAbilityDraft',
+    '21': 'gameMode1v1Mid',
+    '1V1_MID': 'gameMode1v1Mid',
+    '24': 'gameModeMutation',
+    MUTATION: 'gameModeMutation',
+  };
+  const key = byMode[mode];
+  return key ? { key } : { key: 'gameModeOther', params: { id: String(rawMode) } };
+}
+
+/** Fila (`lobby_type`) -> chave de traducao. Mesma regra de `matchModeKey`: vazio é `null`. */
+export function lobbyTypeKey(rawLobby: string | number | null | undefined): LabelKey | null {
+  if (rawLobby === null || rawLobby === undefined || rawLobby === '') return null;
+  const lobby = String(rawLobby).toUpperCase().trim();
+  const byLobby: Record<string, TranslationKey> = {
+    '7': 'lobbyRanked',
+    RANKED: 'lobbyRanked',
+    LOBBY_TYPE_RANKED: 'lobbyRanked',
+    '0': 'lobbyNormal',
+    NORMAL: 'lobbyNormal',
+    UNRANKED: 'lobbyNormal',
+    LOBBY_TYPE_NORMAL: 'lobbyNormal',
+    '9': 'lobbyBattleCup',
+    BATTLE_CUP: 'lobbyBattleCup',
+    LOBBY_TYPE_BATTLE_CUP: 'lobbyBattleCup',
+    '2': 'lobbyTournament',
+    TOURNAMENT: 'lobbyTournament',
+    LOBBY_TYPE_TOURNAMENT: 'lobbyTournament',
+    '1': 'lobbyPractice',
+    PRACTICE: 'lobbyPractice',
+    '4': 'lobbyCoopBots',
+    COOP_BOT: 'lobbyCoopBots',
+  };
+  const key = byLobby[lobby];
+  return key ? { key } : { key: 'lobbyOther', params: { id: String(rawLobby) } };
+}
+
+/**
+ * Human-friendly game mode formatter.
+ *
+ * LEGADO: texto fixo em pt-BR e palpite na entrada vazia. A tela usa `matchModeKey`; isto
+ * fica so enquanto houver chamador (`MatchDetails.gameMode`).
  */
 export function formatGameMode(rawMode: string | number | undefined, rawLobby?: string | number | undefined): string {
   if (!rawMode && !rawLobby) return 'Ranked All Pick';

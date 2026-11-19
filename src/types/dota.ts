@@ -600,8 +600,14 @@ export interface MatchDetails {
   didRadiantWin: boolean;
   durationSeconds: number;
   startDateTime: number; // Unix timestamp
+  /** LEGADO: texto pronto em pt-BR de `formatGameMode`. A tela usa `matchModeKey(gameModeId, lobbyTypeId)`. */
   gameMode: string;
+  /** LEGADO: texto pronto em pt-BR de `formatLobbyType`. A tela usa `lobbyTypeKey(lobbyTypeId)`. */
   lobbyType: string;
+  /** `game_mode` cru da OpenDota; `null` se nao veio. */
+  gameModeId?: number | null;
+  /** `lobby_type` cru da OpenDota; `null` se nao veio. */
+  lobbyTypeId?: number | null;
   radiantScore: number;
   direScore: number;
   radiantNetworth: number;

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { resolveMatchType } from '../../src/utils/dotaFormatters';
+import { lobbyTypeKey, matchModeKey, resolveMatchType } from '../../src/utils/dotaFormatters';
+import { translations } from '../../src/i18n/translations';
+import { referenceMatch } from '../support/fixtureMatches';
 
 /**
  * `resolveMatchType` existe para NAO inventar dado: a lista da home precisa poder dizer
@@ -40,5 +42,39 @@ describe('resolveMatchType', () => {
     expect(resolveMatchType(null, null)).toBeNull();
     expect(resolveMatchType('', '')).toBeNull();
     expect(resolveMatchType('ALGO_DESCONHECIDO', 'LOBBY_ESQUISITO')).toBeNull();
+  });
+});
+
+describe('matchModeKey / lobbyTypeKey — o motor escolhe a chave, a tela traduz', () => {
+  it('a partida de referencia (game_mode 22, lobby 7) sai "Ranked All Pick" em en-US', () => {
+    const m = referenceMatch();
+    expect(m.gameModeId).toBe(22);
+    expect(m.lobbyTypeId).toBe(7);
+    const mode = matchModeKey(m.gameModeId, m.lobbyTypeId)!;
+    expect(translations['en-US'][mode.key]).toBe('Ranked All Pick');
+    expect(translations['pt-BR'][mode.key]).toBe('All Pick Ranqueado');
+    expect(translations['en-US'][lobbyTypeKey(m.lobbyTypeId)!.key]).toBe('Ranked');
+  });
+
+  it('All Pick (1) so é ranqueado com a fila 7; sem fila, nao afirma nem ranqueado nem casual', () => {
+    expect(matchModeKey(1, 7)!.key).toBe('gameModeAllPickRanked');
+    expect(matchModeKey(1, 0)!.key).toBe('gameModeAllPick');
+    expect(matchModeKey(1)!.key).toBe('gameModeAllPick');
+  });
+
+  it('entrada vazia é null (a tela omite), nunca o palpite "All Pick Ranqueado"', () => {
+    expect(matchModeKey(null)).toBeNull();
+    expect(matchModeKey(undefined, 7)).toBeNull();
+    expect(lobbyTypeKey(null)).toBeNull();
+  });
+
+  it('modo ou fila desconhecida sai com o proprio id, nunca chutada', () => {
+    expect(matchModeKey(99)).toEqual({ key: 'gameModeOther', params: { id: '99' } });
+    expect(lobbyTypeKey(42)).toEqual({ key: 'lobbyOther', params: { id: '42' } });
+  });
+
+  it('aceita o enum em texto, como a lista de partidas guarda', () => {
+    expect(matchModeKey('TURBO')!.key).toBe('gameModeTurbo');
+    expect(matchModeKey('23')!.key).toBe('gameModeTurbo');
   });
 });

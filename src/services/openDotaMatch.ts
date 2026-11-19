@@ -683,6 +683,8 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
     startDateTime: num(m?.start_time),
     gameMode: formatGameMode(m?.game_mode, m?.lobby_type),
     lobbyType: formatLobbyType(m?.lobby_type),
+    gameModeId: numOrNull(m?.game_mode),
+    lobbyTypeId: numOrNull(m?.lobby_type),
     radiantScore: typeof m?.radiant_score === 'number' ? m.radiant_score : sumKills(true),
     direScore: typeof m?.dire_score === 'number' ? m.dire_score : sumKills(false),
     radiantNetworth: sumNetworth(true),

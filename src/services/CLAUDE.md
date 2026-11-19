@@ -64,11 +64,12 @@ Toda a rede do app. Nada aqui renderiza: os módulos buscam, mapeiam e cacheiam.
   Virada de patch limpa a meta em cache sozinha; não há passo manual.
 - **Valor novo de posição ou rota falha em silêncio.** `mapPosition` e `mapLane`
   (`openDotaMatch.ts`) caem em `'UNKNOWN'` sem lançar erro — deliberado (chutar `POSITION_1` ou
-  `SAFE` produziria veredito errado), mas significa que um valor novo some sem sinal. `gameMode`/`lobbyType` passam por
-  `formatGameMode`/`formatLobbyType` em `utils/dotaFormatters.ts`, que também são mudos, de outro
-  jeito: valor desconhecido vira o próprio enum formatado (`ABILITY_DRAFT` → "Ability Draft"), e
-  **entrada vazia** vira o palpite `"All Pick Ranqueado"` / `"Ranqueada"`. Modo ou papel novo ⇒
-  conferir estes quatro pontos.
+  `SAFE` produziria veredito errado), mas significa que um valor novo some sem sinal. Modo e fila
+  vão crus para `MatchDetails.gameModeId`/`lobbyTypeId`, e a tela os traduz por
+  `matchModeKey`/`lobbyTypeKey` (`utils/dotaFormatters.ts`): modo desconhecido sai como "Modo {id}"
+  e entrada vazia é `null`. Os textos legados `gameMode`/`lobbyType` (de `formatGameMode`/
+  `formatLobbyType`, fixos em pt-BR e com palpite na entrada vazia) só ficam até o último
+  chamador sair. Modo ou papel novo ⇒ conferir a tabela de `matchModeKey` e os dois dicionários.
 
 Ver também: [../CLAUDE.md](../CLAUDE.md) · [../types/CLAUDE.md](../types/CLAUDE.md) ·
 [../hooks/CLAUDE.md](../hooks/CLAUDE.md) ·
