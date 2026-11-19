@@ -385,10 +385,21 @@ O monograma in-app é outro arquivo, redesenhado à mão na grade de 24px:
 
 ## Release
 
-Todo push na `main` dispara `.github/workflows/release.yml`: incrementa o patch, commita
+Todo push na `main` dispara `.github/workflows/release.yml`: calcula a versão, commita
 `chore: release vX [skip ci]`, cria a tag e faz build/publish nas três plataformas. Gates, nessa
 ordem: `icons:check` → `npm test` → `npm run build`. Teste vermelho bloqueia a release de propósito.
-Não editar `version` no `package.json` à mão — o workflow faz isso.
+
+**A versão sai de `scripts/next-version.cjs`** (testado em `tests/scripts/`): última tag + 1 no
+patch, a menos que o `major.minor` do `package.json` seja **maior** que o da tag — aí vale a
+versão do `package.json`. Não editar `version` à mão, **com uma exceção**: subir major ou minor,
+uma vez, no commit da versão (a 2.0.0 nasce assim, decisão de 2026-11-19, §7 de
+[`docs/PROPOSTA-V2.md`](docs/PROPOSTA-V2.md)). Patch editado à mão é ignorado, e `package.json`
+menor que a tag nunca faz a versão regredir. Criar a tag à mão não serve: nenhum gatilho roda
+sobre tag, e o push seguinte somaria 1 ao patch dela.
+
+**Notas de versão por arquivo.** Se existir `docs/release-notes/v<versão>.md`, a release nasce
+com ele como corpo (`--notes-file`); senão, vazia, como sempre foi. As notas precisam estar no
+commit que vai para a `main` **antes** do push que gera a versão.
 
 **Quem cria a release é o job `version`, e só ele.** Os três jobs de plataforma rodam em paralelo e
 o publisher do electron-builder faz *procura ou cria* — com a release ainda inexistente, dois deles

@@ -40,16 +40,14 @@ jobs:
           git fetch --tags --force
 
           latest="$(git tag -l 'v*' --sort=-v:refname | head -n1 || true)"
-          if [ -z "$latest" ]; then
-            # Primeira release do repo: usa a versão do package.json como está.
-            next="$(node -p "require('./package.json').version")"
-            echo "Nenhuma tag encontrada; primeira release em v$next"
-          else
-            base="${latest#v}"
-            IFS='.' read -r major minor patch <<< "$base"
-            next="${major}.${minor}.$((patch + 1))"
-            echo "Última tag $latest; próxima versão v$next"
-          fi
+          # A regra mora em scripts/next-version.cjs, testada em tests/scripts/:
+          #  - sem tag: a versão do package.json, como está;
+          #  - major.minor do package.json MAIOR que o da tag: a versão do package.json
+          #    (o único jeito de subir major ou minor — editar `version` uma vez, no commit
+          #    da versão; é assim que a 2.0.0 nasce);
+          #  - qualquer outro caso: última tag + 1 no patch, nunca regredindo.
+          next="$(node scripts/next-version.cjs "$latest")"
+          echo "Última tag ${latest:-(nenhuma)}; package.json em $(node -p "require('./package.json').version"); próxima versão v$next"
 
           if git rev-parse -q --verify "refs/tags/v$next" >/dev/null; then
             echo "::error::A tag v$next já existe. Abortando para não sobrescrever uma release." >&2
@@ -88,7 +86,9 @@ jobs:
       # dependem deste (`needs: version`), entao criar a release aqui garante que os tres
       # ENCONTREM a mesma e apenas subam artefatos nela.
       #
-      # Nome sem corpo para nao divergir do que o electron-builder criava antes.
+      # Notas: `docs/release-notes/v<versao>.md` quando existe (o caminho das notas da 2.0 —
+      # o que saiu, o que entrou, o que é experimental — chegarem a pagina da release e ao
+      # auto-updater); sem o arquivo, corpo vazio como sempre foi.
       - name: Create the GitHub release (single owner of the tag)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -102,7 +102,13 @@ jobs:
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release $tag ja existe; os jobs de plataforma vao subir os artefatos nela."
           else
-            gh release create "$tag" --title "${{ steps.bump.outputs.version }}" --notes ""
+            notes="docs/release-notes/${tag}.md"
+            if [ -f "$notes" ]; then
+              echo "Notas de versão em $notes"
+              gh release create "$tag" --title "${{ steps.bump.outputs.version }}" --notes-file "$notes"
+            else
+              gh release create "$tag" --title "${{ steps.bump.outputs.version }}" --notes ""
+            fi
           fi
 
   release:
