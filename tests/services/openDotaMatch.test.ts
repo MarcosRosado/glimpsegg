@@ -226,6 +226,78 @@ describe('mapOpenDotaMatch — visao', () => {
   });
 });
 
+describe('mapOpenDotaMatch — lutas, objetivos, usos de item, buyback e eficiencia de rota', () => {
+  it('lutas: uma por luta da resposta, jogadores alinhados por slot', () => {
+    expect(match.teamfights).toHaveLength(raw.teamfights.length);
+    // Oraculo do alinhamento: as mortes de cada jogador na luta batem com os instantes
+    // distintos do `deaths_log` DELE dentro da janela da luta (o log tem uma linha por autor).
+    let linhas = 0;
+    for (const f of match.teamfights!) {
+      expect(f.players).toHaveLength(10);
+      for (const fp of f.players) {
+        const log = rawBySlot.get(fp.playerSlot).deaths_log ?? [];
+        const instantes = new Set(log.filter((d: any) => d.time >= f.start && d.time <= f.end).map((d: any) => d.time));
+        expect(fp.deaths, `luta ${f.start} slot ${fp.playerSlot}`).toBe(instantes.size);
+        linhas++;
+      }
+    }
+    expect(linhas).toBe(150);
+    // Primeira luta, conta a mao: 173 a 213 s, 3 mortes; o jogador do indice 0 (slot 0)
+    // ganhou 288 de ouro e 334 de xp, curou 372.
+    expect(match.teamfights![0]).toMatchObject({ start: 173, end: 213, lastDeath: 198, deaths: 3 });
+    expect(match.teamfights![0].players[0]).toMatchObject({ playerSlot: 0, goldDelta: 288, xpDelta: 334, healing: 372, deaths: 0 });
+  });
+
+  it('objetivos: lado de quem ganhou, construcao pelo DONO lido do nome', () => {
+    const objs = match.objectives!;
+    const brutos = raw.objectives.filter((o: any) => ['building_kill', 'CHAT_MESSAGE_ROSHAN_KILL', 'CHAT_MESSAGE_MINIBOSS_KILL'].includes(o.type));
+    expect(objs.length + match.objectivesUnresolved!).toBe(brutos.length);
+    expect(match.objectivesUnresolved).toBe(0);
+    for (let i = 1; i < objs.length; i++) expect(objs[i].time).toBeGreaterThanOrEqual(objs[i - 1].time);
+    // 658 s: torre 1 top do Dire (`badguys`) derrubada pelo slot 1 (Radiant).
+    expect(objs.find((o) => o.time === 658)).toEqual({ time: 658, kind: 'TOWER', takenBy: 'RADIANT', key: 'npc_dota_badguys_tower1_top', denied: false });
+    // 730 s: torre 1 bot do RADIANT com golpe final do slot 4, que é Radiant — negada.
+    // Continua sendo torre perdida pelo Radiant, entao quem ganhou é o Dire.
+    expect(objs.find((o) => o.time === 730)).toMatchObject({ kind: 'TOWER', takenBy: 'DIRE', denied: true });
+    // Roshan aos 2238 s com `team` 3 (Dire), e a Aegis no mesmo instante foi para o slot 132.
+    expect(objs.find((o) => o.kind === 'ROSHAN')).toEqual({ time: 2238, kind: 'ROSHAN', takenBy: 'DIRE' });
+    // Tormentor aos 1303 s com `team` 2, abatido pelo slot 3 (Radiant).
+    expect(objs.find((o) => o.time === 1303)).toEqual({ time: 1303, kind: 'TORMENTOR', takenBy: 'RADIANT' });
+    // Construcao: uma por `building_kill`, e as negadas sao as de golpe final do proprio dono.
+    const predios = objs.filter((o) => o.key);
+    expect(predios).toHaveLength(raw.objectives.filter((o: any) => o.type === 'building_kill').length);
+    for (const o of predios) {
+      const killer = raw.objectives.find((r: any) => r.type === 'building_kill' && r.time === o.time && r.key === o.key);
+      const donoRadiant = o.key!.includes('goodguys');
+      // Sem `player_slot` (aos 2261 s foi um creep Radiant) nao ha como ser negada.
+      const negada = typeof killer.player_slot === 'number' && killer.player_slot < 128 === donoRadiant;
+      expect(o.denied, `${o.time} ${o.key}`).toBe(negada);
+    }
+  });
+
+  it('usos de item: do `item_uses`, maior primeiro, por id do catalogo', () => {
+    const p0 = match.players.find((p) => p.playerSlot === 0)!;
+    // slot 0: power_treads 63, madstone_bundle 25, blink 17, tpscroll 12, ...
+    expect(p0.itemUses![0]).toEqual({ itemId: 63, uses: 63 });
+    const total = Object.values(rawBySlot.get(0).item_uses as Record<string, number>).reduce((a, b) => a + b, 0);
+    expect(p0.itemUses!.reduce((s, u) => s + u.uses, 0)).toBe(total);
+  });
+
+  it('buyback: os instantes do `buyback_log`, e [] para quem nao comprou', () => {
+    const at = (slot: number) => match.players.find((p) => p.playerSlot === slot)!.buybackTimes;
+    expect(at(2)).toEqual([1978]);
+    expect(at(129)).toEqual([1694, 2242]);
+    expect(at(0)).toEqual([]);
+  });
+
+  it('eficiencia de rota: ouro aos 10 min sobre a referencia fixa de 4.948', () => {
+    for (const p of match.players) {
+      const r = rawBySlot.get(p.playerSlot);
+      expect(p.laneEfficiencyPct!).toBeCloseTo((r.gold_t[10] / 4948) * 100, 6);
+    }
+  });
+});
+
 describe('mapOpenDotaMatch — o que a OpenDota nao tem fica desligado', () => {
   it('availability diz exatamente o que veio', () => {
     expect(match.availability).toEqual({
@@ -243,6 +315,8 @@ describe('mapOpenDotaMatch — o que a OpenDota nao tem fica desligado', () => {
       imp: false,
       glint: true,
       parsePending: false,
+      teamfights: true,
+      objectives: true,
     });
   });
 
@@ -320,6 +394,8 @@ describe('mapOpenDotaMatch — partida nao parseada', () => {
     'hero_healing_t', 'camps_stacked_t', 'obs_log', 'sen_log', 'obs_left_log', 'sen_left_log',
     'deaths_log', 'kills_log', 'purchase_log', 'damage_taken', 'damage_inflictor_received',
     'position_est', 'lane', 'lane_role', 'is_roaming',
+    // Conferido numa partida real nao parseada (2026-11-19): estes nem vem na resposta.
+    'item_uses', 'buyback_log', 'lane_efficiency', 'lane_efficiency_pct',
   ];
   const strip = (p: any) => Object.fromEntries(Object.entries(p).filter(([k]) => !PARSED_ONLY.includes(k)));
   const unparsedRaw = {
@@ -327,6 +403,8 @@ describe('mapOpenDotaMatch — partida nao parseada', () => {
     version: null,
     radiant_gold_adv: null,
     radiant_xp_adv: null,
+    teamfights: undefined,
+    objectives: undefined,
     players: raw.players.map(strip),
   };
   const unparsed = mapOpenDotaMatch(unparsedRaw);
@@ -355,7 +433,14 @@ describe('mapOpenDotaMatch — partida nao parseada', () => {
       expect(p.itemTimings).toBeUndefined();
       expect(p.role).toBe('UNKNOWN');
       expect(p.lane).toBe('UNKNOWN');
+      expect(p.itemUses).toBeNull();
+      expect(p.buybackTimes).toBeNull();
+      expect(p.laneEfficiencyPct).toBeNull();
     }
+    expect(unparsed.teamfights).toBeNull();
+    expect(unparsed.objectives).toBeNull();
+    expect(unparsed.availability.teamfights).toBe(false);
+    expect(unparsed.availability.objectives).toBe(false);
   });
 
   it('o placar final continua vindo', () => {

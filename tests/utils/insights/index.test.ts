@@ -174,6 +174,7 @@ describe('REGRESSAO: fim do filler', () => {
           parsed: false, perMinuteStats: false, networthSeries: false, deathEvents: false,
           damageReport: false, wards: false, advantageTimeline: false, heroAverage: false,
           abilities: false, laneOutcomes: false, imp: false, glint: false, parsePending: false,
+          teamfights: false, objectives: false,
         },
       },
     );
@@ -191,6 +192,7 @@ describe('partida NAO parseada', () => {
       parsed: false, perMinuteStats: false, networthSeries: false, deathEvents: false,
       damageReport: false, wards: false, advantageTimeline: false, heroAverage: false,
       abilities: false, laneOutcomes: false, imp: false, glint: false, parsePending: false,
+      teamfights: false, objectives: false,
     },
   };
 

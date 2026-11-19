@@ -454,6 +454,63 @@ export interface MatchDataAvailability {
    * definitivo do ponto de vista do app: aqui existe uma acao que traz o dado.
    */
   parsePending: boolean;
+  /** `MatchDetails.teamfights` veio (partida parseada com lutas). Sem ela, `teamfights` é `null`. */
+  teamfights: boolean;
+  /** `MatchDetails.objectives` traz ao menos um objetivo com lado determinado. */
+  objectives: boolean;
+}
+
+/**
+ * Um jogador numa luta de time (`teamfights[].players[]` da OpenDota). O array cru é POR
+ * INDICE de `players`; o mapper resolve para `playerSlot` (conferido na fixture: mortes por
+ * luta batem com o `deaths_log` de cada jogador em 150/150 linhas).
+ */
+export interface MatchTeamfightPlayer {
+  playerSlot: number;
+  deaths: number;
+  buybacks: number;
+  /** Dano causado na luta. */
+  damage: number;
+  healing: number;
+  /** Ouro ganho menos ouro perdido durante a luta, deste jogador. */
+  goldDelta: number;
+  xpDelta: number;
+}
+
+/** Uma luta de time, em segundos de relogio de partida. */
+export interface MatchTeamfight {
+  start: number;
+  end: number;
+  lastDeath: number;
+  /** Mortes na luta, dos dois lados. */
+  deaths: number;
+  players: MatchTeamfightPlayer[];
+}
+
+export type MatchObjectiveKind = 'TOWER' | 'BARRACKS' | 'ANCIENT' | 'OTHER_BUILDING' | 'ROSHAN' | 'TORMENTOR';
+
+/**
+ * Objetivo da partida, do ponto de vista de QUEM GANHOU com ele.
+ *  - Construcao: `takenBy` é o lado oposto ao DONO, lido do nome (`npc_dota_goodguys_*` é do
+ *    Radiant) — e nao de quem deu o ultimo golpe, que pode ser o proprio dono negando
+ *    (`denied`). Torre negada continua sendo torre perdida.
+ *  - Roshan e Tormentor: o `team` da OpenDota (2 Radiant, 3 Dire).
+ * Objetivo sem lado determinavel nao entra e é contado em `MatchDetails.objectivesUnresolved`.
+ */
+export interface MatchObjective {
+  time: number;
+  kind: MatchObjectiveKind;
+  takenBy: 'RADIANT' | 'DIRE';
+  /** So construcao: o nome cru (`npc_dota_badguys_tower1_top`). */
+  key?: string;
+  /** So construcao: derrubada pelo proprio dono. */
+  denied?: boolean;
+}
+
+/** Usos de um item ativo na partida (`item_uses` da OpenDota). */
+export interface ItemUseCount {
+  itemId: number;
+  uses: number;
 }
 
 export interface MatchPlayer {
@@ -506,6 +563,20 @@ export interface MatchPlayer {
   visionStats?: PlayerVisionStats;
   series?: PlayerTimeSeries | null;
   deathEvents?: MatchDeathEvent[] | null;
+  /**
+   * Usos por item ativo (`item_uses`), maior primeiro. `null` = sem dado (partida nao
+   * parseada). Conta ALTERNANCIA e CONSUMIVEL como uso (Power Treads trocado, TP), e a
+   * OpenDota nao da hora de venda: quem calcula taxa por tempo de posse tem de declarar isso.
+   */
+  itemUses?: ItemUseCount[] | null;
+  /** Instantes de buyback (`buyback_log`). `null` = sem dado; `[]` = nao comprou. */
+  buybackTimes?: number[] | null;
+  /**
+   * `lane_efficiency` da OpenDota × 100: ouro aos 10 min (`gold_t[10]`) dividido por uma
+   * REFERENCIA FIXA de 4.948 (conferido nas duas fixtures, 20 de 20 jogadores) — nao é
+   * comparacao com o heroi, a posicao nem o ranque. Pode passar de 100. `null` = sem dado.
+   */
+  laneEfficiencyPct?: number | null;
   damageReport?: DamageReport | null;
   heroAverageCurve?: HeroAverageEntry[] | null;
   abilityBuild?: AbilityBuildEntry[] | null;
@@ -551,6 +622,12 @@ export interface MatchDetails {
     bottom: LaneOutcome | null;
   };
   vision: VisionData;
+  /** Lutas de time. `null` = partida nao parseada (sem o array); `[]` = parseada e sem luta. */
+  teamfights?: MatchTeamfight[] | null;
+  /** Objetivos com lado determinado, em ordem de tempo. `null` = a resposta nao trouxe o array. */
+  objectives?: MatchObjective[] | null;
+  /** Objetivos da resposta que ficaram de fora por nao ter lado determinavel. */
+  objectivesUnresolved?: number;
   availability: MatchDataAvailability;
 }
 

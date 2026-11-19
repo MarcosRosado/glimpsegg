@@ -14,9 +14,12 @@ daqui são praticamente a única rede de tipos que existe — ver *Gates* em
 
 ## Regras locais
 
-- **`MatchDataAvailability` tem 13 flags** (`parsed`, `perMinuteStats`, `networthSeries`,
+- **`MatchDataAvailability` tem 15 flags** (`parsed`, `perMinuteStats`, `networthSeries`,
   `deathEvents`, `damageReport`, `wards`, `advantageTimeline`, `heroAverage`, `abilities`,
-  `laneOutcomes`, `imp`, `glint`, `parsePending`). `glint` diz que ao menos um jogador tem a nota
+  `laneOutcomes`, `imp`, `glint`, `parsePending`, `teamfights`, `objectives`). As duas últimas
+  entraram com as métricas da 2.0: `MatchDetails.teamfights`/`objectives` são `null` sem parse
+  (a resposta nem traz os arrays), e `MatchObjective.takenBy` de construção sai do **dono** lido
+  do nome, não de quem deu o golpe final — torre negada é torre perdida. `glint` diz que ao menos um jogador tem a nota
   própria experimental (`MatchPlayer.glint`, de `utils/glint.ts`). `imp` e `parsePending` nasceram com o mapper da OpenDota:
   `imp` diz se `MatchPlayer.imp` é o IMP real da STRATZ (no caminho OpenDota é `false` e o campo é
   só um `0` de marcador), e `parsePending` diz que a fonte ainda não parseou o replay mas **pode**

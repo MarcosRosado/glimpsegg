@@ -1,13 +1,17 @@
 import {
   DamageReport,
   ItemTimingEvent,
+  ItemUseCount,
   Lane,
   LaningStats,
   MapTeam,
   MatchDataAvailability,
   MatchDeathEvent,
   MatchDetails,
+  MatchObjective,
+  MatchObjectiveKind,
   MatchPlayer,
+  MatchTeamfight,
   PlayerLaneAdvantage,
   PlayerLaneResult,
   PlayerTimeSeries,
@@ -184,6 +188,117 @@ function mapItemTimings(p: any): ItemTimingEvent[] | undefined {
     });
   }
   return out.length > 0 ? out.sort((a, b) => a.time - b.time) : undefined;
+}
+
+/** `item_uses` -> usos por item, maior primeiro. Nome fora do catalogo é pulado, como nas compras. */
+function mapItemUses(p: any): ItemUseCount[] | null {
+  const raw = p?.item_uses;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out: ItemUseCount[] = [];
+  for (const [key, uses] of Object.entries(raw)) {
+    const itemId = itemIdFromKey(key);
+    if (itemId === undefined || typeof uses !== 'number' || !Number.isFinite(uses) || uses <= 0) continue;
+    out.push({ itemId, uses });
+  }
+  return out.sort((a, b) => b.uses - a.uses || a.itemId - b.itemId);
+}
+
+function mapBuybackTimes(p: any): number[] | null {
+  const log = p?.buyback_log;
+  if (!Array.isArray(log)) return null;
+  return log.map((e: any) => e?.time).filter((t: unknown): t is number => typeof t === 'number').sort((a, b) => a - b);
+}
+
+/**
+ * `teamfights` -> lutas com os jogadores por `playerSlot`. O array `players` de cada luta é
+ * por INDICE do `players` da partida (conferido: mortes por luta batem com o `deaths_log` em
+ * 150 de 150 linhas da fixture). Luta com outro numero de jogadores nao é alinhavel e sai.
+ */
+function mapTeamfights(m: any, rawPlayers: any[]): MatchTeamfight[] | null {
+  const raw = m?.teamfights;
+  if (!Array.isArray(raw)) return null;
+  const out: MatchTeamfight[] = [];
+  for (const f of raw) {
+    if (!Array.isArray(f?.players) || f.players.length !== rawPlayers.length) continue;
+    if (typeof f.start !== 'number' || typeof f.end !== 'number') continue;
+    out.push({
+      start: f.start,
+      end: f.end,
+      lastDeath: num(f.last_death),
+      deaths: num(f.deaths),
+      players: f.players.map((fp: any, i: number) => ({
+        playerSlot: num(rawPlayers[i]?.player_slot),
+        deaths: num(fp?.deaths),
+        buybacks: num(fp?.buybacks),
+        damage: num(fp?.damage),
+        healing: num(fp?.healing),
+        goldDelta: num(fp?.gold_delta),
+        xpDelta: num(fp?.xp_delta),
+      })),
+    });
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+
+const BUILDING_KEY = /^npc_dota_(goodguys|badguys)_(.+)$/;
+
+function buildingKind(rest: string): MatchObjectiveKind {
+  if (/^tower/.test(rest)) return 'TOWER';
+  if (/_rax_/.test(rest) || /^(melee|range)_rax/.test(rest)) return 'BARRACKS';
+  if (rest === 'fort') return 'ANCIENT';
+  return 'OTHER_BUILDING';
+}
+
+const TEAM_BY_OPENDOTA: Record<number, 'RADIANT' | 'DIRE'> = { 2: 'RADIANT', 3: 'DIRE' };
+
+/**
+ * `objectives` -> construcoes, Roshan e Tormentor, com o lado que ganhou. Ver o tipo
+ * `MatchObjective`: construcao pelo DONO lido do nome (o golpe final pode ser de quem nega);
+ * Roshan e Tormentor pelo `team`. Primeiro sangue, courier e Aegis nao sao objetivo de mapa
+ * aqui e ficam de fora sem contar como "sem lado".
+ */
+function mapObjectives(m: any, rawPlayers: any[]): { objectives: MatchObjective[] | null; unresolved: number } {
+  const raw = m?.objectives;
+  if (!Array.isArray(raw)) return { objectives: null, unresolved: 0 };
+  // Mesmo criterio do `isRadiantOf` do mapper: `isRadiant` quando vem, senao slot < 128.
+  const radiantSlots = new Set(
+    rawPlayers
+      .filter((p) => (typeof p?.isRadiant === 'boolean' ? p.isRadiant : num(p?.player_slot) < 128))
+      .map((p) => num(p?.player_slot)),
+  );
+  const out: MatchObjective[] = [];
+  let unresolved = 0;
+  for (const o of raw) {
+    const time = o?.time;
+    if (typeof time !== 'number') continue;
+    if (o?.type === 'building_kill') {
+      const match = typeof o.key === 'string' ? BUILDING_KEY.exec(o.key) : null;
+      if (!match) {
+        unresolved += 1;
+        continue;
+      }
+      const ownerRadiant = match[1] === 'goodguys';
+      const killerSlot = typeof o.player_slot === 'number' ? o.player_slot : null;
+      out.push({
+        time,
+        kind: buildingKind(match[2]),
+        takenBy: ownerRadiant ? 'DIRE' : 'RADIANT',
+        key: o.key,
+        denied: killerSlot !== null && radiantSlots.has(killerSlot) === ownerRadiant,
+      });
+      continue;
+    }
+    const kind: MatchObjectiveKind | null =
+      o?.type === 'CHAT_MESSAGE_ROSHAN_KILL' ? 'ROSHAN' : o?.type === 'CHAT_MESSAGE_MINIBOSS_KILL' ? 'TORMENTOR' : null;
+    if (!kind) continue;
+    const takenBy = TEAM_BY_OPENDOTA[o?.team];
+    if (!takenBy) {
+      unresolved += 1;
+      continue;
+    }
+    out.push({ time, kind, takenBy });
+  }
+  return { objectives: out.sort((a, b) => a.time - b.time), unresolved };
 }
 
 /**
@@ -506,6 +621,9 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
       abilityBuild: null,
       damageReport,
       deathEvents,
+      itemUses: mapItemUses(p),
+      buybackTimes: mapBuybackTimes(p),
+      laneEfficiencyPct: typeof p.lane_efficiency === 'number' && Number.isFinite(p.lane_efficiency) ? p.lane_efficiency * 100 : null,
       laningStats: buildLaningStats(p, series, itemTimings, deathEvents, {
         result: resolvePlayerLaneResult(laneIdFromOpenDota(p.lane), isRadiant, laneOutcomes),
         advantage: playerLaneAdvantage(laneMeasures, p.lane, isRadiant),
@@ -534,6 +652,9 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
   const sumNetworth = (radiant: boolean) =>
     players.filter((p) => p.isRadiant === radiant).reduce((s, p) => s + p.networth, 0);
 
+  const teamfights = mapTeamfights(m, rawPlayers);
+  const { objectives, unresolved: objectivesUnresolved } = mapObjectives(m, rawPlayers);
+
   const some = (fn: (p: MatchPlayer) => boolean) => players.some(fn);
   const availability: MatchDataAvailability = {
     parsed: isParsed,
@@ -551,6 +672,8 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
     imp: false,
     glint: some((p) => typeof p.glint === 'number'),
     parsePending: !isParsed,
+    teamfights: teamfights !== null,
+    objectives: !!objectives?.length,
   };
 
   return {
@@ -573,6 +696,9 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
     firstBloodTime: numOrNull(m?.first_blood_time),
     laneOutcomes,
     vision,
+    teamfights,
+    objectives,
+    objectivesUnresolved,
     availability,
   };
 }

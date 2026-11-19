@@ -151,8 +151,9 @@ selecionada, slot selecionado e aba ativa; alterna entre a view de dashboard e a
 
 Boa parte do desenho do projeto existe para isso. Três mecanismos, todos tipados:
 
-1. **`MatchDataAvailability`** (`types/dota.ts`) — 13 flags (`parsed`, `perMinuteStats`,
-   `deathEvents`, `wards`, `heroAverage`, `laneOutcomes`, `imp`, `glint`, `parsePending`…). Regra de
+1. **`MatchDataAvailability`** (`types/dota.ts`) — 15 flags (`parsed`, `perMinuteStats`,
+   `deathEvents`, `wards`, `heroAverage`, `laneOutcomes`, `imp`, `glint`, `parsePending`,
+   `teamfights`, `objectives`…). Regra de
    coaching ou seção de UI que exija uma flag ausente é **pulada**, não estimada.
 2. **`BenchmarkSource`** — `HERO_AVERAGE` | `HERO_STATS` | `MATCH_ONLY` | `ROLE_BASELINE`. Todo
    número de comparação carrega procedência e `sampleSize`, e a UI renderiza isso como chip.
