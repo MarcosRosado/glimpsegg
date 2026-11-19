@@ -61,37 +61,58 @@ do herói estão escondidos por esse motivo: a OpenDota não tem volume para sus
 
 ## Telas
 
-As capturas abaixo saem do app em execução, mas **são anteriores à saída da STRATZ**: algumas ainda
-mostram campo de token, cards de build ou a nota de impacto antiga. Até serem refeitas, vale o
-texto, não a imagem. O perfil exibido é uma conta pública de alto ranque (`86745912`), usada apenas para ilustrar as telas —
-nenhum dado do mantenedor aparece aqui. As telas de hero grid usam um **layout fictício** agrupado
-pelos quatro atributos, como o Dota entrega por padrão: o grid é um arquivo local, então não existe
-"o grid de outro jogador" para exibir.
+As capturas abaixo saem do app em execução (versão 2.0, patch 7.42). O perfil exibido é uma conta
+pública de alto ranque (`86745912`), usada apenas para ilustrar as telas — nenhum dado do
+mantenedor aparece aqui. Essa conta não tem partida recente sem análise, então o modo placar é
+mostrado com outra partida pública (`9091277624`), aberta pela busca. Placar, companheiros e
+recordes mostram apelidos e avatares públicos de outros jogadores, como o Dota e a OpenDota
+mostram. As telas de hero grid usam um **layout fictício** agrupado pelos quatro atributos, como o
+Dota entrega por padrão: o grid é um arquivo local, então não existe "o grid de outro jogador" para
+exibir.
 
-**Dashboard do jogador** — perfil e rank, forma recente, lista de partidas com resumo por jogo,
-heróis principais e tendências.
+**Início** — a última partida primeiro, depois forma recente, a tendência do Glint e a atividade.
 
-![Dashboard do jogador](docs/screenshots/dashboard.png)
+![Início](docs/screenshots/home.pt-BR.png)
 
-**`OVERVIEW`** — prêmios da partida, comparativo entre as equipes, linha do tempo de vantagem de
-ouro/XP e o scoreboard, com a ordem e o tempo de compra de cada item do jogador aberto.
+**Partida ainda não analisada** — o placar, os destaques que só dependem do placar e o cartão que
+pede a análise do replay e lista o que ela libera.
 
-![Aba Overview da análise de partida](docs/screenshots/match-overview.png)
+![Partida no modo placar](docs/screenshots/match-scoreboard.pt-BR.png)
 
-**`PERFORMANCE`** — cronômetro de itens contra a meta do benchmark, radar de competências, métricas
-dos primeiros 10 minutos, composição do dano e sequência de habilidades.
+**`RESUMO`** — prêmios, quem liderou a partida, melhor de cada posição, comparativo entre as
+equipes, a vantagem de ouro/xp e o placar.
 
-![Aba Performance da análise de partida](docs/screenshots/match-performance.png)
+![Aba Resumo de uma partida analisada](docs/screenshots/match-summary.pt-BR.png)
 
-**`VISION`** — wards reais sobre o minimapa, com raio de visão, tempo de vida, autor, dewards e
+**`MEU JOGO`** — uso de item ativo (usos registrados, ritmo como piso), o radar com o selo de
+estimativa e o veredito de rota com **as duas** diferenças aos 10 minutos, patrimônio e xp.
+
+![Aba Meu jogo de uma partida analisada](docs/screenshots/match-my-game.pt-BR.png)
+
+**`LUTAS`** — cada luta, o que rendeu para cada lado, o que o jogador escolhido fez nela e os
+objetivos que caíram até a luta seguinte. Sem selo de "luta vencida": nenhum critério para isso foi
+medido.
+
+![Aba Lutas de uma partida analisada](docs/screenshots/match-fights.pt-BR.png)
+
+**`VISÃO`** — wards reais sobre o minimapa, com raio de visão, tempo de vida, autor, dewards e
 cobertura, navegáveis pela linha do tempo da partida.
 
-![Aba Vision da análise de partida](docs/screenshots/match-vision.png)
+![Aba Visão de uma partida analisada](docs/screenshots/match-vision.pt-BR.png)
 
 **`COACHING`** — diagnóstico determinístico. Cada card traz o número e a procedência, com o tamanho
 da amostra quando há uma.
 
-![Aba Coaching da análise de partida](docs/screenshots/match-coaching.png)
+![Aba Coaching de uma partida analisada](docs/screenshots/match-coaching.pt-BR.png)
+
+**Heróis** — o seu desempenho em cada herói, por período e patch; menos de 5 partidas sai marcado
+como amostra pequena.
+
+![Seção Heróis](docs/screenshots/heroes.pt-BR.png)
+
+**Conta** — totais da carreira com a amostra de cada linha, recordes e contagens.
+
+![Seção Conta](docs/screenshots/account.pt-BR.png)
 
 **Hero grid — o espelho** — a réplica do que o app gravou na sua coleção de layouts do Dota, com os
 grupos nas posições que ocupam no jogo e o GlimpseScore que definiu a ordem dentro de cada um.
@@ -103,19 +124,19 @@ qual fonte, e o ranking herói a herói com as componentes de meta e pessoal de 
 
 ![Painel de sincronização do hero grid](docs/screenshots/hero-grid-panel.png)
 
-**Busca de jogador** — procura por SteamID32/64, vanity URL ou nome, com histórico e favoritos.
-Abre com `Ctrl K`.
+**Busca** — procura jogador por SteamID32/64, vanity URL ou nome, ou abre partida pelo id, com
+histórico e favoritos. Abre com `Ctrl K`.
 
-![Modal de busca de jogador](docs/screenshots/search.png)
+![Modal de busca](docs/screenshots/search.pt-BR.png)
 
 **Configurações** — idioma da interface, conta Steam ativa e a configuração do layout espelho.
 
-![Configurações da aplicação](docs/screenshots/settings.png)
+![Configurações da aplicação](docs/screenshots/settings.pt-BR.png)
 
 **Onboarding** — a primeira execução pede o idioma da interface (inglês por padrão) e a conta Steam
 a acompanhar. Nenhum token é pedido.
 
-![Tela de onboarding](docs/screenshots/onboarding.png)
+![Tela de onboarding](docs/screenshots/onboarding.pt-BR.png)
 
 ## Requisitos
 

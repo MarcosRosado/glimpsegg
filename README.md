@@ -63,37 +63,58 @@ them.
 
 ## Screens
 
-The captures below come from the running app, but **they predate the move away from STRATZ**: some
-still show a token field, build cards or the old impact score. Until they are retaken, trust the
-text over the picture. The profile shown is a public high-rank account (`86745912`), used only to illustrate the screens — none of the
-maintainer's data appears here. The hero grid screens use a **fictitious layout** grouped by the
-four attributes, the way Dota ships it by default: a hero grid is a local file, so there is no such
-thing as another player's grid to show.
+The captures below come from the running app (version 2.0, patch 7.42). The profile shown is a
+public high-rank account (`86745912`), used only to illustrate the screens — none of the
+maintainer's data appears here. That account has no unanalyzed recent match, so the scoreboard
+mode is shown with another public match (`9091277624`), opened through search. Scoreboards,
+teammates and records show other players' public nicknames and avatars, as Dota and OpenDota do.
+The hero grid screens use a **fictitious layout** grouped by the four attributes, the way Dota ships
+it by default: a hero grid is a local file, so there is no such thing as another player's grid to
+show.
 
-**Player dashboard** — profile and rank, recent form, match list with a per-game summary, top heroes
-and trends.
+**Home** — the last match first, then recent form, the Glint trend and activity.
 
-![Player dashboard](docs/screenshots/dashboard.png)
+![Home](docs/screenshots/home.png)
 
-**`OVERVIEW`** — match awards, team comparison, gold/XP advantage timeline and the scoreboard, with
-the purchase order and timing of every item for the selected player.
+**Match not analyzed yet** — the scoreboard, the highlights that only need the scoreboard, and the
+card that requests the replay analysis and lists what it unlocks.
 
-![Overview tab of the match analysis](docs/screenshots/match-overview.png)
+![Match in scoreboard mode](docs/screenshots/match-scoreboard.png)
 
-**`PERFORMANCE`** — item timings against the benchmark target, skill radar, first-10-minute metrics,
-damage breakdown and ability order.
+**`SUMMARY`** — awards, who led the match, best of each position, team comparison, the gold/XP
+advantage and the scoreboard.
 
-![Performance tab of the match analysis](docs/screenshots/match-performance.png)
+![Summary tab of an analyzed match](docs/screenshots/match-summary.png)
+
+**`MY GAME`** — active item usage (recorded uses, rate as a floor), the radar with its estimate
+chip, and the lane verdict with **both** differences at 10 minutes, net worth and XP.
+
+![My game tab of an analyzed match](docs/screenshots/match-my-game.png)
+
+**`FIGHTS`** — each team fight, what it yielded for each side, what the selected player did in it,
+and the objectives that fell before the next fight. No "fight won" badge: no criterion for it was
+measured.
+
+![Fights tab of an analyzed match](docs/screenshots/match-fights.png)
 
 **`VISION`** — real wards over the minimap, with vision radius, lifetime, placer, dewards and
 coverage, navigable through the match timeline.
 
-![Vision tab of the match analysis](docs/screenshots/match-vision.png)
+![Vision tab of an analyzed match](docs/screenshots/match-vision.png)
 
 **`COACHING`** — deterministic diagnosis. Every card carries the number and its provenance, with
 the sample size when there is one.
 
-![Coaching tab of the match analysis](docs/screenshots/match-coaching.png)
+![Coaching tab of an analyzed match](docs/screenshots/match-coaching.png)
+
+**Heroes** — your record on every hero, by period and patch; fewer than 5 matches is marked as a
+small sample.
+
+![Heroes section](docs/screenshots/heroes.png)
+
+**Account** — career totals with the sample size of each line, records and breakdowns.
+
+![Account section](docs/screenshots/account.png)
 
 **Hero grid — the mirror** — a replica of what the app wrote into your Dota layout collection, with
 the groups in their in-game positions and the GlimpseScore that set the order inside each one.
@@ -105,10 +126,10 @@ hero-by-hero ranking with the meta and personal components of every score.
 
 ![Hero grid sync panel](docs/screenshots/hero-grid-panel.png)
 
-**Player search** — look a player up by SteamID32/64, vanity URL or name, with history and
-favourites. Opens with `Ctrl K`.
+**Search** — look a player up by SteamID32/64, vanity URL or name, or open a match by its ID, with
+history and favourites. Opens with `Ctrl K`.
 
-![Player search modal](docs/screenshots/search.png)
+![Search modal](docs/screenshots/search.png)
 
 **Settings** — interface language, active Steam account and the hero grid configuration.
 
