@@ -45,7 +45,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
   // Rota: regra propria (utils/laneVerdict.ts). Sem medida, a secao do veredito some.
   const laneView = laneVerdictView(player.laningStats);
   // `formatGold` so abrevia (1,2k); serve igual para xp.
-  const signedGold = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatGold(Math.abs(n))}`;
+  const signedGold = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatGold(Math.abs(n), language)}`;
   const pctOf = (x: number) => (100 * x).toLocaleString(language, { maximumFractionDigits: 1 });
   const laneHintParams = (v: LaneVerdictView) => ({
     tie: pctOf(LANE_VERDICT_MODEL.tieThreshold),
@@ -149,7 +149,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                 <span className="text-slate-500 ml-1">({((player.kills + player.assists) / Math.max(1, player.deaths)).toFixed(1)} KDA)</span>
               </span>
               <span>•</span>
-              <span className="text-amber-400 font-bold">{t('netWorthTotal', { gold: formatGold(player.networth) })}</span>
+              <span className="text-amber-400 font-bold">{t('netWorthTotal', { gold: formatGold(player.networth, language) })}</span>
               <span>•</span>
               <span className="text-yellow-300 font-bold">{player.goldPerMinute} {t('gpmShort')}</span>
               <span>•</span>
@@ -262,7 +262,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                       {item.displayName}
                     </div>
                     <div className="text-[10px] text-amber-400 font-mono font-semibold">
-                      {item.cost > 0 ? formatGold(item.cost) : t('itemNoCost')}
+                      {item.cost > 0 ? formatGold(item.cost, language) : t('itemNoCost')}
                     </div>
                   </div>
                 </div>
@@ -488,7 +488,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               {/* Sem `laningStats` nao existe ouro aos 10min. O antigo
                   `networth * 0.22` inventava o numero a partir do patrimonio final. */}
               <div className="text-base font-black text-amber-400 mt-0.5">
-                {player.laningStats ? formatGold(player.laningStats.gold10) : t('noData')}
+                {player.laningStats ? formatGold(player.laningStats.gold10, language) : t('noData')}
               </div>
             </div>
 
@@ -639,7 +639,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               </h4>
             </div>
             <span className="text-xs font-black text-amber-400 font-mono">
-              {t('netWorthTotal', { gold: formatGold(player.networth) })}
+              {t('netWorthTotal', { gold: formatGold(player.networth, language) })}
             </span>
           </div>
 

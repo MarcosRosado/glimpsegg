@@ -20,7 +20,7 @@ export const TurningPointNote: React.FC<{ match: MatchDetails }> = ({ match }) =
 
   const winner = match.didRadiantWin ? t('radiant') : t('dire');
   const hint = t('turningPointHint', {
-    floor: formatGold(TURNING_POINT_MODEL.minDeficit),
+    floor: formatGold(TURNING_POINT_MODEL.minDeficit, language),
     rate: (TURNING_POINT_MODEL.measuredRate * 100).toLocaleString(language, { maximumFractionDigits: 0 }),
     matches: TURNING_POINT_MODEL.matches,
   });
@@ -40,7 +40,7 @@ export const TurningPointNote: React.FC<{ match: MatchDetails }> = ({ match }) =
         <div className="text-slate-300">
           {t('turningPointDeficit', {
             team: winner,
-            gold: formatGold(tp.maxDeficit),
+            gold: formatGold(tp.maxDeficit, language),
             minute: tp.maxDeficitMinute,
           })}
           {tp.leadForGoodFromMinute !== null && (

@@ -72,7 +72,7 @@ const GLINT_HIGH_IMPACT = GLINT_THRESHOLDS.good;    // 61 — 22,3% (era IMP >= 
 const GLINT_LOW_IMPACT = GLINT_THRESHOLDS.poor;     // 41 — 42,4% (era IMP <= -10)
 const GLINT_HIGHLIGHT = GLINT_THRESHOLDS.strong;    // 68 — 11,4% (era IMP >= 25)
 
-function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): MatchTag[] {
+function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate, locale: string): MatchTag[] {
   const tags: MatchTag[] = [];
   // `|| 2100` assumia 35 minutos quando a duracao nao vinha, e essa suposicao decidia
   // sozinha qual badge aparecia (stomp <=32min, comeback >=42min). Sem duracao real, os
@@ -324,7 +324,7 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
   if (match.towerDamage != null && match.towerDamage >= TOWER_DAMAGE) {
     tags.push({
       key: 'acc-tower-damage',
-      label: t('badgeTowerDamage', { value: formatGold(match.towerDamage) }),
+      label: t('badgeTowerDamage', { value: formatGold(match.towerDamage, locale) }),
       icon: <Hammer className="w-2.5 h-2.5 text-orange-400" />,
       className: 'bg-orange-500/20 text-orange-300 border-orange-500/40 font-medium',
       priority: 48,
@@ -334,7 +334,7 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
   if (match.heroHealing != null && match.heroHealing >= HERO_HEALING) {
     tags.push({
       key: 'acc-healing',
-      label: t('badgeHealing', { value: formatGold(match.heroHealing) }),
+      label: t('badgeHealing', { value: formatGold(match.heroHealing, locale) }),
       icon: <HeartPulse className="w-2.5 h-2.5 text-emerald-400" />,
       className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-medium',
       priority: 47,
@@ -376,7 +376,7 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
   if (match.unspentGold != null && match.unspentGold >= UNSPENT_GOLD) {
     tags.push({
       key: 'acc-unspent-gold',
-      label: t('badgeUnspentGold', { value: formatGold(match.unspentGold) }),
+      label: t('badgeUnspentGold', { value: formatGold(match.unspentGold, locale) }),
       icon: <PiggyBank className="w-2.5 h-2.5 text-yellow-500" />,
       className: 'bg-yellow-600/15 text-yellow-200/90 border-yellow-600/40 font-medium',
       priority: 18,
@@ -406,7 +406,7 @@ export const MatchList: React.FC<MatchListProps> = ({
   heroFilterId = null,
   onClearHeroFilter,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [outcomeFilter, setOutcomeFilter] = useState<'ALL' | 'WON' | 'LOST'>('ALL');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [typeFilter, setTypeFilter] = useState<'ALL' | MatchTypeCode>('ALL');
@@ -674,7 +674,7 @@ export const MatchList: React.FC<MatchListProps> = ({
                       </span>
 
                       {/* Accumulating Tags: Top 3 by priority */}
-                      {getAccumulatedMatchTags(match, t).map((tag) => (
+                      {getAccumulatedMatchTags(match, t, language).map((tag) => (
                         <span
                           key={tag.key}
                           className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-all whitespace-nowrap ${tag.className}`}

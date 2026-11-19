@@ -158,7 +158,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
             </span>
             <span>•</span>
             <span>
-              {t('totalGold')}: <strong className="text-amber-400">{formatGold(teamTotalNetworth)}</strong>
+              {t('totalGold')}: <strong className="text-amber-400">{formatGold(teamTotalNetworth, language)}</strong>
             </span>
           </div>
         </div>
@@ -266,7 +266,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
                       {/* Networth */}
                       <td className="py-2.5 px-2 text-right font-bold text-amber-400">
-                        {formatGold(player.networth)}
+                        {formatGold(player.networth, language)}
                       </td>
 
                       {/* GPM / XPM */}
@@ -454,7 +454,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                             ? 'bg-slate-900/90 border-cyan-500/50 shadow-md shadow-cyan-950/20'
                                             : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
                                         }`}
-                                        title={`${item.displayName} - ${item.cost > 0 ? formatGold(item.cost) : 'Item'}`}
+                                        title={`${item.displayName} - ${item.cost > 0 ? formatGold(item.cost, language) : 'Item'}`}
                                       >
                                         {/* Item Icon */}
                                         <div className="w-8 h-6 rounded-lg overflow-hidden border border-slate-700 bg-slate-950 shrink-0 shadow-inner">
@@ -478,7 +478,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                             {item.cost > 0 && (
                                               <>
                                                 <span className="text-slate-600">•</span>
-                                                <span className="text-amber-300">{formatGold(item.cost)}</span>
+                                                <span className="text-amber-300">{formatGold(item.cost, language)}</span>
                                               </>
                                             )}
                                           </div>

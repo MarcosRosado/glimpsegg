@@ -18,7 +18,7 @@ import { OBJECTIVE_LABEL } from './objectiveLabels';
  * Sem `availability.teamfights` a função devolve `null` e o App nem mostra a aba.
  */
 
-const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatGold(Math.abs(n))}`;
+const signed = (n: number, locale: string) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatGold(Math.abs(n), locale)}`;
 
 /** Quantos objetivos aparecem abertos; o resto fica num "+N", recolhido mas alcançável. */
 const OPEN_OBJECTIVES = 3;
@@ -116,9 +116,9 @@ export const FightsTab: React.FC<{ match: MatchDetails; playerSlot: number }> = 
                       </div>
                       <div className="text-[10px] text-slate-400" title={t('fightsGoldXpHint')}>
                         <span className={side.goldDelta >= 0 ? 'text-yellow-300' : 'text-rose-300'}>
-                          {signed(side.goldDelta)}
+                          {signed(side.goldDelta, language)}
                         </span>{' '}
-                        {t('fightsGoldShort')} · {signed(side.xpDelta)} {t('fightsXpShort')}
+                        {t('fightsGoldShort')} · {signed(side.xpDelta, language)} {t('fightsXpShort')}
                       </div>
                     </td>
                   ))}
@@ -127,7 +127,7 @@ export const FightsTab: React.FC<{ match: MatchDetails; playerSlot: number }> = 
                       <div className={cn('text-[11px]', f.player.deaths > 0 ? 'text-rose-300' : 'text-slate-300')}>
                         {f.player.deaths > 0 ? t('fightsYouDied') : t('fightsYouSurvived')}
                         <div className="text-[10px] text-slate-400">
-                          {signed(f.player.goldDelta)} {t('fightsGoldShort')} · {f.player.damage.toLocaleString(language)} {t('fightsDamageShort')}
+                          {signed(f.player.goldDelta, language)} {t('fightsGoldShort')} · {f.player.damage.toLocaleString(language)} {t('fightsDamageShort')}
                         </div>
                       </div>
                     ) : (

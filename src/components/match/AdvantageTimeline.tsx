@@ -18,7 +18,7 @@ interface AdvantageTimelineProps {
 }
 
 export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [metric, setMetric] = useState<'GOLD' | 'XP'>('GOLD');
 
   // Compute max absolute value for balanced domain
@@ -94,7 +94,7 @@ export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }
               axisLine={{ stroke: '#334155' }}
               tick={{ fill: '#94a3b8', fontSize: 11 }}
               domain={[-domainMax, domainMax]}
-              tickFormatter={(v) => formatGold(v)}
+              tickFormatter={(v) => formatGold(v, language)}
             />
             <ReferenceLine y={0} stroke="#475569" strokeDasharray="3 3" />
             <Tooltip
@@ -119,7 +119,7 @@ export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }
                             }`}
                           >
                             {isRadiantLead ? `${t('radiant')} ` : `${t('dire')} `}
-                            {formatSignedGold(goldLead)}
+                            {formatSignedGold(goldLead, language)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
@@ -130,7 +130,7 @@ export const AdvantageTimeline: React.FC<AdvantageTimelineProps> = ({ timeline }
                             }`}
                           >
                             {xpLead >= 0 ? `${t('radiant')} ` : `${t('dire')} `}
-                            {formatSignedGold(xpLead)}
+                            {formatSignedGold(xpLead, language)}
                           </span>
                         </div>
                       </div>

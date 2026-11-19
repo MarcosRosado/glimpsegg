@@ -102,9 +102,9 @@ const AWARD_STYLE: Record<AwardId, string> = {
 type Translate = (key: TranslationKey, params?: Record<string, string | number>) => string;
 
 /** So o numero, ja abreviado. Quem chama decide se ele vira frase. */
-function formatAwardNumber(value: number, unit: AwardUnit): string {
+function formatAwardNumber(value: number, unit: AwardUnit, locale: string): string {
   if (unit === 'GLINT') return formatGlint(value);
-  if (unit === 'GOLD' || unit === 'DAMAGE') return formatGold(value);
+  if (unit === 'GOLD' || unit === 'DAMAGE') return formatGold(value, locale);
   return String(value);
 }
 
@@ -112,10 +112,10 @@ function formatAwardNumber(value: number, unit: AwardUnit): string {
  * A frase completa: "27 denies", "19,6k em torres", "Glint 72". O motor devolve numero
  * cru justamente para que idioma e unidade sejam decididos aqui.
  */
-function formatAwardValue(award: { value: number; unit: AwardUnit; id: AwardId }, t: Translate): string {
+function formatAwardValue(award: { value: number; unit: AwardUnit; id: AwardId }, t: Translate, locale: string): string {
   if (award.unit === 'NONE') return '';
   const key = SCORE_VALUE[award.unit] ?? AWARD_VALUE[award.id as keyof typeof AWARD_VALUE];
-  return key ? t(key, { value: formatAwardNumber(award.value, award.unit) }) : '';
+  return key ? t(key, { value: formatAwardNumber(award.value, award.unit, locale) }) : '';
 }
 
 const AwardBadge: React.FC<{ id: AwardId; t: Translate; small?: boolean }> = ({ id, t, small }) => (
@@ -135,6 +135,7 @@ const AwardRow: React.FC<{
   onSelect: (playerSlot: number) => void;
   selected: number;
 }> = ({ award, t, onSelect, selected }) => {
+  const { language } = useLanguage();
   const hero = getHero(award.heroId);
   const isSelected = selected === award.playerSlot;
   return (
@@ -173,7 +174,7 @@ const AwardRow: React.FC<{
               )}
             </>
           ) : (
-            formatAwardValue(award, t)
+            formatAwardValue(award, t, language)
           )}
         </span>
       </span>
@@ -204,6 +205,7 @@ const SuperlativeRow: React.FC<{
   onSelect: (playerSlot: number) => void;
   selected: number;
 }> = ({ group, t, onSelect, selected }) => {
+  const { language } = useLanguage();
   const hero = getHero(group.heroId);
   const isSelected = selected === group.playerSlot;
   return (
@@ -231,7 +233,7 @@ const SuperlativeRow: React.FC<{
             <span key={a.id} className="flex items-center gap-1.5 min-w-0">
               <AwardBadge id={a.id} t={t} small />
               <span className="text-[10px] font-mono text-slate-300 truncate">
-                {formatAwardValue(a, t)}
+                {formatAwardValue(a, t, language)}
               </span>
               <span
                 className="text-[9px] font-mono text-slate-600 shrink-0"
@@ -377,7 +379,7 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
                         title={scoreKind === 'GLINT' ? glintHint : undefined}
                       >
                         {ph.score !== null && t('awardValueGlint', { value: formatGlint(ph.score) })}
-                        {ph.stat && `${ph.score !== null ? ' \u2022 ' : ''}${formatAwardValue({ ...ph.stat }, t)}`}
+                        {ph.stat && `${ph.score !== null ? ' \u2022 ' : ''}${formatAwardValue({ ...ph.stat }, t, language)}`}
                       </span>
                     </span>
                   </button>
@@ -414,11 +416,11 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
           {/* Networth Bar */}
           <div>
             <div className="flex items-center justify-between text-slate-300 mb-1.5 font-sans">
-              <span className="font-bold text-emerald-400">{formatGold(aggregates.radiantNetworth)}</span>
+              <span className="font-bold text-emerald-400">{formatGold(aggregates.radiantNetworth, language)}</span>
               <span className="text-slate-400 font-medium flex items-center gap-1">
                 <Coins className="w-3.5 h-3.5 text-amber-400" /> {t('totalGold')}
               </span>
-              <span className="font-bold text-rose-400">{formatGold(aggregates.direNetworth)}</span>
+              <span className="font-bold text-rose-400">{formatGold(aggregates.direNetworth, language)}</span>
             </div>
             <div className="w-full h-3 rounded-full bg-slate-900 flex overflow-hidden border border-slate-800">
               <div
