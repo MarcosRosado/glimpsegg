@@ -83,14 +83,27 @@ async function readOpenDota() {
       getJson(`${OPENDOTA}/items`),
     ]);
     const out = {};
+    const skipped = [];
     for (const [idStr, shortName] of Object.entries(idMap)) {
-      const details = items[shortName] || {};
+      // `item_ids` lista id que `items` nao descreve: no 7.42 vieram 1876 (invocacao do
+      // urso do Lone Druid), 1912 e 1914 (talentos do Venomancer). Sem esta trava o merge
+      // fabricava a entrada inteira — nome por titleCase, `isNeutral: true` por ter custo
+      // 0 e uma imageUrl que da 404. Id sem descricao nao é item: fica de fora, e se um
+      // dia aparecer em partida o `getItem` ja devolve fallback rotulado.
+      if (!items[shortName]) {
+        skipped.push(`${idStr} ${shortName}`);
+        continue;
+      }
+      const details = items[shortName];
       out[idStr] = {
         name: withPrefix(shortName),
         displayName: details.dname,
         cost: details.cost,
         tier: details.tier,
       };
+    }
+    if (skipped.length) {
+      console.log(`OpenDota: ${skipped.length} ids sem descricao em constants/items, ignorados:\n  ${skipped.join('\n  ')}`);
     }
     return out;
   } catch (err) {

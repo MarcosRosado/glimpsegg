@@ -75,7 +75,7 @@ linha. Ele usa o token do app sem exibi-lo.
 | Agregados de meta ainda misturam 7.41 | `itemFullPurchase` de um herói qualquer devolve algum id novo (1942, 1944, 1946, 1948, 1953, 1955) | Até lá, o `buildAdvisor` não recomenda item novo e ainda pode recomendar Khanda ou Helm of the Overlord. O cache já virou (a chave leva o patch), então o app **rotula como 7.42 um agregado que é quase todo 7.41** — ver decisão D1 |
 | `winWeek` (STRATZ) e `/heroStats` (OpenDota) do layout espelho | Sete dias de patch: a partir de 2026-11-25 a janela semanal é só 7.42 | Nada a editar; só não confiar na ordem do espelho antes disso |
 | `heroAverage` da STRATZ (benchmark `HERO_AVERAGE`) | Curva de um herói mudar em relação à capturada em `match-parsed.json` | Se não mudar em ~2 semanas, o benchmark é de 7.41 e precisa de rótulo — ver D1 |
-| OpenDota publicar o catálogo | `constants/patch` lista 7.42 e `constants/item_ids` contém `1942` | Rodar `node scripts/sync-items-full.cjs` de novo; diff esperado: vazio |
+| ~~OpenDota publicar o catálogo~~ — **fechado em 2026-11-19** | `constants/patch` lista 7.42 e `constants/item_ids` contém `1942` (os dois `[ok]` às 12:28 UTC) | Sync rodado de novo: catálogo idêntico, 619 itens. A OpenDota lista 622 ids, mas os três a mais (1876, 1912, 1914) não são itens — `item_ids` os lista e `constants/items` não os descreve. O sync passou a ignorar id sem descrição em vez de fabricar a entrada |
 | Datafeed da Valve lido no dia do patch | Alguns dias de patch, ou sair um 7.42a | Rodar o sync de novo mesmo sem a OpenDota: hotfix de custo no primeiro dia é comum. Reexecutado no mesmo dia, o sync deu arquivo idêntico |
 | Itens sem ícone no CDN (404): Stone of Recall (1949), Berserker's Hood (1881), Nothl Sigil (1883), Claszian Timepiece (1884) | `HEAD` no PNG devolve 200 | São itens que as notas não citam (provavelmente não lançados). Nada a fazer se nunca aparecerem em partida |
 | Enums novos de modo/lobby | Partida 7.42 com `gameMode`/`lobbyType` formatado cru | `formatGameMode`/`formatLobbyType` em `src/utils/dotaFormatters.ts` |
@@ -145,7 +145,7 @@ certa, o desenho embaixo é que está velho no mid e nas bordas.
 ## 5. Ordem de execução sugerida
 
 1. Agora: revisar o diff, rodar o app contra uma partida 7.42 e uma 7.41, commitar.
-2. Em alguns dias, e de novo quando a OpenDota publicar o 7.42: rodar o sync.
+2. Em alguns dias: rodar o sync de novo (a rodada da OpenDota foi feita em 2026-11-19, sem diff).
 3. A partir de 2026-11-25: rodar o script de prontidão; se der `[ok]`, remover a transição (§4).
 4. Uma a duas semanas de patch: coletar as amostras e remedir o §3.2.
 5. Quando houver minimapa oficial: §3.3.

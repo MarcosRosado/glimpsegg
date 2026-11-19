@@ -30,7 +30,10 @@ geram artefato commitado (ícones, catálogo de itens) e duas são operacionais.
   só serve de base para o id que nenhuma fonte lista mais (item removido do jogo). Ele resolve o
   caminho relativo ao diretório de trabalho — rodar da raiz do repo. São ~570 requisições ao
   datafeed (uma por item, para o custo); leva cerca de um minuto. Se a Valve falhar o script
-  aborta sem tocar no arquivo; se a OpenDota falhar, segue sem ela.
+  aborta sem tocar no arquivo; se a OpenDota falhar, segue sem ela. Id que a OpenDota lista em
+  `item_ids` mas não descreve em `constants/items` é **ignorado e impresso**: são ~100, quase
+  todos já cobertos pela Valve ou pelo catálogo, e os que sobram são talento e invocação, não
+  item — o merge fabricava para eles nome, `isNeutral: true` e uma imagem 404.
 - `build-and-deploy-local.sh` tem `/home/Reider/AppImages` e o diretório da Área de trabalho
   **cravados**: é script da máquina do autor, não pipeline portátil. Ele sempre regenera os
   ícones — a guarda anterior só testava se os arquivos existiam, então editar o SVG nunca
