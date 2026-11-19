@@ -217,7 +217,6 @@ export const HeroesSection: React.FC<{
         {selectedRow && (
           <div className="lg:col-span-5 lg:sticky lg:top-16 min-w-0">
             <HeroDetailPanel
-              key={selectedRow.heroId}
               steamAccountId={steamAccountId}
               row={selectedRow}
               filters={toMatchFilters(days, patch)}

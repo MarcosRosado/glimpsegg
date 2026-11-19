@@ -20,6 +20,8 @@ interface PerformanceTrendChartProps {
   onSelectMatch?: (matchId: string) => void;
   /** Dá para trazer mais partidas: as janelas maiores aparecem e o clique pede a carga. */
   canLoadMore?: boolean;
+  loadingMore?: boolean;
+  loadMoreFailed?: boolean;
   onRequestMore?: () => void;
   /** Altura menor: na Conta o gráfico divide a tela com os totais (no Início ele ocupava meia tela). */
   compact?: boolean;
@@ -35,7 +37,7 @@ const RANGES: { size: 25 | 50 | 100; label: 'trend25' | 'trend50' | 'trend100' }
 
 const hasGlint = (g: number | null | undefined): g is number => typeof g === 'number' && Number.isFinite(g);
 
-export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ matches, onSelectMatch, canLoadMore = false, onRequestMore, compact = false }) => {
+export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ matches, onSelectMatch, canLoadMore = false, loadingMore = false, loadMoreFailed = false, onRequestMore, compact = false }) => {
   const { t } = useLanguage();
   const [rangeChoice, setMatchCountRange] = useState<25 | 50 | 100>(25);
   // A lista pode encolher (troca de conta): a janela escolhida nunca passa do que existe.
@@ -174,9 +176,10 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ ma
                   // na janela que a lista preenche (nunca desenha 40 com o rótulo de 100).
                   if (matches.length < r.size) onRequestMore?.();
                 }}
+                aria-busy={r.size > matches.length && loadingMore}
                 className={`px-2 py-1 rounded transition ${
                   matchCountRange === r.size ? 'bg-slate-700 text-amber-300 font-bold' : 'text-slate-400 hover:text-slate-200'
-                }`}
+                } ${r.size > matches.length && loadingMore ? 'animate-pulse text-amber-300' : ''}`}
               >
                 {t(r.label)}
               </button>
@@ -184,6 +187,8 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ ma
           </div>
         </div>
       </div>
+
+      {loadMoreFailed && <p role="alert" className="text-[11px] text-rose-300 -mt-2 mb-2">{t('trendLoadMoreError')}</p>}
 
       {/* Chart Canvas */}
       <div className={`${compact ? 'h-40' : 'h-56'} w-full pt-2`}>

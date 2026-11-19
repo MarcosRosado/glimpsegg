@@ -28,14 +28,15 @@ não finge que consegue: a nota de impacto exibida aqui se chama **Glint**. Ela 
 Uma barra lateral com cinco seções — **Início**, **Partidas**, **Heróis**, **Conta** e o
 **Layout espelho** — que recolhe num trilho de ícones.
 
-**Início** — a sua última partida primeiro, com o estado do replay e o botão "Pedir análise do
-replay" ali mesmo; depois forma recente, a tendência das últimas 100 partidas, heróis mais
-jogados, atividade e companheiros (clique num deles para abrir a conta).
+**Início** — duas colunas. Na principal, a sua última partida, com o estado do replay e o botão
+"Pedir análise do replay" ali mesmo, e as partidas anteriores. Na lateral, forma recente com a
+linha do Glint, um anel com os heróis das últimas 25 ou 100 partidas colorido pelo winrate,
+companheiros (clique num deles para abrir a conta) e atividade.
 
 **Partidas, Heróis, Conta**
 - Lista de partidas que carrega além das 40 primeiras, com filtro de período e de patch
-- O seu desempenho em cada herói, por período e patch
-- Totais da carreira (cada um com a própria amostra), recordes e divisão por patch, fila, rota e lado
+- O seu desempenho em cada herói, por período e patch, com o herói escolhido e as últimas partidas dele ao lado da lista
+- A evolução do Glint, do winrate e do farm, e os totais da carreira (cada um com a própria amostra), recordes e divisão por patch, fila, rota e lado
 
 **Análise de partida** — o estado do replay decide o layout
 - **Ainda não analisada:** a partida abre como placar, diz isso e oferece pedir a análise. A
@@ -70,7 +71,7 @@ mostram. As telas de hero grid usam um **layout fictício** agrupado pelos quatr
 Dota entrega por padrão: o grid é um arquivo local, então não existe "o grid de outro jogador" para
 exibir.
 
-**Início** — a última partida primeiro, depois forma recente, a tendência do Glint e a atividade.
+**Início** — a última partida e as anteriores; ao lado, forma recente, o anel de heróis, companheiros e atividade.
 
 ![Início](docs/screenshots/home.pt-BR.png)
 
@@ -105,12 +106,13 @@ da amostra quando há uma.
 
 ![Aba Coaching de uma partida analisada](docs/screenshots/match-coaching.pt-BR.png)
 
-**Heróis** — o seu desempenho em cada herói, por período e patch; menos de 5 partidas sai marcado
-como amostra pequena.
+**Heróis** — o seu desempenho em cada herói, por período e patch, com as últimas partidas do herói
+escolhido ao lado da lista; menos de 5 partidas sai marcado como amostra pequena.
 
 ![Seção Heróis](docs/screenshots/heroes.pt-BR.png)
 
-**Conta** — totais da carreira com a amostra de cada linha, recordes e contagens.
+**Conta** — a evolução do Glint, do winrate e do farm, totais da carreira com a amostra de cada
+linha, fila e ranque, recordes e contagens.
 
 ![Seção Conta](docs/screenshots/account.pt-BR.png)
 

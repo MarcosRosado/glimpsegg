@@ -13,7 +13,7 @@ disposição da 1.0: **coluna principal larga com as partidas, coluna lateral de
 | `RecentMatchesCard.tsx` | As 15 partidas seguintes, uma linha cada (herói, resultado, KDA, GPM, Glint, itens, quando) e "Ver todas" para Partidas. Tags e filtros ficam em Partidas | `HomeSection.tsx` |
 | `HeroShareCard.tsx` | O anel lateral: heróis das últimas 25 (ou 100) partidas, fatia = partidas, **cor = winrate** numa escala divergente (vermelho, cinza no meio, verde; satura em 25 pontos), cinza abaixo de `HERO_SHARE_MIN_SAMPLE`. Retrato na fatia que comporta, centro com o total ou o herói em foco, legenda em lista com o número exato. Agregação em `utils/heroShare.ts` | `HomeSection.tsx` |
 | `HomeSkeleton.tsx` | As duas colunas enquanto o perfil chega (antes aparecia o convite "configure sua conta") | `App.tsx` |
-| `useTrendMatches.ts` | As partidas da janela de 100: começa com as 40 do perfil e busca as 100 mais recentes **só quando o jogador escolhe a janela maior** | `HomeSection.tsx`, `account/AccountSection.tsx` |
+| `useTrendMatches.ts` | As partidas da janela de 100: começa com as 40 do perfil e busca as 100 mais recentes **só quando o jogador escolhe a janela maior**. Expõe `loading` (o botão da janela pulsa) e `failed` (linha de erro; o clique seguinte tenta de novo) — antes o clique não dava sinal e a falha só fazia o botão sumir | `HomeSection.tsx`, `account/AccountSection.tsx` |
 
 ## Regras locais
 

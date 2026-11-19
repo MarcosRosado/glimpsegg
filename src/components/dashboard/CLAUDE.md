@@ -14,7 +14,7 @@ Os cards de perfil que as seções da 2.0 reaproveitam: Início, Partidas e Cont
 | `PerformanceTrendChart.tsx` | Evolução de Glint/winrate/GPM com média móvel (`recharts`), com `compact` (altura menor). A métrica de Glint (botão e gráfico) some quando nenhuma partida da janela tem nota | `account/AccountSection.tsx` |
 | `ActivityHeatmap.tsx` | Heatmap de 30 dias, partidas/dia com winrate. Cabeçalho sempre empilhado: o card mora na coluna lateral | `home/HomeSection.tsx` |
 | `QueueRankCard.tsx` | "Fila e ranque": winrate da janela com delta, histórico de rota (some sem veredito), rank médio, fila solo/grupo, não classificado e distribuição de medalhas. Era a metade `part="account"` do `TrendsCard` (antes `StratzTrendsCard`); a outra metade — sunburst de posições, que a lista nunca alimentou, e as barras de Glint por partida — foi apagada em 2026-11-19, quando saiu do Início | `account/AccountSection.tsx` |
-| `TeammatesCard.tsx` | Top companheiros com winrate junto; o clique abre a conta do companheiro (`onOpenPeer`) — na 1.0 a linha parecia clicável e não fazia nada. Era `StratzTeammatesCard` até a 2.0 | `home/HomeSection.tsx` |
+| `TeammatesCard.tsx` | Top companheiros com winrate junto; o clique abre a conta do companheiro (`onOpenPeer`) — na 1.0 a linha parecia clicável e não fazia nada. Duas linhas por companheiro (nome e partidas; barra de winrate), porque mora na coluna lateral e as três colunas fixas cortavam o nome. Era `StratzTeammatesCard` até a 2.0 | `home/HomeSection.tsx` |
 
 ## Glint e o que a lista não traz (desde 2026-11-19)
 

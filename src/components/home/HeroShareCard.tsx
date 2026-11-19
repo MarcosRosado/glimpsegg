@@ -75,16 +75,18 @@ type Range = 25 | 100;
 export const HeroShareCard: React.FC<{
   matches: PlayerMatchSummary[];
   canLoadMore: boolean;
+  loadingMore?: boolean;
+  loadMoreFailed?: boolean;
   onRequestMore: () => void;
   onOpenHeroMatches: (heroId: number) => void;
-}> = ({ matches, canLoadMore, onRequestMore, onOpenHeroMatches }) => {
+}> = ({ matches, canLoadMore, loadingMore = false, loadMoreFailed = false, onRequestMore, onOpenHeroMatches }) => {
   const { t, language } = useLanguage();
   const glintHint = useGlintHint();
   const [rangeChoice, setRangeChoice] = useState<Range>(25);
   const [focus, setFocus] = useState<number | null>(null);
-  // Janela de 100 pedida e ainda não carregada: fica nas 25 (nunca desenha 40 sob o "100").
-  // Conta com menos de 100 partidas: a janela é o que existe, e o subtítulo diz quantas.
-  const range: Range = rangeChoice === 100 && canLoadMore ? 25 : rangeChoice;
+  // "100" só com 100 carregadas: pedida e ainda não chegou (ou falhou), fica nas 25 — nunca
+  // desenha 40 sob o rótulo de 100.
+  const range: Range = rangeChoice === 100 && matches.length >= 100 ? 100 : 25;
   const windowMatches = useMemo(() => matches.slice(0, range), [matches, range]);
   const share = useMemo(() => summarizeHeroShare(windowMatches), [windowMatches]);
 
@@ -100,7 +102,7 @@ export const HeroShareCard: React.FC<{
   });
   const focused = focus !== null ? share.slices[focus] : null;
   const hasAnyGlint = share.slices.some((s) => s.glintCount > 0);
-  const showMore = matches.length > 25 || canLoadMore;
+  const showMore = matches.length >= 100 || canLoadMore;
 
   const sliceLabel = (s: HeroShareSlice) =>
     s.heroId === null ? t('heroShareOther', { n: s.heroCount }) : getHero(s.heroId).displayName;
@@ -127,7 +129,12 @@ export const HeroShareCard: React.FC<{
                   setRangeChoice(r);
                   if (r === 100 && matches.length < 100) onRequestMore();
                 }}
-                className={cn('px-2 py-0.5 rounded transition', range === r ? 'bg-slate-700 text-cyan-200 font-bold' : 'text-slate-400 hover:text-slate-200')}
+                aria-busy={r === 100 && loadingMore}
+                className={cn(
+                  'px-2 py-0.5 rounded transition',
+                  range === r ? 'bg-slate-700 text-cyan-200 font-bold' : 'text-slate-400 hover:text-slate-200',
+                  r === 100 && loadingMore && 'animate-pulse text-cyan-300',
+                )}
               >
                 {r}
               </button>
@@ -135,6 +142,7 @@ export const HeroShareCard: React.FC<{
           </div>
         )}
       </div>
+      {loadMoreFailed && <p role="alert" className="text-[11px] text-rose-300 mb-1">{t('trendLoadMoreError')}</p>}
       <p className="text-[11px] text-slate-500 mb-3 cursor-help" title={t('heroShareColorHint', { n: HERO_SHARE_MIN_SAMPLE })}>
         {t('heroShareSubtitle', { n: share.total })}
       </p>
@@ -195,6 +203,9 @@ export const HeroShareCard: React.FC<{
                 <span className="text-rose-400">{focused.count - focused.wins}</span>
                 <span className="text-slate-400"> ({pct(focused.wins, focused.count)}%)</span>
               </div>
+              <div className="text-[10px] font-mono text-teal-300/90" title={t('heroesKdaHint')}>
+                {t('kda')} {((focused.kills + focused.assists) / Math.max(1, focused.deaths)).toLocaleString(language, { maximumFractionDigits: 1 })}
+              </div>
             </>
           ) : (
             <>
@@ -216,9 +227,8 @@ export const HeroShareCard: React.FC<{
         <span className="flex-1">{t('heroesColHero')}</span>
         <span className="w-6 text-right">#</span>
         <span className="w-12 text-right whitespace-nowrap">{t('heroesColWinRate')}</span>
-        <span className="w-9 text-right hidden sm:inline">{t('kda')}</span>
         {hasAnyGlint && (
-          <span className="w-7 text-right hidden sm:inline cursor-help" title={glintHint}>
+          <span className="w-9 text-right cursor-help whitespace-nowrap" title={glintHint}>
             {t('glint')}
             <sup className="ml-0.5 text-[7px]">{t('glintBeta')}</sup>
           </span>
@@ -227,7 +237,6 @@ export const HeroShareCard: React.FC<{
       <ul className="space-y-1">
         {share.slices.map((s, i) => {
           const hero = s.heroId !== null ? getHero(s.heroId) : null;
-          const kda = (s.kills + s.assists) / Math.max(1, s.deaths);
           const avgGlint = s.glintCount > 0 ? Math.round(s.glintSum / s.glintCount) : null;
           return (
             <li key={s.heroId ?? 'other'}>
@@ -248,9 +257,9 @@ export const HeroShareCard: React.FC<{
               >
                 <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: sliceColor(s) }} aria-hidden />
                 {hero ? (
-                  <img src={hero.avatarUrl} alt="" className="w-8 h-[18px] rounded object-cover shrink-0" onError={handleHeroImageError} />
+                  <img src={hero.avatarUrl} alt="" className="w-7 h-4 rounded object-cover shrink-0" onError={handleHeroImageError} />
                 ) : (
-                  <span className="w-8 shrink-0" />
+                  <span className="w-7 shrink-0" />
                 )}
                 <span className="flex-1 min-w-0 truncate text-slate-200 font-semibold">{sliceLabel(s)}</span>
                 <span className="font-mono text-slate-300 tabular-nums w-6 text-right">{s.count}</span>
@@ -262,13 +271,10 @@ export const HeroShareCard: React.FC<{
                 >
                   {pct(s.wins, s.count)}%
                 </span>
-                <span className="font-mono text-teal-300/90 tabular-nums w-9 text-right hidden sm:inline" title={t('heroesKdaHint')}>
-                  {kda.toLocaleString(language, { maximumFractionDigits: 1 })}
-                </span>
                 {/* A coluna existe se algum herói tem nota; quem não tem fica com a célula vazia. */}
                 {hasAnyGlint && (
                   <span
-                    className="font-mono text-amber-300/90 tabular-nums w-7 text-right hidden sm:inline"
+                    className="font-mono text-amber-300/90 tabular-nums w-9 text-right"
                     title={avgGlint !== null ? `${t('glintSampled', { count: s.glintCount })}. ${glintHint}` : undefined}
                   >
                     {avgGlint !== null ? formatGlint(avgGlint) : ''}

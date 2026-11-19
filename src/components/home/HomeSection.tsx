@@ -44,6 +44,8 @@ export const HomeSection: React.FC<{
         <HeroShareCard
           matches={trend.matches}
           canLoadMore={trend.canLoadMore}
+          loadingMore={trend.loading}
+          loadMoreFailed={trend.failed}
           onRequestMore={trend.requestMore}
           onOpenHeroMatches={onOpenHeroMatches}
         />

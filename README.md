@@ -29,14 +29,15 @@ is neither STRATZ's IMP nor claimed to match it.
 A sidebar with five sections — **Home**, **Matches**, **Heroes**, **Account** and the **Hero
 grid** — that collapses into an icon rail.
 
-**Home** — your last match first, with its replay status and the "Request replay analysis" button
-right there; then recent form, the trend over your last 100 matches, most played heroes, activity
-and teammates (click one to open their account).
+**Home** — two columns. The main one has your last match, with its replay status and the "Request
+replay analysis" button right there, and the matches before it. The side one has recent form with
+a Glint line, a ring of the heroes in your last 25 or 100 matches colored by win rate, teammates
+(click one to open their account) and activity.
 
 **Matches, Heroes, Account**
 - Match list that loads past the first 40, filtered by period and patch
-- Your record on every hero, by period and patch
-- Career totals (each with its own sample size), records, and breakdowns by patch, queue, lane and side
+- Your record on every hero, by period and patch, with the hero you pick and its latest matches beside the list
+- Your Glint, win rate and farm over time, plus career totals (each with its own sample size), records, and breakdowns by patch, queue, lane and side
 
 **Match analysis** — the replay's status decides the layout
 - **Not analyzed yet:** the match opens as a scoreboard, says so, and offers to request the
@@ -72,7 +73,7 @@ The hero grid screens use a **fictitious layout** grouped by the four attributes
 it by default: a hero grid is a local file, so there is no such thing as another player's grid to
 show.
 
-**Home** — the last match first, then recent form, the Glint trend and activity.
+**Home** — the last match and the ones before it; recent form, the hero ring, teammates and activity on the side.
 
 ![Home](docs/screenshots/home.png)
 
@@ -107,12 +108,13 @@ the sample size when there is one.
 
 ![Coaching tab of an analyzed match](docs/screenshots/match-coaching.png)
 
-**Heroes** — your record on every hero, by period and patch; fewer than 5 matches is marked as a
-small sample.
+**Heroes** — your record on every hero, by period and patch, with the selected hero's latest matches
+beside the list; fewer than 5 matches is marked as a small sample.
 
 ![Heroes section](docs/screenshots/heroes.png)
 
-**Account** — career totals with the sample size of each line, records and breakdowns.
+**Account** — your Glint, win rate and farm over time, career totals with the sample size of each
+line, queue and rank, records and breakdowns.
 
 ![Account section](docs/screenshots/account.png)
 

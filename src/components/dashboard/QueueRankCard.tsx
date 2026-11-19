@@ -14,6 +14,8 @@ interface QueueRankCardProps {
   leaderboardRank?: number;
   /** Dá para trazer mais partidas: o "100" aparece e o clique pede a carga. */
   canLoadMore?: boolean;
+  loadingMore?: boolean;
+  loadMoreFailed?: boolean;
   onRequestMore?: () => void;
 }
 
@@ -34,6 +36,8 @@ export const QueueRankCard: React.FC<QueueRankCardProps> = ({
   seasonRank,
   leaderboardRank,
   canLoadMore = false,
+  loadingMore = false,
+  loadMoreFailed = false,
   onRequestMore,
 }) => {
   const { t } = useLanguage();
@@ -141,17 +145,19 @@ export const QueueRankCard: React.FC<QueueRankCardProps> = ({
                 setRange(r);
                 if (matches.length < r) onRequestMore?.();
               }}
+              aria-busy={r === 100 && loadingMore}
               className={`px-3 py-1 rounded transition ${
                 effRange === r
                   ? 'bg-cyan-500/15 text-cyan-300 font-bold border border-cyan-500/40'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
+              } ${r === 100 && loadingMore ? 'animate-pulse text-cyan-300' : ''}`}
             >
               {r}
             </button>
           ))}
         </div>
       </div>
+      {loadMoreFailed && <p role="alert" className="text-[11px] text-rose-300 mt-1">{t('trendLoadMoreError')}</p>}
 
       <div className="grid grid-cols-3 gap-x-3 gap-y-3 mt-3 pt-3 border-t border-slate-800/80 text-[11px]">
         <div>

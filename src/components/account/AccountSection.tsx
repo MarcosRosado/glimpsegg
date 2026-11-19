@@ -30,6 +30,8 @@ export const AccountSection: React.FC<{
           matches={trend.matches}
           onSelectMatch={onOpenMatch}
           canLoadMore={trend.canLoadMore}
+          loadingMore={trend.loading}
+          loadMoreFailed={trend.failed}
           onRequestMore={trend.requestMore}
         />
       )}
@@ -40,6 +42,8 @@ export const AccountSection: React.FC<{
           <QueueRankCard
             matches={trend.matches}
             canLoadMore={trend.canLoadMore}
+            loadingMore={trend.loading}
+            loadMoreFailed={trend.failed}
             onRequestMore={trend.requestMore}
             seasonRank={p.seasonRank}
             leaderboardRank={p.leaderboardRank}
