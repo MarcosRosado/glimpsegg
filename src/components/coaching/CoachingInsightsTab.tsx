@@ -170,8 +170,6 @@ export const CoachingInsightsTab: React.FC<CoachingInsightsTabProps> = ({
     [player, match, threat],
   );
 
-  const isUnparsed = !match.availability?.parsed;
-
   return (
     <div className="space-y-6">
       {/* Cabecalho */}
@@ -193,17 +191,8 @@ export const CoachingInsightsTab: React.FC<CoachingInsightsTabProps> = ({
       {/* Temporario: some sozinho fora da janela de PATCH_TRANSITION. */}
       <PatchTransitionNotice variant="banner" />
 
-      {/* Banner de partida nao parseada — diz o que NAO pode ser avaliado, em vez de
-          preencher a lacuna com estimativa. */}
-      {isUnparsed && (
-        <div className="glass-card rounded-xl p-4 border border-slate-700/70 bg-slate-900/50 flex items-start gap-3">
-          <Info className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-          <div>
-            <h4 className="text-xs font-bold text-slate-200 mb-1">{t('coachUnparsedTitle')}</h4>
-            <p className="text-[11px] text-slate-400 leading-relaxed">{t('coachUnparsedBody')}</p>
-          </div>
-        </div>
-      )}
+      {/* O aviso de partida nao parseada que morava aqui saiu na 2.0: sem analise a partida
+          abre no "modo placar", que nao tem a aba Coaching. */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Pontos fortes */}
@@ -252,6 +241,17 @@ export const CoachingInsightsTab: React.FC<CoachingInsightsTabProps> = ({
               />
             ))
           )}
+        </div>
+      </div>
+
+      {/* O que esta FORA desta versao, dito na tela em vez de silencio (§5 da proposta da
+          2.0): build e confrontos vinham de agregados da STRATZ que a OpenDota nao tem em
+          volume. Ficam escondidos, nunca estimados. */}
+      <div className="glass-card rounded-xl p-4 border border-slate-800 bg-slate-900/40 flex items-start gap-3">
+        <Info className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" aria-hidden />
+        <div>
+          <h4 className="text-xs font-bold text-slate-200 mb-1">{t('coachOutOfScopeTitle')}</h4>
+          <p className="text-[11px] text-slate-400 leading-relaxed">{t('coachOutOfScopeBody')}</p>
         </div>
       </div>
     </div>

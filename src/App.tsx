@@ -3,13 +3,8 @@ import { Navbar } from './components/layout/Navbar';
 import { BrandMark } from './components/brand/BrandMark';
 import { BrandLockup } from './components/brand/BrandLockup';
 import { TrendsCard } from './components/dashboard/TrendsCard';
-import { TeammatesCard } from './components/dashboard/TeammatesCard';
 import { LOCAL_STORAGE_KEYS, migrateLegacyLocalStorage } from './utils/legacyStorage';
-import { RecentFormCard } from './components/dashboard/RecentFormCard';
-import { MostPlayedHeroes } from './components/dashboard/MostPlayedHeroes';
 import { ProfileHeader } from './components/dashboard/ProfileHeader';
-import { ActivityHeatmap } from './components/dashboard/ActivityHeatmap';
-import { PerformanceTrendChart } from './components/dashboard/PerformanceTrendChart';
 import { MatchHeader } from './components/match/MatchHeader';
 import { ParseRequestCard, PARSE_POLL_DELAYS_MS, type ParseState } from './components/match/ParseRequestCard';
 import { MatchTabs } from './components/match/MatchTabs';
@@ -17,7 +12,7 @@ import { MatchPlayerPicker } from './components/match/MatchPlayerPicker';
 import { FightsTab } from './components/match/FightsTab';
 import { TurningPointNote } from './components/match/TurningPointNote';
 import { Sidebar, type AppSection } from './components/layout/Sidebar';
-import { LastMatchCard } from './components/home/LastMatchCard';
+import { HomeSection } from './components/home/HomeSection';
 import { MatchesSection } from './components/matches/MatchesSection';
 import { HeroesSection } from './components/heroes/HeroesSection';
 import { AccountStats } from './components/account/AccountStats';
@@ -582,7 +577,6 @@ function MainAppContent() {
 
   /** Partida aberta: sem análise é o "modo placar" — outra forma de tela, não um aviso por cima. */
   const isScoreboardMode = !!selectedMatch && !selectedMatch.availability.parsed;
-  const lastMatch = profile?.recentMatches?.[0] ?? null;
 
   const renderMatch = (match: MatchDetails) => (
     <div className="space-y-5 animate-in fade-in duration-200">
@@ -720,63 +714,17 @@ function MainAppContent() {
         );
       case 'HOME':
       default:
-        /* Início, opção A dos wireframes: última partida no topo, depois forma e tendência,
-           por último os cards menores (docs/PROPOSTA-V2.md §3.2). */
         return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-stretch">
-              <div className="xl:col-span-3 [&>*]:h-full">
-                {lastMatch && (
-                  <LastMatchCard
-                    match={lastMatch}
-                    onOpen={(id) => void handleSelectMatch(id)}
-                    onOpenAndRequestParse={(id) => void handleSelectMatch(id, { requestParse: true })}
-                  />
-                )}
-              </div>
-              <div className="xl:col-span-2">
-                <RecentFormCard
-                  recentMatches={p.recentMatches}
-                  onSelectMatch={(id) => void handleSelectMatch(id)}
-                />
-              </div>
-            </div>
-
-            {/* Tendência: a curva por partida na largura inteira — ela é a leitura de
-                "estou melhorando?" e espremida perde o eixo. */}
-            {p.recentMatches.length > 1 && (
-              <PerformanceTrendChart
-                matches={p.recentMatches}
-                onSelectMatch={(id) => void handleSelectMatch(id)}
-              />
-            )}
-
-            {/* Os cards menores, em colunas que acomodam alturas diferentes sem buraco. */}
-            <div className="columns-1 lg:columns-2 2xl:columns-3 gap-6 [&>*]:mb-6 [&>*]:break-inside-avoid">
-              <TrendsCard
-                part="trend"
-                matches={p.recentMatches}
-                seasonRank={p.seasonRank}
-                leaderboardRank={p.leaderboardRank}
-                onSelectMatch={(id) => void handleSelectMatch(id)}
-              />
-              <MostPlayedHeroes
-                heroes={p.mostPlayedHeroes}
-                onFilterHero={(heroId) => {
-                  // O clique no herói abre Partidas já filtrada por ele.
-                  setHeroFilterId(heroId);
-                  setSection('MATCHES');
-                }}
-              />
-              {p.activityDays && p.activityDays.length > 0 && <ActivityHeatmap activityDays={p.activityDays} />}
-              {p.peers && p.peers.length > 0 && (
-                <TeammatesCard
-                  peers={p.peers}
-                  onOpenPeer={(accountId) => void handleSelectProfileFromHistory(accountId)}
-                />
-              )}
-            </div>
-          </div>
+          <HomeSection
+            profile={p}
+            onOpenMatch={(id) => void handleSelectMatch(id)}
+            onOpenAndRequestParse={(id) => void handleSelectMatch(id, { requestParse: true })}
+            onOpenHeroMatches={(heroId) => {
+              setHeroFilterId(heroId);
+              setSection('MATCHES');
+            }}
+            onOpenPeer={(accountId) => void handleSelectProfileFromHistory(accountId)}
+          />
         );
     }
   };

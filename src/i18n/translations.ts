@@ -304,8 +304,6 @@ export const translations = {
     coachSrcHeroStats: 'Dados do patch',
     coachSrcMatchOnly: 'Desta partida',
     coachSrcRoleBaseline: 'Estimativa genérica',
-    coachUnparsedTitle: 'Análise limitada nesta partida',
-    coachUnparsedBody: 'O replay ainda não foi analisado pela OpenDota, então visão, mortes e fase de rotas não podem ser avaliadas. Peça a análise no aviso do topo da partida. Nada aqui foi estimado para preencher a lacuna.',
     coachNoStrengths: 'Nenhum destaque acima da referência nesta partida.',
     coachBracketGeneric: 'média geral',
     coachBracketYours: 'no seu ranque',
@@ -1009,6 +1007,8 @@ export const translations = {
     acctPings: 'Pings',
     acctApm: 'Ações por minuto',
     acctHours: '{h} h',
+    coachOutOfScopeTitle: 'Fora desta versão',
+    coachOutOfScopeBody: 'Recomendação de build, confrontos por herói e coaching minuto a minuto contra a média do herói não aparecem aqui. Eles dependiam de agregados que a OpenDota não tem em volume suficiente, e voltam quando o app tiver agregado próprio. Nada foi estimado no lugar deles.',
     acctLaneEfficiencyHint: 'Ouro aos 10 min dividido por uma referência fixa de 4.948 de ouro da OpenDota, não pela média do herói, da posição ou do ranque. Só existe em partida analisada, por isso a amostra é menor.',
   },
 
@@ -1315,8 +1315,6 @@ export const translations = {
     coachSrcHeroStats: 'Patch data',
     coachSrcMatchOnly: 'This match',
     coachSrcRoleBaseline: 'Generic estimate',
-    coachUnparsedTitle: 'Limited analysis for this match',
-    coachUnparsedBody: 'OpenDota has not analyzed this replay yet, so vision, deaths and the laning phase cannot be evaluated. Request the analysis from the notice at the top of the match. Nothing here was estimated to fill the gap.',
     coachNoStrengths: 'Nothing stood out above the benchmark in this match.',
     coachBracketGeneric: 'all brackets',
     coachBracketYours: 'at your bracket',
@@ -2021,6 +2019,8 @@ export const translations = {
     acctApm: 'Actions per minute',
     acctHours: '{h} h',
     acctLaneEfficiencyHint: 'Gold at 10 min divided by a fixed OpenDota reference of 4,948 gold, not by the hero, position or rank average. It only exists for analyzed matches, so the sample is smaller.',
+    coachOutOfScopeTitle: 'Not in this version',
+    coachOutOfScopeBody: "Build recommendation, hero matchups and minute-by-minute coaching against the hero average are not shown here. They depended on aggregates OpenDota does not have in enough volume, and they come back once the app has its own aggregates. Nothing was estimated in their place.",
   },
 } as const;
 

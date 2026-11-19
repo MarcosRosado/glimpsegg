@@ -109,7 +109,9 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartDimensions, setChartDimensions] = useState({ width: 320, height: 300 });
 
-  const displayedMatches = useMemo(() => matches.slice(0, range), [matches, range]);
+  // A janela nunca passa do que foi carregado (a lista pode encolher ao trocar de conta).
+  const effRange = range > 25 && matches.length < range ? 25 : range;
+  const displayedMatches = useMemo(() => matches.slice(0, effRange), [matches, effRange]);
 
   /** Agregados da janela, por posicao e por heroi dentro da posicao. */
   const stats = useMemo(() => {
@@ -440,12 +442,13 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
         </h3>
 
         <div className="flex bg-slate-900/90 p-0.5 rounded-lg border border-slate-800 text-xs font-mono">
-          {([25, 100] as const).map((r) => (
+          {/* "100" só quando há 100 partidas carregadas: senão o botão desenharia as mesmas. */}
+          {([25, 100] as const).filter((r) => r === 25 || matches.length >= r).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
               className={`px-3 py-1 rounded transition ${
-                range === r
+                effRange === r
                   ? 'bg-cyan-500/15 text-cyan-300 font-bold border border-cyan-500/40'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}

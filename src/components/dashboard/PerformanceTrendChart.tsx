@@ -22,11 +22,19 @@ interface PerformanceTrendChartProps {
 
 type TrendMetric = 'GLINT' | 'WINRATE' | 'GPM';
 
+const RANGES: { size: 25 | 50 | 100; label: 'trend25' | 'trend50' | 'trend100' }[] = [
+  { size: 25, label: 'trend25' },
+  { size: 50, label: 'trend50' },
+  { size: 100, label: 'trend100' },
+];
+
 const hasGlint = (g: number | null | undefined): g is number => typeof g === 'number' && Number.isFinite(g);
 
 export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ matches, onSelectMatch }) => {
   const { t } = useLanguage();
-  const [matchCountRange, setMatchCountRange] = useState<25 | 50 | 100>(25);
+  const [rangeChoice, setMatchCountRange] = useState<25 | 50 | 100>(25);
+  // A lista pode encolher (troca de conta): a janela escolhida nunca passa do que existe.
+  const matchCountRange = rangeChoice > 25 && matches.length < rangeChoice ? 25 : rangeChoice;
   const glintHint = useGlintHint();
   const [selectedMetric, setMetric] = useState<TrendMetric>('GLINT');
 
@@ -150,30 +158,19 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ ma
 
           {/* Range Selector */}
           <div className="flex bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 text-xs font-mono">
-            <button
-              onClick={() => setMatchCountRange(25)}
-              className={`px-2 py-1 rounded transition ${
-                matchCountRange === 25 ? 'bg-slate-700 text-amber-300 font-bold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {t('trend25')}
-            </button>
-            <button
-              onClick={() => setMatchCountRange(50)}
-              className={`px-2 py-1 rounded transition ${
-                matchCountRange === 50 ? 'bg-slate-700 text-amber-300 font-bold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {t('trend50')}
-            </button>
-            <button
-              onClick={() => setMatchCountRange(100)}
-              className={`px-2 py-1 rounded transition ${
-                matchCountRange === 100 ? 'bg-slate-700 text-amber-300 font-bold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {t('trend100')}
-            </button>
+            {/* Só as janelas que a lista carregada preenche. Com 40 partidas, "100 jogos"
+                desenhava as mesmas 40 com o rótulo de 100 — a 1.0 fazia isso. */}
+            {RANGES.filter((r) => r.size === 25 || matches.length >= r.size).map((r) => (
+              <button
+                key={r.size}
+                onClick={() => setMatchCountRange(r.size)}
+                className={`px-2 py-1 rounded transition ${
+                  matchCountRange === r.size ? 'bg-slate-700 text-amber-300 font-bold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {t(r.label)}
+              </button>
+            ))}
           </div>
         </div>
       </div>
