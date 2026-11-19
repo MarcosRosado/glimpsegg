@@ -120,8 +120,8 @@ lista o que a OpenDota **não** tem e sai **desligado, não aproximado**: `avail
 sai da regra própria de `utils/laneVerdict.ts`.
 
 **Partida não parseada é o caso comum.** A STRATZ parseava sozinha; a OpenDota parseia a pedido.
-Sem parse a partida abre só com o placar (`availability.parsePending`), e o `ParsePendingBanner`
-oferece "Pedir análise do replay". O pedido sai **só no clique** — cada um conta como 10 chamadas
+Sem parse a partida abre só com o placar (`availability.parsePending`), no "modo placar", e o
+`ParseRequestCard` oferece "Pedir análise do replay". O pedido sai **só no clique** — cada um conta como 10 chamadas
 no limite da OpenDota — e a espera consulta a **partida**, não o job (`GET /request/{jobId}`
 devolve `null` tanto para "terminou" quanto para "não existe"), com recuo e teto de ~5 minutos.
 
@@ -143,9 +143,11 @@ Falha de rede ou de parsing devolve `null`, e o `App` mostra toast. **Não exist
 fabricados** — o antigo `src/services/mockData.ts` foi removido de propósito, porque ele fazia a tela
 abrir com a partida errada em vez de avisar.
 
-`src/App.tsx` é o orquestrador: guarda token, perfil atual, histórico de perfis, partida
-selecionada, slot selecionado e aba ativa; alterna entre a view de dashboard e a de partida
-(`selectedMatch ? ... : ...`) e monta as quatro abas.
+`src/App.tsx` é o orquestrador: guarda a conta, perfil atual, histórico de perfis, partida
+selecionada, slot selecionado e aba ativa; monta a moldura da 2.0 (barra lateral com Início,
+Partidas, Heróis, Conta e o hero grid; topo com conta, patch e busca) e a partida em duas formas:
+sem análise, o "modo placar" sem abas; analisada, as abas Resumo, Meu jogo, Lutas, Visão e
+Coaching com um seletor de jogador só. Detalhe em [`src/CLAUDE.md`](src/CLAUDE.md).
 
 ## A doutrina central: nunca inventar dado
 
