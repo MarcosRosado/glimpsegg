@@ -650,6 +650,8 @@ export const translations = {
     // Toasts e erros
     matchLoadError: 'Não foi possível carregar esta partida na OpenDota.',
     profileLoaded: 'Perfil carregado: {name}',
+    profileLoadErrorTitle: 'Não foi possível carregar o perfil',
+    profileLoadErrorDesc: 'A conta {id} está salva, mas a OpenDota não respondeu agora (limite de uso ou rede). Tente de novo em instantes.',
     playerNotFound: 'Nenhum jogador encontrado com esse ID.',
     playerSearchError: 'Erro ao buscar o jogador.',
     historyCleared: 'Histórico recente limpo com sucesso.',
@@ -1692,6 +1694,8 @@ export const translations = {
     // Toasts and errors
     matchLoadError: 'Could not load this match from OpenDota.',
     profileLoaded: 'Profile loaded: {name}',
+    profileLoadErrorTitle: 'Could not load the profile',
+    profileLoadErrorDesc: 'Account {id} is saved, but OpenDota did not answer right now (usage limit or network). Try again in a moment.',
     playerNotFound: 'No player found with that ID.',
     playerSearchError: 'Error searching for the player.',
     historyCleared: 'Recent history cleared.',

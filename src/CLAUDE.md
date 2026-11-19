@@ -31,6 +31,12 @@ vai chegar: `MatchSkeleton` ao abrir partida (`loadingMatchId`; recarga da mesma
 a tela), `HomeSkeleton` enquanto o perfil chega, e linhas nas seções. Recarga com dado na tela
 segue com `opacity-60`. Falha mostra aviso com "tentar de novo", nunca área em branco.
 
+**"Não carregou" não é "sem conta".** Perfil que não chega com conta salva vira
+`profileLoadFailedFor` e o aviso "Não foi possível carregar o perfil" (tentar de novo,
+configurações). Antes, a falha dava "Nenhum Perfil Conectado" e, na abertura do app, reabria o
+onboarding inteiro — com a cota diária da OpenDota esgotada, o jogador recém-cadastrado via o
+app pedir a conta de novo. O "atualizar" da mesma conta que falha mantém a tela que já estava.
+
 - **`AppSection`** (`layout/Sidebar.tsx`) — sem partida aberta: `HOME` (Início) · `MATCHES`
   (`MatchesSection`) · `HEROES` (`HeroesSection`, lista e painel do herói) · `ACCOUNT`
   (`AccountSection`: `ProfileHeader`, evolução, `AccountStats` e `QueueRankCard`) ·

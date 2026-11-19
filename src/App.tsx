@@ -34,7 +34,7 @@ import { fetchOpenDotaMatchDetails, requestOpenDotaParse } from './services/open
 import { resolveSteamId } from './services/steamResolver';
 import { configuredProfileTier } from './utils/heroGrid/sourcePrecedence';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
-import { Sparkles, DownloadCloud, UserX } from 'lucide-react';
+import { Sparkles, DownloadCloud, UserX, AlertTriangle } from 'lucide-react';
 
 import { useHeroGridSync } from './hooks/useHeroGridSync';
 import { MatchSkeleton } from './components/match/MatchSkeleton';
@@ -79,6 +79,12 @@ function MainAppContent() {
    */
   const [configuredSeasonRank, setConfiguredSeasonRank] = useState<number | null>(null);
   const [profile, setProfile] = useState<PlayerProfileSummary | null>(null);
+  /**
+   * Conta cujo perfil não carregou (OpenDota fora, limite de uso). Separa "não carregou" de
+   * "não tem conta": antes as duas davam "Nenhum Perfil Conectado", e na abertura do app a
+   * falha reabria o onboarding inteiro com a conta já salva.
+   */
+  const [profileLoadFailedFor, setProfileLoadFailedFor] = useState<string | null>(null);
   const [profileHistory, setProfileHistory] = useState<ProfileHistoryItem[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MatchDetails | null>(null);
   /** Partida sendo buscada: mostra o `MatchSkeleton` até o detalhe chegar (ou falhar). */
@@ -275,6 +281,7 @@ function MainAppContent() {
           const profileData = await fetchPlayerProfile(resolvedSteamId);
           if (profileData && profileData.steamAccountId) {
             setProfile(profileData);
+            setProfileLoadFailedFor(null);
             // Aqui `resolvedSteamId === configuredSteamId` por construção.
             setConfiguredSeasonRank(profileData.seasonRank ?? null);
             upsertProfileHistory(profileData);
@@ -286,9 +293,15 @@ function MainAppContent() {
         } catch (err) {
           console.warn('Failed to load profile on startup:', err);
         }
+        // Conta salva e perfil que não carregou: aviso com "tentar de novo", NÃO onboarding.
+        setProfile(null);
+        setProfileLoadFailedFor(resolvedSteamId);
+        setIsAppInitializing(false);
+        setIsLoading(false);
+        return;
       }
 
-      // Sem Steam ID configurado, ou o perfil nao carregou: onboarding.
+      // Sem Steam ID configurado: onboarding.
       setIsOnboardingOpen(true);
       setOnboardingMode('onboarding');
       setProfile(null);
@@ -328,20 +341,27 @@ function MainAppContent() {
    * no mesmo tique em que faz `setConfiguredSteamId`, então `configuredSteamId` aqui ainda
    * seria o valor ANTIGO e o `seasonRank` da conta nova não seria guardado.
    */
-  const loadProfileData = async (steamId: string, configuredIdOverride?: string) => {
+  const loadProfileData = async (steamId: string, configuredIdOverride?: string): Promise<boolean> => {
     setIsLoading(true);
     try {
       const data = await fetchPlayerProfile(steamId);
+      if (!data || !data.steamAccountId) throw new Error('profile unavailable');
       setProfile(data);
+      setProfileLoadFailedFor(null);
       // Só o perfil da conta configurada alimenta o ranque de referência do espelho.
       if (steamId === (configuredIdOverride ?? configuredSteamId)) {
-        setConfiguredSeasonRank(data?.seasonRank ?? null);
+        setConfiguredSeasonRank(data.seasonRank ?? null);
       }
-      if (data && data.steamAccountId) {
-        upsertProfileHistory(data);
-      }
+      upsertProfileHistory(data);
+      return true;
     } catch (err) {
       console.error('Error loading profile:', err);
+      // O "atualizar" da mesma conta que falha mantém a tela que já estava; conta diferente
+      // não pode ficar com o perfil da anterior na tela, e cai no aviso de falha.
+      setProfile((prev) => (prev && prev.steamAccountId === steamId ? prev : null));
+      setProfileLoadFailedFor(steamId);
+      showToast(t('profileLoadErrorTitle'));
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -402,9 +422,9 @@ function MainAppContent() {
       const res = await resolveSteamId(input);
       if (res.success && res.steamAccountId) {
         setCurrentSteamId(res.steamAccountId);
-        await loadProfileData(res.steamAccountId);
+        const ok = await loadProfileData(res.steamAccountId);
         setSelectedMatch(null);
-        showToast(t('profileLoaded', { name: res.personaname || res.steamAccountId }));
+        if (ok) showToast(t('profileLoaded', { name: res.personaname || res.steamAccountId }));
       } else {
         showToast(res.error || t('playerNotFound'));
       }
@@ -445,8 +465,7 @@ function MainAppContent() {
     if (!configuredSteamId || currentSteamId === configuredSteamId) return;
     setCurrentSteamId(configuredSteamId);
     setSelectedMatch(null);
-    await loadProfileData(configuredSteamId);
-    showToast(t('returnedToPrimary'));
+    if (await loadProfileData(configuredSteamId)) showToast(t('returnedToPrimary'));
   };
 
   const handleSaveSettings = async (newSteamId: string) => {
@@ -464,13 +483,13 @@ function MainAppContent() {
     }
 
     showToast(t('settingsSavedAlert'));
-    await loadProfileData(newSteamId, newSteamId);
+    return loadProfileData(newSteamId, newSteamId);
   };
 
   const handleOnboardingComplete = async (newSteamId: string) => {
     setIsOnboardingOpen(false);
-    await handleSaveSettings(newSteamId);
-    showToast(t('welcomeToast'));
+    // Perfil que não carregou já mostra o aviso de falha; "bem-vindo" por cima o esconderia.
+    if (await handleSaveSettings(newSteamId)) showToast(t('welcomeToast'));
   };
 
   /**
@@ -822,6 +841,33 @@ function MainAppContent() {
             </div>
           ) : !profile && isLoading ? (
             <HomeSkeleton />
+          ) : !profile && profileLoadFailedFor ? (
+            /* Conta salva, perfil que não veio: falha, não "sem conta". */
+            <div role="alert" className="flex flex-col items-center justify-center py-28 text-center space-y-5 animate-in fade-in duration-300">
+              <div className="w-16 h-16 rounded-2xl bg-rose-950/40 border border-rose-500/40 flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-rose-300" aria-hidden />
+              </div>
+              <div className="space-y-1.5 max-w-md">
+                <h2 className="text-lg font-bold text-white">{t('profileLoadErrorTitle')}</h2>
+                <p className="text-xs text-slate-400">{t('profileLoadErrorDesc', { id: profileLoadFailedFor })}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void loadProfileData(profileLoadFailedFor)}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-xs transition"
+                >
+                  {t('parseRetryButton')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:border-slate-500 text-xs font-bold transition"
+                >
+                  {t('settings')}
+                </button>
+              </div>
+            </div>
           ) : !profile ? (
             /* Empty Setup State when no profile is loaded yet */
             <div className="flex flex-col items-center justify-center py-28 text-center space-y-5 animate-in fade-in duration-300">
@@ -882,7 +928,9 @@ function MainAppContent() {
         onClose={() => setIsSettingsOpen(false)}
         currentSteamId={configuredSteamId}
         profileHistory={profileHistory}
-        onSave={handleSaveSettings}
+        onSave={async (id) => {
+          await handleSaveSettings(id);
+        }}
         onOpenGuide={handleOpenGuide}
         onHeroGridEnabledChange={(enabled) => {
           void heroGridSync.reloadPreferences();
