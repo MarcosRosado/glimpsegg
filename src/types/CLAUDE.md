@@ -8,16 +8,22 @@ daqui são praticamente a única rede de tipos que existe — ver *Gates* em
 
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
-| `dota.ts` | Domínio da partida e do perfil: `MatchDetails`, `MatchPlayer`, `PlayerProfileSummary`, `PlayerMatchSummary`, `MatchDataAvailability`, `BenchmarkSource`, `CoachingInsight`, `VisionData`/`WardPlacement`/`VisionSource`, `Role`, `Lane`, `LaneOutcome`, `PlayerLaneResult`, `MatchDynamicType`, `RadarStats`, `LaningStats`, `DamageReport` | `services/`, `utils/`, `components/`, `App.tsx` |
-| `electron.d.ts` | Superfície do `window.api`: `ElectronApi` (`store`, `stratzQuery`, `openDotaFetch`, `resolveSteamId`, `windowControl`, `updater`, `getPlatform`, `getVersion`, `heroGrid`), `AppConfig` e `HeroGridApi`. Traz o `declare global` que tipa `Window.api` | ambiente global — todo `window.api` do renderer |
+| `dota.ts` | Domínio da partida e do perfil: `MatchDetails`, `MatchPlayer`, `PlayerProfileSummary`, `PlayerMatchSummary`, `MatchDataAvailability`, `BenchmarkSource`, `CoachingInsight`, `VisionData`/`WardPlacement`/`VisionSource`, `Role`, `Lane`, `LaneOutcome`, `PlayerLaneResult`, `LaneId`, `PlayerLaneAdvantage`, `MatchDynamicType`, `RadarStats`, `LaningStats`, `DamageReport` | `services/`, `utils/`, `components/`, `App.tsx` |
+| `electron.d.ts` | Superfície do `window.api`: `ElectronApi` (`store`, `openDotaFetch`, `openDotaRequestParse`, `resolveSteamId`, `windowControl`, `updater`, `getPlatform`, `getVersion`, `heroGrid`), `AppConfig` e `HeroGridApi`. Traz o `declare global` que tipa `Window.api` | ambiente global — todo `window.api` do renderer |
 | `heroGrid.ts` | Formato bruto do arquivo da Valve (`HeroGridFile`, `HeroGridConfig`, `HeroGridCategory`) e os tipos da feature: `MetaWinrate`, `PersonalWinrate`, `HeroScore`, `MirrorResult`, `HeroGridPreferences`, `SyncOutcome`, `SyncState`, `HeroGridResult`, `HeroGridErrorCode` | `services/heroGrid/`, `utils/heroGrid/`, `hooks/useHeroGridSync.ts`, `components/heroGrid/` |
 
 ## Regras locais
 
-- **`MatchDataAvailability` tem 10 flags** (`parsed`, `perMinuteStats`, `networthSeries`,
+- **`MatchDataAvailability` tem 13 flags** (`parsed`, `perMinuteStats`, `networthSeries`,
   `deathEvents`, `damageReport`, `wards`, `advantageTimeline`, `heroAverage`, `abilities`,
-  `laneOutcomes`). Condição nova de disponibilidade **entra aqui**, não vira `if` solto no
+  `laneOutcomes`, `imp`, `glint`, `parsePending`). `glint` diz que ao menos um jogador tem a nota
+  própria experimental (`MatchPlayer.glint`, de `utils/glint.ts`). `imp` e `parsePending` nasceram com o mapper da OpenDota:
+  `imp` diz se `MatchPlayer.imp` é o IMP real da STRATZ (no caminho OpenDota é `false` e o campo é
+  só um `0` de marcador), e `parsePending` diz que a fonte ainda não parseou o replay mas **pode**
+  parsear a pedido. Condição nova de disponibilidade **entra aqui**, não vira `if` solto no
   componente. Regra ou seção que exija flag ausente é pulada, nunca estimada.
+- **`MatchDeathEvent.x`/`y` são opcionais.** A OpenDota não dá a posição da morte; evento sem
+  coordenada alimenta regra e contagem e fica fora de `VisionData.deaths`, que é o que o mapa plota.
 - **`BenchmarkSource` carrega procedência, e a UI renderiza isso.** `ROLE_BASELINE` é constante
   estática e **precisa** aparecer rotulado como estimativa.
 - **`'UNKNOWN'` é membro legítimo de `Role`, `Lane`, `MapTeam` e `PlayerLaneResult`** — é assim que

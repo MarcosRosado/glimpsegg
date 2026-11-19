@@ -3,11 +3,17 @@ import { generateMatchInsights, ALL_RULES, evaluateRules } from '../../../src/ut
 import { buildInsightContext } from '../../../src/utils/insights/context';
 import { RULE_TEXT } from '../../../src/utils/insights/ruleText';
 import { IMPROVEMENT_SCORE_FLOOR, MAX_PER_CATEGORY, scoreToImpact } from '../../../src/utils/insights/rank';
-import { mapStratzMatch } from '../../../src/services/stratzGql';
-import fixture from '../../../src/services/__fixtures__/match-parsed.json';
 import { translations } from '../../../src/i18n/translations';
+import { referenceMatch, unevenLaneMatch, withSyntheticHeroAverage } from '../../support/fixtureMatches';
 
-const match = mapStratzMatch((fixture as any).data.match);
+/** Partida real da OpenDota pelo mapper real. Nao tem `heroAverage` (a OpenDota nao tem). */
+const match = referenceMatch();
+/**
+ * A mesma partida com curva de media do heroi SINTETICA (tests/support/): cada jogador
+ * contra a propria serie dividida por 0,8 / 1,25 alternados. É o que cobre o caminho
+ * HERO_AVERAGE, hoje dormente no app ate a Fase 2 trazer benchmark proprio.
+ */
+const withCurve = withSyntheticHeroAverage(match, { ratio: (_p, i) => (i % 2 ? 0.8 : 1.25) });
 
 describe('sanidade do conjunto de regras', () => {
   it('todo ruleId é unico', () => {
@@ -36,32 +42,53 @@ describe('sanidade do conjunto de regras', () => {
 });
 
 describe('partida real parseada', () => {
-  it('produz insights para todos os 10 jogadores sem explodir', () => {
-    for (const p of match.players) {
-      const out = generateMatchInsights(p, match);
-      expect(Array.isArray(out.strengths)).toBe(true);
-      expect(Array.isArray(out.improvements)).toBe(true);
+  it('produz insights para todos os 10 jogadores sem explodir, nas duas fixtures', () => {
+    for (const m of [match, unevenLaneMatch()]) {
+      for (const p of m.players) {
+        const out = generateMatchInsights(p, m);
+        expect(Array.isArray(out.strengths)).toBe(true);
+        expect(Array.isArray(out.improvements)).toBe(true);
+      }
     }
   });
 
-  it('usa heroAverage como procedencia primaria, nao a baseline estatica', () => {
-    const sources = new Set<string>();
+  it('sem curva da media do heroi (o caso da OpenDota), nenhum insight diz HERO_AVERAGE', () => {
     for (const p of match.players) {
       const out = generateMatchInsights(p, match);
+      for (const i of [...out.strengths, ...out.improvements]) expect(i.source).not.toBe('HERO_AVERAGE');
+    }
+  });
+
+  it('com a curva (sintetica), heroAverage é a procedencia primaria, nao a baseline estatica', () => {
+    const sources = new Set<string>();
+    for (const p of withCurve.players) {
+      const out = generateMatchInsights(p, withCurve);
       [...out.strengths, ...out.improvements].forEach((i) => sources.add(i.source));
     }
     expect(sources.has('HERO_AVERAGE')).toBe(true);
   });
 
-  it('insights de benchmark carregam amostra na casa dos milhares', () => {
-    const withSample = match.players
+  it('insight de benchmark carrega a amostra da curva, nao um numero solto', () => {
+    const withSample = withCurve.players
       .flatMap((p) => {
-        const out = generateMatchInsights(p, match);
+        const out = generateMatchInsights(p, withCurve);
         return [...out.strengths, ...out.improvements];
       })
-      .filter((i) => i.source === 'HERO_AVERAGE' && i.sampleSize);
+      .filter((i) => i.source === 'HERO_AVERAGE');
     expect(withSample.length).toBeGreaterThan(0);
-    expect(Math.max(...withSample.map((i) => i.sampleSize!))).toBeGreaterThan(1000);
+    // A curva sintetica declara matchCount 5.000 em toda entrada.
+    for (const i of withSample) expect(i.sampleSize).toBe(5000);
+  });
+
+  it('as regras dormentes de economia disparam com a curva: acima e abaixo da media', () => {
+    const ids = new Set(
+      withCurve.players.flatMap((p) => {
+        const ctx = buildInsightContext(p, withCurve, { threat: null, build: null });
+        return evaluateRules(ctx).map((h) => h.ruleId);
+      }),
+    );
+    expect(ids.has('farmingNetworthHigh')).toBe(true);
+    expect(ids.has('farmingNetworthLow')).toBe(true);
   });
 
   it('ordena por score decrescente', () => {
@@ -146,7 +173,7 @@ describe('REGRESSAO: fim do filler', () => {
         availability: {
           parsed: false, perMinuteStats: false, networthSeries: false, deathEvents: false,
           damageReport: false, wards: false, advantageTimeline: false, heroAverage: false,
-          abilities: false, laneOutcomes: false,
+          abilities: false, laneOutcomes: false, imp: false, glint: false, parsePending: false,
         },
       },
     );
@@ -163,7 +190,7 @@ describe('partida NAO parseada', () => {
     availability: {
       parsed: false, perMinuteStats: false, networthSeries: false, deathEvents: false,
       damageReport: false, wards: false, advantageTimeline: false, heroAverage: false,
-      abilities: false, laneOutcomes: false,
+      abilities: false, laneOutcomes: false, imp: false, glint: false, parsePending: false,
     },
   };
 

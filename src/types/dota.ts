@@ -80,8 +80,14 @@ export interface WardDeward {
 
 export interface MatchDeathEvent {
   time: number;
-  x: number;
-  y: number;
+  /**
+   * Celula da morte. AUSENTE no caminho OpenDota: `deaths_log` nao traz posicao (ela so
+   * existe para mortes dentro de `teamfights[].players[].deaths_pos`). Evento sem
+   * coordenada alimenta regra e contagem, nunca pino no mapa — por isso o mapper da
+   * OpenDota nao o coloca em `VisionData.deaths`.
+   */
+  x?: number;
+  y?: number;
   team: MapTeam;
   slot: number;
   heroId?: number;
@@ -197,16 +203,39 @@ export type MatchAnalysisOutcome = 'STOMPED' | 'COMEBACK' | 'CLOSE_GAME';
 
 export type LaneOutcome = 'TIE' | 'RADIANT_VICTORY' | 'RADIANT_STOMP' | 'DIRE_VICTORY' | 'DIRE_STOMP';
 
-/** Resultado da lane do ponto de vista do jogador, derivado de LaneOutcomeEnums. */
+/**
+ * Resultado da rota do ponto de vista do jogador. Desde 2026-11-19 sai da regra propria de
+ * `utils/laneVerdict.ts` (patrimonio aos 10 min de quem estava na rota), nao da STRATZ.
+ */
 export type PlayerLaneResult = 'STOMP_WON' | 'WON' | 'TIE' | 'LOST' | 'STOMP_LOST' | 'UNKNOWN';
+
+/** Rota geografica (campo `lane` da OpenDota: 1 bot, 2 mid, 3 top). */
+export type LaneId = 'bottom' | 'mid' | 'top';
+
+/**
+ * A base numerica do veredito, do ponto de vista do jogador (`utils/laneVerdict.ts`).
+ *  - `VERDICT`: rota pareada; `networthDiff` é a diferenca de patrimonio da ROTA aos 10 min.
+ *  - `ADVANTAGE`: rota desigual (2v1, 1v2...), que nao passou no aceite e nunca vira "Rota
+ *    vencida"; `networthDiff` é POR HEROI, que é o que a regra compara.
+ */
+export interface PlayerLaneAdvantage {
+  kind: 'VERDICT' | 'ADVANTAGE';
+  lane: LaneId;
+  networthDiff: number;
+  perHero: boolean;
+  allies: number;
+  enemies: number;
+}
 
 export interface LaningStats {
   lastHits10: number;
   denies10: number;
   gold10: number;
   exp10: number;
-  /** Resultado real da lane vindo da STRATZ. Nao é mais estimativa. */
+  /** Veredito da rota (regra propria, Fase 3). `UNKNOWN` em rota desigual ou sem medida. */
   laneResult: PlayerLaneResult;
+  /** A base do veredito, para o numero ao lado do badge. `null` = rota sem medida. */
+  laneAdvantage?: PlayerLaneAdvantage | null;
   firstCoreItemTimingSec: number | null;
   firstCoreItemId: number | null;
   /**
@@ -397,6 +426,25 @@ export interface MatchDataAvailability {
   heroAverage: boolean;
   abilities: boolean;
   laneOutcomes: boolean;
+  /**
+   * `MatchPlayer.imp` é o IMP REAL da STRATZ para ao menos um jogador. `false` no caminho
+   * OpenDota, que nao tem nota de impacto: la `imp` fica `0` como marcador e nenhuma tela
+   * pode exibi-lo — nem rotulado de IMP, nem com outro nome (ver Fase 4 de
+   * docs/PLANO-OPENDOTA.md).
+   */
+  imp: boolean;
+  /**
+   * `MatchPlayer.glint` existe para ao menos um jogador: a nota propria EXPERIMENTAL
+   * (`utils/glint.ts`), calculada dos percentis `benchmarks` da OpenDota. A tela mostra
+   * sempre rotulada como experimental. `false` no caminho STRATZ, que nao traz percentis.
+   */
+  glint: boolean;
+  /**
+   * A fonte ainda nao parseou o replay, mas PODE parsear a pedido (OpenDota,
+   * `POST /request/{match_id}`). Diferente de `parsed: false` puro, que na STRATZ é
+   * definitivo do ponto de vista do app: aqui existe uma acao que traz o dado.
+   */
+  parsePending: boolean;
 }
 
 export interface MatchPlayer {
@@ -419,6 +467,11 @@ export interface MatchPlayer {
   towerDamage: number;
   heroHealing: number;
   imp: number; // STRATZ IMP or our custom calculated IMP
+  /**
+   * Glint experimental, 0 a 100 (`utils/glint.ts`). `null` = faltou percentil; ausente =
+   * caminho que nao calcula. Nunca exibir sem o rotulo de experimental.
+   */
+  glint?: number | null;
   role: Role;
   lane: Lane;
   award?: string;
@@ -475,7 +528,8 @@ export interface MatchDetails {
   direNetworth: number;
   players: MatchPlayer[];
   advantageTimeline: AdvantagePoint[];
-  /** null => replay nao parseado pelo STRATZ, logo sem playbackData/stats profundos. */
+  /** null => replay nao parseado pelo STRATZ, logo sem playbackData/stats profundos.
+   *  Sempre null no caminho OpenDota (a API nao da a data do parse): use `availability.parsed`. */
   parsedDateTime: number | null;
   bracket: number | null;
   actualRank: number | null;
@@ -527,8 +581,9 @@ export interface PlayerProfileSummary {
     matchCount: number;
     winCount: number;
     winRate: number;
-    avgKda: number;
-    avgImp: number;
+    /** `null` no caminho OpenDota: `/players/{id}/heroes` so traz jogos e vitorias. */
+    avgKda: number | null;
+    avgImp: number | null;
   }>;
   peers?: PeerTeammate[];
   activityDays?: ActivityDay[];
@@ -560,7 +615,12 @@ export interface PlayerMatchSummary {
   numDenies: number;
   goldPerMinute: number;
   experiencePerMinute: number;
-  imp: number;
+  /** IMP da STRATZ. `null` no caminho OpenDota: zero seria uma nota. */
+  imp: number | null;
+  /** Glint experimental, 0 a 100. `null` = sem tabela de percentil ou sem insumo. */
+  glint?: number | null;
+  /** A OpenDota ja parseou o replay (`version` preenchido). Ausente = nao se sabe. */
+  isParsed?: boolean;
   role: Role;
   lane: Lane;
   award?: string;

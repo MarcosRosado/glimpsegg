@@ -1,36 +1,56 @@
 import { describe, it, expect } from 'vitest';
 import { buildThreatProfile, MatchupRow } from '../../../src/utils/insights/threatProfile';
-import { mapStratzMatch } from '../../../src/services/stratzGql';
-import fixture from '../../../src/services/__fixtures__/match-parsed.json';
+import { referenceMatch, withSyntheticDamageReport, withSyntheticHeroAverage } from '../../support/fixtureMatches';
 
-const match = mapStratzMatch((fixture as any).data.match);
+/**
+ * Base REAL: a partida da OpenDota pelo mapper. Ela tem de quem veio o dano
+ * (`receivedTargets`), mas nao o tipo (fisico/magico/puro) nem o controle sofrido — e sem
+ * `receivedTotal` o perfil de ameaca nao existe. Tudo o que depende disso entra pela
+ * sobreposicao SINTETICA de tests/support/ (as regras que leem o perfil estao dormentes no
+ * app desde que a STRATZ saiu, 2026-11-19).
+ */
+const real = referenceMatch();
+const match = withSyntheticDamageReport(
+  real,
+  () => ({ physicalDamage: 6000, magicalDamage: 3000, pureDamage: 1000 }),
+  () => [
+    { abilityId: 5003, count: 4, amount: 1800 },
+    { abilityId: 5004, count: 9, amount: 2600 },
+    { abilityId: 5005, count: 1, amount: 300 },
+  ],
+);
 
 describe('buildThreatProfile — partida real', () => {
+  it('na OpenDota pura, sem divisao de dano, nao ha perfil: null, nunca um perfil vazio', () => {
+    for (const p of real.players) expect(buildThreatProfile(p, real, null)).toBeNull();
+  });
+
   it('calcula a divisao fisico/magico/puro somando 1', () => {
-    const p = match.players[0];
-    const t = buildThreatProfile(p, match, null)!;
+    const t = buildThreatProfile(match.players[0], match, null)!;
     expect(t).toBeTruthy();
     expect(t.physicalPct + t.magicalPct + t.purePct).toBeCloseTo(1, 5);
+    expect(t.physicalPct).toBeCloseTo(0.6, 5);
     expect(t.totalReceived).toBeGreaterThan(0);
   });
 
-  it('o maior agressor é um heroi INIMIGO, nao um neutro nem um aliado', () => {
-    const p = match.players[0];
-    const t = buildThreatProfile(p, match, null)!;
-    expect(t.topAttacker).toBeTruthy();
-    const enemyIds = new Set(
-      match.players.filter((x) => x.isRadiant !== p.isRadiant).map((x) => x.heroId),
-    );
-    expect(enemyIds.has(t.topAttacker!.heroId)).toBe(true);
-    expect(t.topAttacker!.pct).toBeGreaterThan(0);
-    expect(t.topAttacker!.pct).toBeLessThanOrEqual(1);
+  it('o maior agressor é um heroi INIMIGO, nao um neutro nem um aliado (dado real)', () => {
+    for (const p of match.players) {
+      const t = buildThreatProfile(p, match, null)!;
+      expect(t.topAttacker).toBeTruthy();
+      const enemyIds = new Set(match.players.filter((x) => x.isRadiant !== p.isRadiant).map((x) => x.heroId));
+      expect(enemyIds.has(t.topAttacker!.heroId)).toBe(true);
+      expect(t.topAttacker!.pct).toBeGreaterThan(0);
+      expect(t.topAttacker!.pct).toBeLessThanOrEqual(1);
+      // É o maior dos inimigos no relatorio que o mapper montou da resposta da OpenDota.
+      const maior = Math.max(...p.damageReport!.receivedTargets.filter((x) => enemyIds.has(x.heroId)).map((x) => x.amount));
+      expect(t.topAttacker!.amount).toBe(maior);
+    }
   });
 
   it('identifica a habilidade que mais machucou', () => {
     const t = buildThreatProfile(match.players[0], match, null)!;
-    expect(t.topAbility).toBeTruthy();
-    expect(t.topAbility!.abilityId).toBeGreaterThan(0);
-    expect(t.topAbility!.amount).toBeGreaterThan(0);
+    expect(t.topAbility).toMatchObject({ abilityId: 5004, count: 9, amount: 2600 });
+    expect(t.topAbility!.pct).toBeCloseTo(2600 / 4700, 5);
   });
 
   it('devolve null quando nao ha relatorio de dano', () => {
@@ -132,6 +152,7 @@ describe('controle e slow sofridos — contra a media da partida', () => {
       slowDuration: number;
     }>,
     durationSeconds = match.durationSeconds,
+    from = match,
   ) {
     const zero = {
       stunCount: 0,
@@ -142,9 +163,9 @@ describe('controle e slow sofridos — contra a media da partida', () => {
       slowDuration: 0,
     };
     return {
-      ...match,
+      ...from,
       durationSeconds,
-      players: match.players.map((p, i) => ({
+      players: from.players.map((p, i) => ({
         ...p,
         damageReport: {
           ...p.damageReport!,
@@ -154,27 +175,28 @@ describe('controle e slow sofridos — contra a media da partida', () => {
     } as typeof match;
   }
 
-  it('na partida real, heroi sem stun proprio nao vira "141x a media"', () => {
+  it('a media do heroi NAO entra no denominador: controle igual na partida da razao 1', () => {
     // Regressao: o denominador era `heroAverage.stunDuration`, que mede o controle que o
-    // heroi CAUSA. Terrorblade (109) dava 141x e Undying (85) 68,6x nesta mesma fixture.
-    for (const p of match.players) {
-      const t = buildThreatProfile(p, match, null)!;
-      expect(t.controlRatio).not.toBeNull();
-      expect(t.controlRatio!).toBeLessThan(1.75);
+    // heroi CAUSA. Na fixture antiga da STRATZ, Terrorblade dava 141x e Undying 68,6x. Aqui a
+    // curva sintetica traz controle causado 0 — dividir por ela daria infinito.
+    const m = withControl(() => ({ stunCount: 12, stunDuration: 1500 }), 30 * 60, withSyntheticHeroAverage(match));
+    for (const p of m.players) {
+      const t = buildThreatProfile(p, m, null)!;
+      expect(t.controlRatio).toBeCloseTo(1, 5);
       expect(t.archetypes).not.toContain('HARD_LOCKDOWN');
     }
-    const terrorblade = match.players.find((p) => p.heroId === 109)!;
-    expect(buildThreatProfile(terrorblade, match, null)!.controlRatio!).toBeCloseTo(0.8, 1);
   });
 
   it('as razoes da partida tem media 1 — a referencia sao os dez jogadores', () => {
-    const ratios = match.players.map((p) => buildThreatProfile(p, match, null)!.controlRatio!);
+    const m = withControl((i) => ({ stunCount: 5 + i, stunDuration: 300 + 120 * i }));
+    const ratios = m.players.map((p) => buildThreatProfile(p, m, null)!.controlRatio!);
     expect(ratios.reduce((s, r) => s + r, 0) / ratios.length).toBeCloseTo(1, 5);
   });
 
-  it('na partida real, o slow acima da media com contagem alta vira SLOW_KITE', () => {
-    const undying = match.players.find((p) => p.heroId === 85)!;
-    const t = buildThreatProfile(undying, match, null)!;
+  it('slow acima da media com contagem alta vira SLOW_KITE', () => {
+    // O caso que a fixture antiga trazia (um Undying), montado com os mesmos criterios.
+    const m = withControl((i) => (i === 0 ? { slowCount: 60, slowDuration: 9000 } : { slowCount: 10, slowDuration: 1500 }), 30 * 60);
+    const t = buildThreatProfile(m.players[0], m, null)!;
     expect(t.slowRatio!).toBeGreaterThan(1.75);
     expect(t.archetypes).toContain('SLOW_KITE');
   });

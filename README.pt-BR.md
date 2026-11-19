@@ -2,24 +2,26 @@
 
 [English](README.md) · **Português (pt-BR)**
 
-Aplicativo desktop de análise pós-jogo de Dota 2. Cruza dados da STRATZ e da OpenDota para
-transformar um replay já encerrado em leitura tática: benchmarks por herói e posição, timeline de
-vantagem, mapa de visão e insights acionáveis por jogador.
+Aplicativo desktop de análise pós-jogo de Dota 2. Lê dados públicos da OpenDota, com a arte de
+heróis e itens vinda da Valve, e transforma uma partida já encerrada em leitura tática: scoreboard,
+timeline de vantagem, mapa de visão e insights por jogador. **Nenhum token de API é exigido.**
 
 Construído com Electron + React + TypeScript + Vite. Interface em português (pt-BR) e inglês (en-US).
 
 ## Por que existe
 
-O GlimpseGG não tenta ser uma alternativa à STRATZ nem propor uma metodologia nova. O objetivo é
-mais estreito: **manter atualizado o que a STRATZ mostrava**.
+O GlimpseGG nasceu para **manter atualizado o que a STRATZ mostrava**. A STRATZ parou de receber
+atualizações, e o custo disso aparece a cada patch — heróis e itens novos não entram nas bases,
+então partidas que os incluem ficam sem exibição correta e fora de qualquer análise.
 
-A STRATZ parou de receber atualizações, e o custo disso aparece a cada patch — heróis e itens novos
-não entram nas bases, então partidas que os incluem ficam sem exibição correta e fora de qualquer
-análise. Não é que a leitura fique pior: ela simplesmente não acontece para o conteúdo recente.
+As primeiras versões liam da API da STRATZ e exigiam um token pessoal. Isso acabou: **o app não faz
+nenhuma chamada à STRATZ e não precisa de token.** Perfil, partida e meta vêm da OpenDota, que é
+pública; a arte de heróis e itens vem da Valve.
 
-O GlimpseGG preenche essa lacuna. **O cálculo das métricas é o mesmo empregado pela STRATZ** — a
-intenção não é divergir dos números que você já conhecia, e sim continuar produzindo-os para o
-patch atual, com heróis e itens novos devidamente reconhecidos, exibidos e analisados.
+As telas, e o tipo de leitura que elas tentam entregar, continuam **inspiradas na STRATZ** — o
+crédito é devido. O que o GlimpseGG não consegue é reproduzir os números da própria STRATZ, e ele
+não finge que consegue: a nota de impacto exibida aqui se chama **Glint**. Ela é do GlimpseGG, é
+**experimental**, e não é o IMP da STRATZ nem pretende equivaler a ele.
 
 ## Recursos
 
@@ -28,31 +30,37 @@ patch atual, com heróis e itens novos devidamente reconhecidos, exibidos e anal
 - Lista de partidas com resumo por jogo
 - Heróis mais jogados e tendência de performance
 - Heatmap de atividade
-- Matriz de duplas e tendências vindas da STRATZ
+- Matriz de duplas
 
 **Análise de partida** — quatro abas por jogador
 - `OVERVIEW` — scoreboard, visão geral dos times, timeline de vantagem
 - `PERFORMANCE` — métricas contra baseline de herói/posição
 - `VISION` — wards reais no minimapa, com tempo de vida, autor, dewards e cobertura
-- `COACHING` — diagnóstico determinístico: comparação com a média do próprio herói na
-  própria posição, recomendação de build por win rate do patch, e forense de morte
+- `COACHING` — diagnóstico determinístico da partida, com forense de morte; todo card diz de onde
+  vem o número
+- **Glint** — a nota de impacto experimental, por jogador (veja [Por que existe](#por-que-existe))
+
+O que cada aba mostra depende do que a OpenDota tem daquela partida. Quando falta um dado, a seção
+é escondida — nunca estimada. A recomendação de build das versões anteriores está escondida por
+esse motivo: a OpenDota não tem volume para sustentá-la.
 
 **Layout espelho de heróis** — grava uma cópia do seu layout do Dota, reordenada por win rate
 - O seu layout **nunca é alterado**: o espelho é um elemento **novo** ao lado dele, e a gravação
   aborta se qualquer outra coisa no arquivo tiver mudado
 - Ordenado pelo GlimpseScore, que combina o win rate do meta no patch com o seu próprio histórico
-- Funciona sem token da STRATZ — a fonte primária de meta é a OpenDota
+- Não precisa de token — o win rate de meta vem da OpenDota
 
 ## Telas
 
-As capturas abaixo saem do app em execução, com dados vindos da STRATZ e da OpenDota. O perfil
-exibido é uma conta pública de alto ranque (`86745912`), usada apenas para ilustrar as telas —
+As capturas abaixo saem do app em execução, mas **são anteriores à saída da STRATZ**: algumas ainda
+mostram campo de token, cards de build ou a nota de impacto antiga. Até serem refeitas, vale o
+texto, não a imagem. O perfil exibido é uma conta pública de alto ranque (`86745912`), usada apenas para ilustrar as telas —
 nenhum dado do mantenedor aparece aqui. As telas de hero grid usam um **layout fictício** agrupado
 pelos quatro atributos, como o Dota entrega por padrão: o grid é um arquivo local, então não existe
 "o grid de outro jogador" para exibir.
 
 **Dashboard do jogador** — perfil e rank, forma recente, lista de partidas com resumo por jogo,
-heróis principais e as tendências vindas da STRATZ.
+heróis principais e tendências.
 
 ![Dashboard do jogador](docs/screenshots/dashboard.png)
 
@@ -71,8 +79,8 @@ cobertura, navegáveis pela linha do tempo da partida.
 
 ![Aba Vision da análise de partida](docs/screenshots/match-vision.png)
 
-**`COACHING`** — diagnóstico determinístico. Cada card traz o número, a procedência (média do herói,
-dados do patch, esta partida) e o tamanho da amostra.
+**`COACHING`** — diagnóstico determinístico. Cada card traz o número e a procedência, com o tamanho
+da amostra quando há uma.
 
 ![Aba Coaching da análise de partida](docs/screenshots/match-coaching.png)
 
@@ -82,7 +90,7 @@ grupos nas posições que ocupam no jogo e o GlimpseScore que definiu a ordem de
 ![Réplica do espelho de heróis](docs/screenshots/hero-grid-mirror.png)
 
 **Hero grid — painel de sincronização** — quando o grid foi gravado pela última vez, a partir de
-quais fontes, e o ranking herói a herói com as componentes de meta e pessoal de cada nota.
+qual fonte, e o ranking herói a herói com as componentes de meta e pessoal de cada nota.
 
 ![Painel de sincronização do hero grid](docs/screenshots/hero-grid-panel.png)
 
@@ -91,13 +99,12 @@ Abre com `Ctrl K`.
 
 ![Modal de busca de jogador](docs/screenshots/search.png)
 
-**Configurações** — idioma da interface, token da STRATZ, conta Steam ativa e a configuração do
-layout espelho, divididos em quatro abas.
+**Configurações** — idioma da interface, conta Steam ativa e a configuração do layout espelho.
 
 ![Configurações da aplicação](docs/screenshots/settings.png)
 
-**Onboarding** — a primeira execução pede o idioma da interface (inglês por padrão) e o token da
-STRATZ. O Steam Account ID é detectado automaticamente a partir do próprio token.
+**Onboarding** — a primeira execução pede o idioma da interface (inglês por padrão) e a conta Steam
+a acompanhar. Nenhum token é pedido.
 
 ![Tela de onboarding](docs/screenshots/onboarding.png)
 
@@ -118,22 +125,15 @@ Baixe o binário da sua plataforma na página de [Releases](https://github.com/M
 
 O app se atualiza sozinho a partir das Releases deste repositório.
 
-## Token da STRATZ
+## Nenhum token é exigido
 
-A análise de partida **exige token** — ele é a única fonte dos detalhes de partida, e não há
-dataset de demonstração para cair. O antigo foi removido de propósito: ele abria o app na partida
-errada em vez de avisar que algo falhou. Sem token, a primeira execução abre o onboarding e a navbar
-mantém o selo **Sem Chave**, que leva às configurações.
+O GlimpseGG não precisa de token de API nem de conta. Tudo o que ele mostra vem de endpoints
+públicos.
 
-Para usar dados reais:
-
-1. Gere um token em <https://stratz.com/api>.
-2. Cole no onboarding da primeira execução, ou depois em **Settings → STRATZ API Token**.
-3. O Steam Account ID é extraído automaticamente do claim `SteamId` do próprio token — não precisa
-   digitar.
-
-O layout espelho de heróis é a exceção: fecha inteiro sem token nenhum, porque a fonte primária de
-meta dele é a OpenDota, que é pública.
+Versões anteriores exigiam um token pessoal da STRATZ. Se você usou alguma delas, esse token pode
+continuar no arquivo de configuração local (veja
+[O que fica armazenado localmente](#o-que-fica-armazenado-localmente)). O app não o usa mais, mas
+ele continua sendo um segredo:
 
 > [!WARNING]
 > **O token pessoal da STRATZ não pode ser revogado.** Se ele vazar, permanece válido até a data de
@@ -152,16 +152,15 @@ Consequências práticas:
   do lado do projeto.
 - **Nenhuma telemetria ou analytics.** O app não coleta métricas de uso, não tem crash
   reporter e não embute SDK de rastreamento.
-- **O token da STRATZ nunca sai da sua máquina**, exceto no header `Authorization` das
-  chamadas que vão direto para a própria STRATZ — que é quem o emitiu.
+- **Nenhuma credencial está envolvida.** O app não pede token, chave nem login de nenhum
+  serviço de terceiros.
 
 O app é apenas um cliente: ele fala direto com APIs públicas de terceiros para montar as
 telas. Para transparência, tudo com que ele se comunica:
 
 | Destino | Para quê | O que é enviado |
 | --- | --- | --- |
-| `api.stratz.com` | Detalhes de partida, benchmarks, tendências | Seu token e o Steam Account ID consultado |
-| `api.opendota.com` | Perfis, duplas, busca por vanity URL | O Steam Account ID ou termo de busca |
+| `api.opendota.com` | Perfis, histórico e detalhes de partida, pedidos de parse de replay, win rate de heróis, duplas, busca de jogador | O Steam Account ID, o ID da partida ou o termo de busca |
 | `cdn.cloudflare.steamstatic.com` | Ícones de heróis e itens (Valve) | Nada além da requisição da imagem |
 | `avatars.steamstatic.com` | Avatares de jogadores (Valve) | Nada além da requisição da imagem |
 | `www.opendota.com` | Ícones de rank | Nada além da requisição da imagem |
@@ -171,26 +170,28 @@ telas. Para transparência, tudo com que ele se comunica:
 Uma Content-Security-Policy no bundle de produção restringe as conexões exatamente a
 essa lista — qualquer outro destino é bloqueado pelo próprio Chromium.
 
-### Onde o token é armazenado
+### O que fica armazenado localmente
 
-Em texto claro, **localmente**, sem criptografia:
+As configurações — idioma da interface, conta Steam, preferências do layout espelho — ficam em
+texto claro, **localmente**, sem criptografia:
 
 - **Desktop:** `stratz_app_config.json` dentro do diretório `userData` do Electron
   (`~/.config/GlimpseGG` no Linux, `%APPDATA%\GlimpseGG` no Windows,
-  `~/Library/Application Support/GlimpseGG` no macOS).
-- **Browser (dev):** `localStorage`, chave `stratz_api_key`.
+  `~/Library/Application Support/GlimpseGG` no macOS). O arquivo mantém o nome histórico.
+- **Browser (dev):** `localStorage`.
 
-O token nunca é embutido no bundle nem nos artefatos de release. Trate a máquina como o
-limite de confiança: qualquer processo com acesso ao seu perfil de usuário consegue ler
-esse arquivo.
+Um token da STRATZ salvo por uma versão anterior pode continuar lá (`stratzApiKey` no arquivo,
+`stratz_api_key` no `localStorage`). O app não o usa. Trate a máquina como o limite de confiança:
+qualquer processo com acesso ao seu perfil de usuário consegue ler esse arquivo.
 
 ## Desenvolvimento
 
 ```bash
 npm install
-cp .env.example .env     # opcional — o token também pode ser inserido pela UI
 npm run electron:dev     # Vite + Electron com HMR
 ```
+
+Nenhum `.env` é necessário para rodar o app.
 
 Outros scripts:
 
@@ -233,15 +234,17 @@ Duas restrições do master, ambas impostas por preflight no gerador:
 
 ### Fontes de dados
 
-- **STRATZ** (GraphQL, `api.stratz.com`) — detalhes de partida, eventos de ward e morte,
-  `heroAverage` (média do herói por posição), e os agregados de `heroStats`
-  (`itemFullPurchase`, `heroVsHeroMatchup`) que alimentam a recomendação de build. Requer token.
-- **OpenDota** (REST, `api.opendota.com`) — perfis, duplas, busca por vanity URL. Público, sem chave.
+- **OpenDota** (REST, `api.opendota.com`) — perfis, histórico e detalhes de partida, pedidos de
+  parse de replay, o win rate de heróis por trás do layout espelho, duplas, busca por vanity URL.
+  Público, sem chave.
+- **Valve** — arte de heróis e itens e avatares de jogadores, pela CDN da Steam. O catálogo de
+  itens que o app embarca é gerado em tempo de desenvolvimento a partir do datafeed da Valve
+  (`scripts/sync-items-full.cjs`).
+- **STRATZ** — não é mais consultada. Segue como a inspiração das telas.
 
-Não há nenhum modelo de linguagem envolvido. O motor de coaching é determinístico: cada
-número exibido rastreia para um campo específico da resposta da STRATZ, e o card mostra a
-procedência (média do herói, dados do patch, esta partida, ou estimativa genérica) junto
-com o tamanho da amostra. Quando o replay não foi processado pela STRATZ, a análise
+Não há nenhum modelo de linguagem envolvido. O motor de coaching é determinístico: cada número
+exibido rastreia para um campo específico da resposta da fonte, e o card mostra a procedência, com
+o tamanho da amostra quando há uma. Quando a OpenDota não processou o replay, a análise
 correspondente simplesmente não aparece — nada é estimado para preencher a lacuna.
 
 ### Assets de terceiros
@@ -249,8 +252,8 @@ correspondente simplesmente não aparece — nada é estimado para preencher a l
 - `public/minimap.png` — minimapa do Dota 2 (patch 7.41), obtido em
   <https://liquipedia.net/dota2/Minimap>. É arte da Valve, incluída aqui apenas para
   renderizar o posicionamento de wards. Não é coberta pela licença MIT deste repositório.
-  O mapeamento de coordenadas foi calibrado contra esta imagem: com as células 64–192 da
-  STRATZ esticadas de borda a borda, as duas runas de poder do rio caem sobre a água e
+  O mapeamento de coordenadas foi calibrado contra esta imagem: com as células 64–192 do
+  mapa esticadas de borda a borda, as duas runas de poder do rio caem sobre a água e
   97% de uma amostra de 544 wards reais caem sobre terreno.
 
 ## Releases
@@ -264,7 +267,7 @@ três plataformas, via GitHub Actions. Os gates são `icons:check`, `npm test` e
 Marcos Rosado — <contato@marcosrosado.dev>
 
 Bugs e sugestões: abra uma [issue](https://github.com/MarcosRosado/glimpsegg/issues).
-Nunca inclua seu token da STRATZ em issues, logs ou prints.
+Nunca inclua token nem qualquer outro segredo em issues, logs ou prints.
 
 ## Licença
 

@@ -5,13 +5,13 @@ import { fetchOpenDotaHeroStats } from '../opendota';
 import { readStatsCache, statsCacheKey, writeStatsCache } from '../statsCache';
 
 /**
- * Fonte PRIMARIA de meta do layout espelho (FR-015).
+ * A fonte de meta do layout espelho (FR-015) — a UNICA desde que o app deixou de falar
+ * com a STRATZ (2026-11-19).
  *
- * Vem primeiro porque nao exige token, custa 1 requisicao e reaproveita
- * `fetchOpenDotaHeroStats()`, que ja existe e ja cobre os dois caminhos de rede
- * (`window.api.openDotaFetch` no Electron, `fetch` direto no browser). É o que faz a
- * feature fechar sem configuracao nenhuma (FR-015a): sem chave da STRATZ o espelho
- * continua sendo construido, rotulado como PARTIAL.
+ * Nao exige token, custa 1 requisicao e reaproveita `fetchOpenDotaHeroStats()`, que ja
+ * existe e ja cobre os dois caminhos de rede (`window.api.openDotaFetch` no Electron,
+ * `fetch` direto no browser). É o que faz a feature fechar sem configuracao nenhuma
+ * (FR-015a). Respondeu ⇒ `SUCCESS`; nao respondeu ⇒ `FAILURE` e o arquivo nao é tocado.
  *
  * O trabalho deste modulo é so somar os buckets de rank tier de `/api/heroStats` na
  * particao de bracket que o app ja usa. Nenhuma inferencia, nenhum preenchimento.
@@ -113,7 +113,7 @@ export function mapHeroStatsToWinrates(
  * Busca (ou le do cache) os winrates de meta da OpenDota para um bracket.
  *
  * NUNCA lanca para quem chama. O retorno distingue os dois estados que o chamador precisa
- * separar para classificar `PARTIAL` vs `FAILURE` (contrato § 5):
+ * separar para classificar `SUCCESS` vs `FAILURE` (contrato § 5):
  *
  * - `null`  => FONTE INDISPONIVEL. Nao houve resposta utilizavel (rede fora, HTTP != 200,
  *              JSON quebrado). `fetchOpenDotaHeroStats()` colapsa erro em `[]`, e como o

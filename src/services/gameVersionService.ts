@@ -6,7 +6,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export interface GamePatchInfo {
   patch: string;
-  source: 'steam' | 'stratz' | 'opendota' | 'dotaconstants' | 'cache' | 'fallback';
+  source: 'steam' | 'opendota' | 'dotaconstants' | 'cache' | 'fallback';
   cachedAt?: number;
 }
 
@@ -121,60 +121,6 @@ async function fetchFromSteamNews(): Promise<string | null> {
 }
 
 /**
- * Queries STRATZ GraphQL constants if an API token is provided.
- */
-async function fetchFromStratz(token?: string): Promise<string | null> {
-  let cleanToken = (token || '').trim();
-  if (!cleanToken) {
-    try {
-      cleanToken = (localStorage.getItem('stratz_api_key') || '').trim();
-    } catch {
-      // ignore
-    }
-  }
-  if (!cleanToken) return null;
-
-  const query = `
-    query GetGameVersions {
-      constants {
-        gameVersions {
-          id
-          name
-        }
-      }
-    }
-  `;
-
-  let json: any;
-  if (window.api && typeof window.api.stratzQuery === 'function') {
-    const res = await window.api.stratzQuery<any>(query, {}, cleanToken);
-    if (res.success && res.data) json = res.data;
-  } else {
-    const res = await fetch('https://api.stratz.com/graphql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${cleanToken}`,
-        'User-Agent': 'STRATZ_API',
-      },
-      body: JSON.stringify({ query }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      json = data.data;
-    }
-  }
-
-  const versions = json?.constants?.gameVersions;
-  if (Array.isArray(versions) && versions.length > 0) {
-    const valid = versions.map((v: any) => v.name).filter(Boolean);
-    valid.sort(comparePatches);
-    return valid[valid.length - 1] || null;
-  }
-  return null;
-}
-
-/**
  * Queries OpenDota constants endpoint.
  */
 async function fetchFromOpenDota(): Promise<string | null> {
@@ -216,10 +162,13 @@ async function fetchFromGitHubConstants(): Promise<string | null> {
 
 /**
  * Multi-source dynamic patch resolver.
- * Tries Steam News, STRATZ, OpenDota, and GitHub dotaconstants in parallel / cascade,
+ * Tries Steam News, OpenDota, and GitHub dotaconstants in cascade,
  * determines the newest version, caches it, and broadcasts an update event.
+ *
+ * O degrau da STRATZ (`constants.gameVersions`, que exigia token) saiu em 2026-11-19,
+ * junto com o parametro `token`: o app nao fala mais com a STRATZ em tempo de execucao.
  */
-export async function fetchLatestGamePatch(force = false, token?: string): Promise<string> {
+export async function fetchLatestGamePatch(force = false): Promise<string> {
   // Check fresh cache unless forced
   if (!force && isCacheFresh()) {
     return getCachedGamePatch();
@@ -233,14 +182,6 @@ export async function fetchLatestGamePatch(force = false, token?: string): Promi
     if (steamPatch) candidatePatches.push(steamPatch);
   } catch (err) {
     console.warn('[GameVersion] Failed to fetch Steam news patch:', err);
-  }
-
-  // Try STRATZ
-  try {
-    const stratzPatch = await fetchFromStratz(token);
-    if (stratzPatch) candidatePatches.push(stratzPatch);
-  } catch (err) {
-    console.warn('[GameVersion] Failed to fetch STRATZ gameVersions:', err);
   }
 
   // Try OpenDota

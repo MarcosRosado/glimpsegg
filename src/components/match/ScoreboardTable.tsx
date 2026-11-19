@@ -21,7 +21,8 @@ import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
 import { getRankTierInfo } from '../../constants/ranks';
 import { formatGold, formatRoleName, formatLaneName } from '../../utils/dotaFormatters';
-import { ImpBadge } from '../ui/ImpBadge';
+import { GlintBadge, useGlintHint } from '../ui/GlintBadge';
+import { formatGlint, getGlintColor } from '../../utils/glint';
 import { handleHeroImageError, handleItemImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -82,6 +83,8 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
   didRadiantWin,
 }) => {
   const { t } = useLanguage();
+  const glintHint = useGlintHint();
+  const hasGlint = players.some((p) => typeof p.glint === 'number');
   // Multi-expansion set: supports multiple players open concurrently
   const [expandedSlots, setExpandedSlots] = useState<Set<number>>(
     new Set([selectedPlayerSlot])
@@ -170,7 +173,13 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                 <th className="py-2.5 px-2 text-right">{t('healingShort')}</th>
                 <th className="py-2.5 px-2 text-right">{t('towerDamageShort')}</th>
                 <th className="py-2.5 px-3 text-center">{t('items')}</th>
-                <th className="py-2.5 px-3 text-center">{t('impImpact')}</th>
+                {/* Coluna da nota so quando a partida tem nota: cabecalho sobre celulas vazias
+                    pareceria dado que nao carregou. */}
+                {hasGlint && (
+                  <th className="py-2.5 px-3 text-center cursor-help" title={glintHint}>
+                    {t('glint')} <span className="text-[8px] uppercase opacity-60">{t('glintBeta')}</span>
+                  </th>
+                )}
                 <th className="py-2.5 px-2 text-center w-8"></th>
               </tr>
             </thead>
@@ -236,7 +245,8 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                       {/* Role */}
                       <td className="py-2.5 px-2 text-center">
                         <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-purple-300">
-                          {player.role.replace('POSITION_', 'Pos ')}
+                          {/* Sem posicao (partida nao parseada) a celula fica vazia: 'UNKNOWN' nao é rotulo. */}
+                          {player.role === 'UNKNOWN' ? '' : player.role.replace('POSITION_', 'Pos ')}
                         </span>
                       </td>
 
@@ -315,10 +325,12 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                         </div>
                       </td>
 
-                      {/* IMP Rating */}
-                      <td className="py-2.5 px-3 text-center">
-                        <ImpBadge imp={player.imp} size="sm" />
-                      </td>
+                      {/* Glint experimental */}
+                      {hasGlint && (
+                        <td className="py-2.5 px-3 text-center">
+                          <GlintBadge glint={player.glint} size="sm" />
+                        </td>
+                      )}
 
                       {/* Expand / Collapse Indicator */}
                       <td className="py-2.5 px-2 text-center text-slate-400">
@@ -333,7 +345,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                     {/* Expanded Quick Inspection Drawer */}
                     {isExpanded && (
                       <tr className="bg-[#0b1019] border-y border-cyan-500/40">
-                        <td colSpan={11} className="p-4 sm:p-5">
+                        <td colSpan={hasGlint ? 11 : 10} className="p-4 sm:p-5">
                           <div className="space-y-4 font-sans">
                             {/* Top Info Bar: Player Summary & Redirection Button */}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
@@ -358,8 +370,14 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                                     </span>
                                     <span>•</span>
                                     <span>{t('farmShort')}: <strong className="text-amber-300">{player.goldPerMinute} {t('gpmShort')}</strong></span>
-                                    <span>•</span>
-                                    <span>{t('imp')}: <strong className={player.imp >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{player.imp >= 0 ? `+${player.imp}` : player.imp}</strong></span>
+                                    {typeof player.glint === 'number' && (
+                                      <>
+                                        <span>•</span>
+                                        <span title={glintHint} className="cursor-help">
+                                          {t('glintExperimental')}: <strong className={getGlintColor(player.glint)}>{formatGlint(player.glint)}</strong>
+                                        </span>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               </div>

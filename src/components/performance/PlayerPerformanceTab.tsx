@@ -9,7 +9,8 @@ import {
   Tooltip,
 } from 'recharts';
 import { MatchDetails, MatchPlayer } from '../../types/dota';
-import { LANE_RESULT_KEY } from '../../utils/laneResult';
+import { laneVerdictView, type LaneVerdictView } from '../../utils/laneResult';
+import { LANE_VERDICT_MODEL } from '../../utils/laneVerdict';
 import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
 import { getRoleBaseline } from '../../constants/baselines';
@@ -20,7 +21,9 @@ import {
   getEnrichedAbilityUpgrades,
   getItemBenchmarkSeconds,
 } from '../../utils/performanceEnricher';
-import { formatDuration, formatGold, formatImpMarked, getImpColor } from '../../utils/dotaFormatters';
+import { formatDuration, formatGold } from '../../utils/dotaFormatters';
+import { formatGlint, getGlintColor } from '../../utils/glint';
+import { useGlintHint } from '../ui/GlintBadge';
 import { handleHeroImageError, handleItemImageError, handleAbilityImageError } from '../../utils/imageFallback';
 import { getHeroAbilities } from '../../constants/abilities';
 import { Swords, Target, Clock, Zap, Trophy, Coins, Layers, Timer } from 'lucide-react';
@@ -32,7 +35,22 @@ interface PlayerPerformanceTabProps {
 }
 
 export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ player, match }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const glintHint = useGlintHint();
+
+  // Rota: regra propria (utils/laneVerdict.ts). Sem medida, a secao do veredito some.
+  const laneView = laneVerdictView(player.laningStats);
+  const signedGold = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatGold(Math.abs(n))}`;
+  const pctOf = (x: number) => (100 * x).toLocaleString(language, { maximumFractionDigits: 1 });
+  const laneHintParams = (v: LaneVerdictView) => ({
+    tie: pctOf(LANE_VERDICT_MODEL.tieThreshold),
+    stomp: pctOf(LANE_VERDICT_MODEL.stompThreshold),
+    n: LANE_VERDICT_MODEL.test.test.both,
+    patch: LANE_VERDICT_MODEL.testPatch,
+    agreement: pctOf(LANE_VERDICT_MODEL.test.test.agreement),
+    allies: v.allies,
+    enemies: v.enemies,
+  });
   const hero = getHero(player.heroId);
   const heroAbilities = getHeroAbilities(player.heroId, hero.shortName);
   const baseline = getRoleBaseline(player.role);
@@ -134,14 +152,19 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
 
         {/* Tactical Key Metric Pills */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* IMP Impact Score */}
-          <div className="flex flex-col items-end px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800">
-            <span className="text-[10px] text-slate-400 font-mono">{t('impImpact')}</span>
-            <div className={`text-base font-black flex items-center gap-1 mt-0.5 ${getImpColor(player.imp)}`}>
-              <Zap className="w-4 h-4" />
-              <span>IMP {formatImpMarked(player.imp)}</span>
+          {/* Glint experimental. Sem nota, a pilula some — nunca "0". */}
+          {typeof player.glint === 'number' && (
+            <div
+              className="flex flex-col items-end px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800 cursor-help"
+              title={glintHint}
+            >
+              <span className="text-[10px] text-slate-400 font-mono">{t('glintExperimental')}</span>
+              <div className={`text-base font-black flex items-center gap-1 mt-0.5 ${getGlintColor(player.glint)}`}>
+                <Zap className="w-4 h-4" />
+                <span>{formatGlint(player.glint)}</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Kill Participation */}
           <div className="flex flex-col items-end px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800">
@@ -401,11 +424,19 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                 {t('laningBreakdown')}
               </h4>
             </div>
-            <span className="text-xs font-mono font-bold text-slate-300">
-              {player.laningStats
-                ? t(LANE_RESULT_KEY[player.laningStats.laneResult])
-                : t('dataUnavailableShort')}
-            </span>
+            {laneView && (
+              <span
+                title={t(laneView.hintKey, laneHintParams(laneView))}
+                className={`text-right font-mono cursor-help ${
+                  laneView.tone === 'positive' ? 'text-emerald-300' : laneView.tone === 'negative' ? 'text-rose-300' : 'text-slate-300'
+                }`}
+              >
+                <span className="block text-xs font-bold">{t(laneView.labelKey)}</span>
+                <span className="block text-[10px] text-slate-400">
+                  {t(laneView.detailKey, { diff: signedGold(laneView.networthDiff), allies: laneView.allies, enemies: laneView.enemies })}
+                </span>
+              </span>
+            )}
           </div>
 
           {/* Laning KPI 4-grid */}

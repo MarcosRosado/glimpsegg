@@ -88,23 +88,18 @@ export interface SteamResolveResult {
   error?: string;
 }
 
-export interface StratzGqlResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  errors?: Array<{ message: string }>;
-  error?: string;
-  status?: number;
-  statusText?: string;
-}
-
 export interface ElectronApi {
   store: {
     get: <T = unknown>(key: keyof AppConfig | string) => Promise<T>;
     set: <T = unknown>(key: keyof AppConfig | string, value: T) => Promise<boolean>;
     getAll: () => Promise<AppConfig>;
   };
-  stratzQuery: <T = unknown>(query: string, variables?: Record<string, unknown>, customApiKey?: string) => Promise<StratzGqlResponse<T>>;
   openDotaFetch: <T = unknown>(endpoint: string) => Promise<{ success: boolean; data?: T; error?: string }>;
+  /**
+   * Opcional: ausente num preload anterior a esta versao. Quem chama cai no `fetch`
+   * direto, que é o mesmo ramo do caminho browser.
+   */
+  openDotaRequestParse?: (matchId: number) => Promise<{ success: boolean; jobId?: number; error?: string }>;
   resolveSteamId: (input: string) => Promise<SteamResolveResult>;
   windowControl: {
     minimize: () => Promise<void>;

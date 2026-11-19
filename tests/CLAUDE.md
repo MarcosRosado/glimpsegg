@@ -14,11 +14,12 @@ que precisa saber disso. O `tsconfig.app.json` inclui `["src", "tests"]`, então
 
 | Pasta | Espelha | O que cobre |
 | --- | --- | --- |
-| `utils/` | `src/utils/` | Motores puros: `awardEngine`, `buildAdvisor`, `dotaFormatters`, `laneResult`, `minimapCoords`, `rankBracket`, `settingsTabs` — mais `matchContext`, sem fonte homônima (ver abaixo) |
+| `utils/` | `src/utils/` | Motores puros: `awardEngine`, `buildAdvisor`, `dotaFormatters`, `glint`, `laneResult`, `laneVerdict`, `minimapCoords`, `patchTransition`, `rankBracket`, `recentFormStats`, `settingsTabs` |
 | `utils/insights/` | `src/utils/insights/` | Motor de coaching: `context`, `index`, `threatProfile`, `timeSeries`, `wilson` — mais `placeholders`, também sem fonte homônima |
 | `utils/heroGrid/` | `src/utils/heroGrid/` | Decisões puras do layout espelho: `mirrorBuilder`, `mirrorLayout`, `ranking`, `preferences`, `sourcePrecedence`, `syncScheduler`, `valveJson`, `heroTooltip`, `settingsOptions`, `tabFormat` |
-| `services/` | `src/services/` | `stratzGql` (o mapper de ponta a ponta contra a fixture real) e `visionMapper` |
-| `services/heroGrid/` | `src/services/heroGrid/` | `heroGridBridge` (o caminho browser devolve indisponível **explícito**, nunca sucesso simulado), `openDotaWinrates`, `stratzWinrates` — transporte injetado, sem rede e sem token |
+| `services/` | `src/services/` | `openDotaMatch` (o mapper de ponta a ponta contra a fixture real, inclusive o veredito de rota), `openDotaProfile` e `visionMapper` |
+| `support/` | — (não espelha nada) | `fixtureMatches.ts`: as duas partidas reais da OpenDota pelo mapper real, e as sobreposições `withSynthetic*` (média do herói, divisão de dano) para as regras dormentes. Não é teste; ver abaixo |
+| `services/heroGrid/` | `src/services/heroGrid/` | `heroGridBridge` (o caminho browser devolve indisponível **explícito**, nunca sucesso simulado), `openDotaWinrates` — sem rede e sem token |
 | `i18n/` | `src/i18n/` | `translations`: paridade de chaves, nenhuma entrada vazia, mesmos placeholders nas duas locales e o guard de chave órfã |
 | `electron/heroGrid/` | `electron/heroGrid/` | Os `.test.cjs` do processo main: `gridFile` (a guarda de imutabilidade, sobre os bytes que vão ao disco), `pathGuard`, `steamPaths`, `dotaProcess` |
 
@@ -35,8 +36,8 @@ que precisa saber disso. O `tsconfig.app.json` inclui `["src", "tests"]`, então
   `.ts` seguem importando explicitamente; os globais só somam.
 - **As fixtures não moram aqui.** Elas ficam em
   [`src/services/__fixtures__/`](../src/services/__fixtures__/CLAUDE.md) e são consumidas por import
-  relativo (`../../src/services/__fixtures__/match-parsed.json`). São respostas 200 **reais** e
-  anonimizadas da STRATZ e da OpenDota, mais o grid da Valve — dado de contrato de API, não material
+  relativo (`../../src/services/__fixtures__/match-parsed-opendota.json`). São respostas 200
+  **reais** e anonimizadas da OpenDota (e o gerador de IMP da STRATZ, ainda sem consumidor), mais o grid da Valve — dado de contrato de API, não material
   de teste inventado, e por isso ficam do lado do serviço cujo formato elas documentam. Ao mexer em
   parsing, use a fixture em vez de montar objeto sintético à mão, e não a substitua por dado
   inventado.
@@ -44,21 +45,29 @@ que precisa saber disso. O `tsconfig.app.json` inclui `["src", "tests"]`, então
   `collectSources('src')`, então chave de tradução citada apenas dentro de um teste **não** conta
   como usada. Antes da mudança de pasta contava; hoje não. Isso apertou o gate de graça — não
   "corrigir" ampliando o scan para `tests/`.
+- **`support/` é a única pasta fora do espelho, e é dado, não teste.** Desde que a fixture da
+  STRATZ saiu (2026-11-19), os testes de destaques e de coaching partem de
+  `support/fixtureMatches.ts`: base **real** (mapper real sobre fixture real) e, por cima, só o
+  que a OpenDota não tem, em funções com `Synthetic` no nome. A "média do herói" sintética é a
+  própria série do jogador dividida por uma razão escolhida no teste — nenhum número copiado da
+  STRATZ. Não pôr ali valor editado de fixture para fazer regra disparar: partida que dispara
+  entra como fixture real nova, escolhida pelo que dispara.
 
-## Navegação: dois testes nomeados por tema
+## Navegação: um teste nomeado por tema
 
-Todo o resto do diretório é `<fonte>.test.ts` para uma fonte de mesmo nome. Estes dois não:
+Todo o resto do diretório é `<fonte>.test.ts` para uma fonte de mesmo nome. Este não (o
+`utils/matchContext.test.ts`, que também não tinha fonte homônima, saiu em 2026-11-19: o
+`resolveMatchType` foi para `utils/dotaFormatters.test.ts` e o resto testava funções do mapper
+da STRATZ):
 
-- **`utils/matchContext.test.ts`** — não existe `src/utils/matchContext.ts`. O arquivo é nomeado
-  pelo *tema*: cobre `resolveMatchType` (de `src/utils/dotaFormatters.ts`) e `ALL_TOWERS_STANDING`,
-  `derivePartySize` e `deriveTeamShares` (de `src/services/stratzGql.ts`). As duas regras existem
-  para **não inventar dado**: a lista da home precisa poder dizer "não sei" em vez de rotular uma
-  partida casual como ranqueada ou uma partida em grupo como solo.
 - **`utils/insights/placeholders.test.ts`** — não existe `src/utils/insights/placeholders.ts`. Ele
-  roda o motor sobre a fixture real, renderiza cada insight nas duas locales e falha se sobrar
+  roda o motor (acertos crus, antes do corte de relevância) sobre as duas fixtures reais e sobre
+  as sobreposições sintéticas, renderiza cada insight nas duas locales e falha se sobrar
   `{marcador}` sem substituição, se um marcador não vier do motor nem da camada de render
-  (`{bracket}`), se as locales usarem marcadores diferentes na mesma chave, ou se uma regra ficar
-  órfã de texto.
+  (`{bracket}`), se as locales usarem marcadores diferentes na mesma chave, se uma regra ficar
+  órfã de texto **ou se uma regra deixar de disparar em todas as fontes** — as exceções ficam
+  listadas à mão em `SEM_EXERCICIO`, com o motivo (hoje `visionUptimeLow` e
+  `visionWardsLostEarly`).
 
 ## Rodando
 

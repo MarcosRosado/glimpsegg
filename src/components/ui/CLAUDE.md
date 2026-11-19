@@ -7,13 +7,13 @@ Primitivos compartilhados entre telas. Nada de domínio de Dota mora aqui — s�
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
 | `IconButton.tsx` | Botão de ícone padronizado do chrome | `Navbar` |
-| `ImpBadge.tsx` | Chip de IMP: cor e ícone por faixa, com destaque para valor extremo | `MatchList`, `ScoreboardTable` |
+| `GlintBadge.tsx` | Chip do **Glint experimental** (0 a 100) e o hook `useGlintHint`. A procedência faz parte do chip: `title` com as métricas do teste e selo "beta" no tamanho `md`. Não renderiza nada com nota nula | `MatchList`, `ScoreboardTable`; o hook também em `TeamOverviewCard`, `PlayerPerformanceTab` e na dashboard |
 | `Tooltip.tsx` | Tooltip posicionado por portal | `HeroGridMirrorScreen` |
 | `PatchTransitionNotice.tsx` | Aviso temporário (chip ou banner) de que os agregados de meta ainda misturam o patch anterior. Não renderiza nada fora da janela | `StatRail`, `CoachingInsightsTab`, `HeroGridTab` |
 
 ## Regras locais
 
-- O limiar de IMP extremo é `IMP_EXTREME` em [`utils/dotaFormatters.ts`](../../utils/CLAUDE.md),
+- Os limiares do Glint (`GLINT_THRESHOLDS`) moram em [`utils/glint.ts`](../../utils/CLAUDE.md),
   não neste arquivo — o badge só consome a decisão.
 - `Tooltip.tsx` usa portal de propósito: dentro do `transform: scale()` da réplica do hero grid,
   posicionamento relativo quebra.

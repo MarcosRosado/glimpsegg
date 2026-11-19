@@ -430,7 +430,7 @@ export const HeroGridMirrorScreen: React.FC<HeroGridMirrorScreenProps> = ({
   }, [canvas]);
 
   // I-13 / FR-020: "no seu ranque" SÓ quando o bracket era de fato o do jogador na gravacao.
-  // Mesmas chaves que o painel e `useBuildAdvice` usam — é a mesma afirmacao.
+  // Mesmas chaves que o painel e o `CoachingInsightsTab` usam — é a mesma afirmacao.
   // A CHAVE é a fonte; o texto resolvido é derivado dela. `HeroTile` precisa da chave
   // porque quem monta o conteudo do tooltip é uma funcao pura, que nao traduz.
   const bracketLabelKey: TranslationKey = mirrorSnapshot?.bracketIsPlayerSpecific
@@ -560,9 +560,10 @@ export const HeroGridMirrorScreen: React.FC<HeroGridMirrorScreenProps> = ({
         </Notice>
       )}
 
-      {/* FR-016: uma fonte fora ⇒ PARTIAL, ESCREVE, e tem de sair rotulado. Esta é a tela
-          emoldurada como "este é o seu layout", entao omitir aqui é pior que omitir no
-          painel: o jogador leria a ordem como se as duas fontes tivessem entrado. */}
+      {/* FR-016: fonte que faltou tem de sair rotulada. Hoje a meta tem uma fonte só (sem
+          ela nada é gravado), entao este aviso só aparece para foto gravada por versao
+          anterior, com a STRATZ ausente. Esta é a tela emoldurada como "este é o seu
+          layout", entao omitir aqui é pior que omitir no painel. */}
       {mirrorSnapshot && sourcesMissing && (
         <Notice
           tone="warn"

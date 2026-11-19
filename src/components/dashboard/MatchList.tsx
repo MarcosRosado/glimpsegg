@@ -8,7 +8,8 @@ import { TranslationKey } from '../../i18n/translations';
 import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
 import { formatDuration, formatGold, timeAgoText, resolveMatchType, MatchTypeCode } from '../../utils/dotaFormatters';
-import { ImpBadge } from '../ui/ImpBadge';
+import { GlintBadge } from '../ui/GlintBadge';
+import { GLINT_THRESHOLDS, formatGlint } from '../../utils/glint';
 import { handleHeroImageError, handleItemImageError } from '../../utils/imageFallback';
 import { LANE_RESULT_KEY, hasLaneVerdict, isLaneWin, isLaneLoss } from '../../utils/laneResult';
 import { useLanguage } from '../../context/LanguageContext';
@@ -55,6 +56,22 @@ const MARATHON_MIN = 60;             //  6%
 const UNSPENT_GOLD = 5000;           // 15%
 const MAX_TAGS = 4;
 
+/**
+ * Limiares de NOTA das tags, na escala do Glint (0 a 100).
+ *
+ * Ate 2026-11-19 estas tags liam o IMP da STRATZ (`imp >= 25`, `>= 15`, `<= -10`). A
+ * conversao foi POR QUANTIL, nao por soma de 50: cada limiar é o Glint que dispara na
+ * mesma taxa do limiar de IMP que substitui, porque a regressao comprime a escala. As
+ * taxas ao lado sao as medidas em `src/utils/glint.ts` (`GLINT_THRESHOLDS`, linhas de
+ * jogador de 7.42) — sao a taxa do LIMIAR sozinho; `STOMP` e `HIGH_IMPACT` ainda cruzam
+ * com outra condicao (duracao, KDA), entao a tag dispara menos que isso. Refazer com
+ * `node scripts/fit-glint-experimental.cjs`, nunca no olho.
+ */
+const GLINT_STOMP = GLINT_THRESHOLDS.strong;        // 68 — 11,4% (era IMP >= 25)
+const GLINT_HIGH_IMPACT = GLINT_THRESHOLDS.good;    // 61 — 22,3% (era IMP >= 15)
+const GLINT_LOW_IMPACT = GLINT_THRESHOLDS.poor;     // 41 — 42,4% (era IMP <= -10)
+const GLINT_HIGHLIGHT = GLINT_THRESHOLDS.strong;    // 68 — 11,4% (era IMP >= 25)
+
 function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): MatchTag[] {
   const tags: MatchTag[] = [];
   // `|| 2100` assumia 35 minutos quando a duracao nao vinha, e essa suposicao decidia
@@ -62,10 +79,14 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
   // criterios que dependem dela simplesmente nao se aplicam.
   const durMin = match.durationSeconds > 0 ? match.durationSeconds / 60 : null;
   const kda = match.kda || ((match.kills + match.assists) / Math.max(1, match.deaths));
+  // Estreitado UMA vez. Partida sem nota fica `null` e nenhuma tag de nota dispara:
+  // em JS `null <= 41` é verdadeiro, entao comparar o campo cru marcaria "Baixo
+  // Impacto" em toda partida sem tabela de percentil. E nada de `|| 0` — Glint 0 é nota.
+  const glint = typeof match.glint === 'number' && Number.isFinite(match.glint) ? match.glint : null;
 
   // 1. RESULTADO DA PARTIDA (Match Dynamic Outcome)
   if (match.isVictory) {
-    if (durMin !== null && durMin <= 32 && (kda >= 5.0 || match.goldPerMinute >= 720 || match.imp >= 25)) {
+    if (durMin !== null && durMin <= 32 && (kda >= 5.0 || match.goldPerMinute >= 720 || (glint !== null && glint >= GLINT_STOMP))) {
       tags.push({
         key: 'dyn-stomp',
         label: t('badgeStomp'),
@@ -118,9 +139,11 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
     }
   }
 
-  // 2. RESULTADO DA ROTA — do dado real da STRATZ, e so dele.
+  // 2. RESULTADO DA ROTA — do veredito real (`laneResult`), e so dele. Desde que a
+  // lista vem da OpenDota o campo chega 'UNKNOWN' e o badge fica omitido (a regra
+  // propria é a Fase 3 de docs/PLANO-OPENDOTA.md).
   //
-  // Este bloco decidia a rota por `imp`, `kda`, `numLastHits`, `deaths` e `isVictory`,
+  // Este bloco decidia a rota por nota de impacto, `kda`, `numLastHits`, `deaths` e `isVictory`,
   // todos da PARTIDA INTEIRA. `deaths >= 7 && !isVictory` marcava "Rota Dificil" numa
   // safelane atropelada que perdeu o jogo depois. Sem `laneResult`, a partida nao foi
   // parseada e nenhum badge de rota aparece — omitir é a saida honesta, estimar nao é.
@@ -148,15 +171,15 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
   }
 
   // 2b. IMPACTO INDIVIDUAL. Mede a partida inteira, e o rotulo agora diz isso — era
-  // este numero que se passava por veredito de rota.
-  if (match.imp >= 15 && kda >= 4) {
+  // este numero que se passava por veredito de rota. Le o Glint; sem nota, sem tag.
+  if (glint !== null && glint >= GLINT_HIGH_IMPACT && kda >= 4) {
     tags.push({
       key: 'impact-high',
       label: t('badgeHighImpact'),
       className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-bold',
       priority: 58,
     });
-  } else if (match.imp <= -10) {
+  } else if (glint !== null && glint <= GLINT_LOW_IMPACT) {
     tags.push({
       key: 'impact-low',
       label: t('badgeLowImpact'),
@@ -166,7 +189,15 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
   }
 
   // 3. DESTAQUES INDIVIDUAIS (Awards & Accolades)
-  if (match.award === 'MVP' || match.imp >= 35) {
+  //
+  // Os tres premios abaixo so disparam com `award` vindo da fonte. A lista da OpenDota
+  // nao traz premio (exigiria os dez jogadores), entao hoje nenhum aparece — e é assim
+  // que deve ser. Os atalhos por nota que havia aqui (`|| imp >= 35` para MVP, posicao
+  // de suporte + `imp >= 15` para Top Sup) foram REMOVIDOS em vez de convertidos para
+  // Glint: "MVP" é afirmacao sobre os dez jogadores, e a nota de um jogador so, ainda
+  // por cima experimental, nao sustenta o rotulo. Nota alta ja tem a tag propria
+  // (`acc-high-glint`), que diz o que é.
+  if (match.award === 'MVP') {
     tags.push({
       key: 'award-mvp',
       label: t('badgeMvp'),
@@ -176,7 +207,7 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
     });
   }
 
-  if (match.award === 'TOP_SUPPORT' || (['POSITION_4', 'POSITION_5'].includes(match.role) && match.imp >= 15 && match.award !== 'MVP')) {
+  if (match.award === 'TOP_SUPPORT') {
     tags.push({
       key: 'award-top-sup',
       label: t('badgeTopSupport'),
@@ -219,10 +250,12 @@ function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate): Match
     });
   }
 
-  if (match.imp >= 25 && match.award !== 'MVP' && match.imp < 35) {
+  // Sem teto: o teto antigo (`imp < 35`) existia so para ceder lugar ao MVP por nota,
+  // que saiu.
+  if (glint !== null && glint >= GLINT_HIGHLIGHT && match.award !== 'MVP') {
     tags.push({
-      key: 'acc-high-imp',
-      label: t('badgeImpact', { value: match.imp }),
+      key: 'acc-high-glint',
+      label: t('badgeGlint', { value: formatGlint(glint) }),
       icon: <Zap className="w-2.5 h-2.5 text-amber-400" />,
       className: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40 font-bold',
       priority: 65,
@@ -380,6 +413,11 @@ export const MatchList: React.FC<MatchListProps> = ({
   const [queueFilter, setQueueFilter] = useState<'ALL' | 'SOLO' | 'PARTY'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // A lista da OpenDota nao traz posicao (`role` vem 'UNKNOWN'). Com nenhuma partida
+  // posicionada, o filtro de posicao esvaziaria a lista em qualquer escolha — entao ele
+  // so existe quando ha o que filtrar, mesmo padrao de `availableTypes`.
+  const hasRoleData = useMemo(() => matches.some((m) => m.role && m.role !== 'UNKNOWN'), [matches]);
+
   const filteredMatches = useMemo(() => {
     return matches.filter((m) => {
       // Outcome filter
@@ -387,7 +425,7 @@ export const MatchList: React.FC<MatchListProps> = ({
       if (outcomeFilter === 'LOST' && m.isVictory) return false;
 
       // Role filter
-      if (roleFilter !== 'ALL' && m.role !== roleFilter) return false;
+      if (hasRoleData && roleFilter !== 'ALL' && m.role !== roleFilter) return false;
 
       // Heroi vindo do card "Mais Jogados"
       if (heroFilterId !== null && m.heroId !== heroFilterId) return false;
@@ -415,7 +453,7 @@ export const MatchList: React.FC<MatchListProps> = ({
 
       return true;
     });
-  }, [matches, outcomeFilter, roleFilter, typeFilter, queueFilter, heroFilterId, searchQuery]);
+  }, [matches, outcomeFilter, roleFilter, hasRoleData, typeFilter, queueFilter, heroFilterId, searchQuery]);
 
   // So oferece os modos que realmente aparecem no historico carregado — um
   // select com 'Battle Cup' para quem nunca jogou Battle Cup e ruido.
@@ -501,7 +539,8 @@ export const MatchList: React.FC<MatchListProps> = ({
             </button>
           </div>
 
-          {/* Role Filter */}
+          {/* Role Filter — so com partida que tenha posicao */}
+          {hasRoleData && (
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -514,6 +553,7 @@ export const MatchList: React.FC<MatchListProps> = ({
             <option value="POSITION_4">{t('pos4')}</option>
             <option value="POSITION_5">{t('pos5')}</option>
           </select>
+          )}
 
           {/* Tipo de Partida — so aparece quando ha mais de um no historico */}
           {availableTypes.length > 1 && (
@@ -650,8 +690,13 @@ export const MatchList: React.FC<MatchListProps> = ({
                         {match.isVictory ? t('win') : t('loss')}
                       </span>
                       <span>•</span>
-                      <span className="text-purple-300">{match.role.replace('POSITION_', 'Pos ')}</span>
-                      <span>•</span>
+                      {/* Sem posicao conhecida a celula some: 'UNKNOWN' nao é posicao. */}
+                      {match.role && match.role !== 'UNKNOWN' && (
+                        <>
+                          <span className="text-purple-300">{match.role.replace('POSITION_', 'Pos ')}</span>
+                          <span>•</span>
+                        </>
+                      )}
                       <span className="flex items-center gap-1 text-slate-400">
                         <Clock className="w-3 h-3 text-slate-500" />
                         {formatDuration(match.durationSeconds)}
@@ -687,10 +732,17 @@ export const MatchList: React.FC<MatchListProps> = ({
                   </div>
                 </div>
 
-                {/* 4. Prominent IMP Rating */}
+                {/* 4. Glint (experimental). A CELULA fica sempre — é uma trilha do grid de
+                    7 colunas em `2xl`, e sem ela as colunas seguintes deslizam. O conteudo
+                    some inteiro em partida sem nota: nem "0", nem traco, nem legenda. O
+                    chip ja carrega o selo "beta" e o tooltip de procedencia. */}
                 <div className="text-left 2xl:text-center font-mono">
-                  <ImpBadge imp={match.imp} />
-                  <div className="text-[9px] text-slate-400 font-sans mt-0.5">{t('impImpact')}</div>
+                  {typeof match.glint === 'number' && (
+                    <>
+                      <GlintBadge glint={match.glint} />
+                      <div className="text-[9px] text-slate-400 font-sans mt-0.5">{t('glint')}</div>
+                    </>
+                  )}
                 </div>
 
                 {/* 5. Contexto: rank medio, grupo e tipo de partida */}

@@ -2,25 +2,27 @@
 
 **English** · [Português (pt-BR)](README.pt-BR.md)
 
-Desktop app for Dota 2 post-game analysis. It cross-references STRATZ and OpenDota data to turn a
-finished replay into a tactical read: per-hero and per-position benchmarks, advantage timeline,
-vision map, and actionable per-player insights.
+Desktop app for Dota 2 post-game analysis. It reads public OpenDota data, with hero and item art
+from Valve, and turns a finished match into a tactical read: scoreboard, advantage timeline, vision
+map and per-player insights. **No API token is required.**
 
 Built with Electron + React + TypeScript + Vite. The interface ships in Portuguese (pt-BR) and
 English (en-US).
 
 ## Why it exists
 
-GlimpseGG is not trying to be an alternative to STRATZ, nor to propose a new methodology. The goal
-is narrower: **keep what STRATZ used to show up to date**.
+GlimpseGG started as a way to **keep up to date what STRATZ used to show**. STRATZ stopped receiving
+updates, and the cost shows up on every patch — new heroes and items never make it into the
+datasets, so matches containing them are displayed incorrectly and fall out of any analysis.
 
-STRATZ stopped receiving updates, and the cost shows up on every patch — new heroes and items never
-make it into the datasets, so matches containing them are displayed incorrectly and fall out of any
-analysis. It is not that the read gets worse: it simply does not happen for recent content.
+The first versions read from the STRATZ API and required a personal token. That is no longer the
+case: **the app makes no call to STRATZ and needs no token.** Profile, match and meta data come from
+OpenDota, which is public; hero and item art comes from Valve.
 
-GlimpseGG fills that gap. **The metrics are computed the same way STRATZ computed them** — the
-intent is not to diverge from the numbers you already knew, but to keep producing them for the
-current patch, with new heroes and items properly recognized, displayed and analyzed.
+The screens, and the kind of read they try to give, remain **inspired by STRATZ** — credit where it
+is due. What GlimpseGG cannot do is reproduce STRATZ's own numbers, and it does not pretend to: the
+impact score shown here is called **Glint**. It is GlimpseGG's own, it is **experimental**, and it
+is neither STRATZ's IMP nor claimed to match it.
 
 ## Features
 
@@ -29,31 +31,37 @@ current patch, with new heroes and items properly recognized, displayed and anal
 - Match list with a per-game summary
 - Most played heroes and performance trend
 - Activity heatmap
-- Teammate matrix and STRATZ trends
+- Teammate matrix
 
 **Match analysis** — four tabs per player
 - `OVERVIEW` — scoreboard, team overview, advantage timeline
 - `PERFORMANCE` — metrics against the hero/position baseline
 - `VISION` — real wards on the minimap, with lifetime, placer, dewards and coverage
-- `COACHING` — deterministic diagnosis: comparison against the average for that hero in that
-  position, build recommendation from the patch's win rate, and death forensics
+- `COACHING` — deterministic diagnosis of the match, with death forensics; every card states where
+  its number comes from
+- **Glint** — the experimental per-player impact score (see [Why it exists](#why-it-exists))
+
+What each tab shows depends on what OpenDota has for that match. When a piece of data is missing,
+the section is hidden — it is never estimated. The build recommendation of earlier versions is
+hidden for that reason: OpenDota does not have the volume to back it.
 
 **Hero grid mirror** — writes a copy of your in-game hero layout, reordered by win rate
 - Your layout is never touched: the mirror is a **new entry** beside it, and the write aborts if
   anything else in the file changed
 - Ordered by GlimpseScore, which blends the patch's meta win rate with your own history
-- Works with no STRATZ token — OpenDota is the primary meta source
+- Needs no token — the meta win rate comes from OpenDota
 
 ## Screens
 
-The captures below come from the running app, with data from STRATZ and OpenDota. The profile shown
-is a public high-rank account (`86745912`), used only to illustrate the screens — none of the
+The captures below come from the running app, but **they predate the move away from STRATZ**: some
+still show a token field, build cards or the old impact score. Until they are retaken, trust the
+text over the picture. The profile shown is a public high-rank account (`86745912`), used only to illustrate the screens — none of the
 maintainer's data appears here. The hero grid screens use a **fictitious layout** grouped by the
 four attributes, the way Dota ships it by default: a hero grid is a local file, so there is no such
 thing as another player's grid to show.
 
 **Player dashboard** — profile and rank, recent form, match list with a per-game summary, top heroes
-and the trends coming from STRATZ.
+and trends.
 
 ![Player dashboard](docs/screenshots/dashboard.png)
 
@@ -72,8 +80,8 @@ coverage, navigable through the match timeline.
 
 ![Vision tab of the match analysis](docs/screenshots/match-vision.png)
 
-**`COACHING`** — deterministic diagnosis. Every card carries the number, its provenance (hero
-average, patch data, this match) and the sample size.
+**`COACHING`** — deterministic diagnosis. Every card carries the number and its provenance, with
+the sample size when there is one.
 
 ![Coaching tab of the match analysis](docs/screenshots/match-coaching.png)
 
@@ -82,7 +90,7 @@ the groups in their in-game positions and the GlimpseScore that set the order in
 
 ![Hero grid mirror replica](docs/screenshots/hero-grid-mirror.png)
 
-**Hero grid — sync panel** — when the grid was last written, from which sources, and the
+**Hero grid — sync panel** — when the grid was last written, from which source, and the
 hero-by-hero ranking with the meta and personal components of every score.
 
 ![Hero grid sync panel](docs/screenshots/hero-grid-panel.png)
@@ -92,13 +100,12 @@ favourites. Opens with `Ctrl K`.
 
 ![Player search modal](docs/screenshots/search.png)
 
-**Settings** — interface language, STRATZ token, active Steam account and the hero grid
-configuration, split into four tabs.
+**Settings** — interface language, active Steam account and the hero grid configuration.
 
 ![Application settings](docs/screenshots/settings.png)
 
-**Onboarding** — the first run asks for the interface language (English by default) and the STRATZ
-token. The Steam Account ID is detected automatically from the token itself.
+**Onboarding** — the first run asks for the interface language (English by default) and the Steam
+account to follow. No token is requested.
 
 ![Onboarding screen](docs/screenshots/onboarding.png)
 
@@ -120,26 +127,17 @@ page:
 
 The app updates itself from this repository's Releases.
 
-## STRATZ token
+## No token required
 
-The match analysis **needs a token** — it is the only source for match details, and there is no
-demo dataset to fall back on. The old one was removed on purpose: it opened the app on the wrong
-match instead of saying that something had failed. Without a token the first run opens onboarding,
-and the navbar keeps a **No Key** badge that takes you to Settings.
+GlimpseGG needs no API token and no account. Everything it shows comes from public endpoints.
 
-To use real data:
-
-1. Generate a token at <https://stratz.com/api>.
-2. Paste it into the first-run onboarding, or later under **Settings → STRATZ API Token**.
-3. The Steam Account ID is extracted automatically from the token's own `SteamId` claim — there is
-   nothing to type.
-
-The hero grid mirror is the exception: it works end to end with no token, because its primary meta
-source is OpenDota, which is public.
+Earlier versions required a personal STRATZ token. If you used one of them, that token may still be
+sitting in the local config file (see [What is stored locally](#what-is-stored-locally)). The app no
+longer uses it, but it is still a secret:
 
 > [!WARNING]
 > **A personal STRATZ token cannot be revoked.** If it leaks, it stays valid until the expiry date
-> embedded in the JWT. Never commit the token, and never paste it into issues, pull requests or
+> embedded in the JWT. Never commit it, and never paste it into issues, pull requests or
 > screenshots. It is a Bearer token: whoever holds the value spends your API quota.
 
 ## Privacy
@@ -153,16 +151,15 @@ Practical consequences:
   project's side.
 - **No telemetry, no analytics.** The app collects no usage metrics, has no crash reporter and
   embeds no tracking SDK.
-- **The STRATZ token never leaves your machine**, except in the `Authorization` header of the calls
-  that go straight to STRATZ itself — the party that issued it.
+- **No credential is involved.** The app asks for no token, key or login for any third-party
+  service.
 
 The app is only a client: it talks directly to public third-party APIs to build the screens. For
 transparency, everything it communicates with:
 
 | Destination | What for | What is sent |
 | --- | --- | --- |
-| `api.stratz.com` | Match details, benchmarks, trends | Your token and the Steam Account ID being queried |
-| `api.opendota.com` | Profiles, teammates, vanity URL lookup | The Steam Account ID or the search term |
+| `api.opendota.com` | Profiles, match history and details, replay parse requests, hero win rates, teammates, player search | The Steam Account ID, the match ID or the search term |
 | `cdn.cloudflare.steamstatic.com` | Hero and item icons (Valve) | Nothing beyond the image request |
 | `avatars.steamstatic.com` | Player avatars (Valve) | Nothing beyond the image request |
 | `www.opendota.com` | Rank icons | Nothing beyond the image request |
@@ -172,25 +169,28 @@ transparency, everything it communicates with:
 A Content-Security-Policy in the production bundle restricts connections to exactly that list —
 any other destination is blocked by Chromium itself.
 
-### Where the token is stored
+### What is stored locally
 
-In plain text, **locally**, unencrypted:
+Settings — interface language, Steam account, hero grid preferences — are kept in plain text,
+**locally**, unencrypted:
 
 - **Desktop:** `stratz_app_config.json` inside Electron's `userData` directory
   (`~/.config/GlimpseGG` on Linux, `%APPDATA%\GlimpseGG` on Windows,
-  `~/Library/Application Support/GlimpseGG` on macOS).
-- **Browser (dev):** `localStorage`, key `stratz_api_key`.
+  `~/Library/Application Support/GlimpseGG` on macOS). The file keeps its historical name.
+- **Browser (dev):** `localStorage`.
 
-The token is never embedded in the bundle or in the release artifacts. Treat the machine as the
-trust boundary: any process with access to your user profile can read that file.
+A STRATZ token saved by an earlier version may still be there (`stratzApiKey` in the file,
+`stratz_api_key` in `localStorage`). The app does not use it. Treat the machine as the trust
+boundary: any process with access to your user profile can read that file.
 
 ## Development
 
 ```bash
 npm install
-cp .env.example .env     # optional — the token can also be entered through the UI
 npm run electron:dev     # Vite + Electron with HMR
 ```
+
+No `.env` is needed to run the app.
 
 Other scripts:
 
@@ -234,23 +234,24 @@ Two constraints on the master, both enforced by a preflight in the generator:
 
 ### Data sources
 
-- **STRATZ** (GraphQL, `api.stratz.com`) — match details, ward and death events, `heroAverage` (the
-  hero's average for that position), and the `heroStats` aggregates (`itemFullPurchase`,
-  `heroVsHeroMatchup`) that feed the build recommendation. Requires a token.
-- **OpenDota** (REST, `api.opendota.com`) — profiles, teammates, vanity URL lookup. Public, no key.
+- **OpenDota** (REST, `api.opendota.com`) — profiles, match history and match details, replay parse
+  requests, the hero win rates behind the hero grid, teammates, vanity URL lookup. Public, no key.
+- **Valve** — hero and item art and player avatars, from the Steam CDN. The item catalogue shipped
+  with the app is generated at development time from Valve's datafeed
+  (`scripts/sync-items-full.cjs`).
+- **STRATZ** — no longer queried. It remains the inspiration for the screens.
 
 No language model is involved anywhere. The coaching engine is deterministic: every number on screen
-traces back to a specific field of the STRATZ response, and the card shows its provenance (hero
-average, patch data, this match, or generic estimate) along with the sample size. When the replay
-was not parsed by STRATZ, the corresponding analysis simply does not appear — nothing is estimated
-to fill the gap.
+traces back to a specific field of the source response, and the card shows its provenance, with the
+sample size when there is one. When OpenDota has not parsed the replay, the corresponding analysis
+simply does not appear — nothing is estimated to fill the gap.
 
 ### Third-party assets
 
 - `public/minimap.png` — Dota 2 minimap (patch 7.41), taken from
   <https://liquipedia.net/dota2/Minimap>. It is Valve art, included here only to render ward
   placement. It is not covered by this repository's MIT license. The coordinate mapping was
-  calibrated against this image: with STRATZ cells 64–192 stretched edge to edge, the river's two
+  calibrated against this image: with map cells 64–192 stretched edge to edge, the river's two
   power runes land on water and 97% of a 544 real-ward sample lands on terrain.
 
 ## Releases
@@ -264,7 +265,7 @@ artifacts for all three platforms, via GitHub Actions. The gates are `icons:chec
 Marcos Rosado — <contato@marcosrosado.dev>
 
 Bugs and suggestions: open an [issue](https://github.com/MarcosRosado/glimpsegg/issues).
-Never include your STRATZ token in issues, logs or screenshots.
+Never include a token or any other secret in issues, logs or screenshots.
 
 ## License
 

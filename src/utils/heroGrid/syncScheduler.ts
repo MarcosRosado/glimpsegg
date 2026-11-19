@@ -321,9 +321,10 @@ export function buildSyncRecord(
  *   em rajada, contra FR-028.
  * - I-22 / FR-017: `lastSuccessfulSyncAt` só avanca em `outcome !== 'FAILURE'`. `PARTIAL` é
  *   sucesso para efeito de marcador porque o arquivo FOI escrito (tabela de degradacao de
- *   `contracts/meta-sources.md § 5`: só a OpenDota, sem token da STRATZ, é `PARTIAL` e
- *   grava). Tratar `PARTIAL` como falha faria o jogador sem token nunca ver o marcador
- *   avancar e o deixaria em backoff eterno.
+ *   `contracts/meta-sources.md § 5`). Com a OpenDota como unica fonte nenhuma sincronizacao
+ *   nova sai `PARTIAL`, mas o desfecho segue no tipo: o historico gravado o contem, e
+ *   trata-lo como falha deixaria o jogador em backoff eterno no dia em que houver uma
+ *   segunda fonte.
  * - `consecutiveFailures`: zera em `SUCCESS`/`PARTIAL`, incrementa em `FAILURE`.
  *
  * C-5 (FR-036): o historico passa pelo `clampSyncHistory` de `preferences.ts` — mesmo corte

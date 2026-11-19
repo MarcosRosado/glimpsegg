@@ -3,8 +3,18 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 GlimpseGG é um app desktop (Electron + React 19 + TypeScript + Vite 8) de análise pós-jogo de
-Dota 2. É um **cliente puro**: não existe backend, banco nem telemetria. Fala direto com
-`api.stratz.com` (GraphQL, exige token) e `api.opendota.com` (REST, público).
+Dota 2. É um **cliente puro**: não existe backend, banco nem telemetria. Fala só com
+`api.opendota.com` (REST, público, sem token) e com fontes da Valve.
+
+**A STRATZ saiu do app em 2026-11-19.** Nenhuma tela, hook ou serviço em uso fala com ela, e o
+app não pede nem guarda token: basta o Steam ID. O que só ela calculava ficou **escondido** até
+existir substituto aceito (coaching por minuto contra a média do herói, recomendação de build),
+com uma exceção assumida — a nota de impacto, que entrou como **Glint experimental**. O veredito
+de rota voltou no mesmo dia, com **regra própria** e aceite medido (Fase 3). O plano inteiro,
+com o que cada fase devolve, está em [`docs/PLANO-OPENDOTA.md`](docs/PLANO-OPENDOTA.md). O código
+da STRATZ saiu por completo do app (etapa 2: `stratzGql.ts` e a fixture `match-parsed.json`
+apagados); ela só é consultada pelos scripts de `scripts/`, como gabarito de medição — rotina em
+[`docs/COLETA-GABARITO.md`](docs/COLETA-GABARITO.md).
 
 Convenção de idioma: documentação, comentários e mensagens de commit em pt-BR; identificadores de
 código em inglês. Os comentários existentes explicam *por que* algo é assim, muitas vezes citando o
@@ -78,30 +88,52 @@ relativo. `tsconfig.app.json` inclui `["src", "tests"]`, então o `tsc -b` conti
 
 - **Electron** — `electron/preload.cjs` expõe `window.api`; as chamadas vão por IPC para
   `electron/main.cjs`, que faz o fetch no processo main. Config persistida em
-  `stratz_app_config.json` dentro do `userData`.
+  `stratz_app_config.json` dentro do `userData` (o nome do arquivo ficou; o app só lê e grava o
+  Steam ID, o idioma e as preferências).
 - **Browser** (`npm run dev`) — `window.api` é `undefined`, então o renderer faz `fetch` direto e a
-  config vive no `localStorage` (`stratz_api_key`, `stratz_steam_id`, `app_language`).
+  config vive no `localStorage` (`stratz_steam_id`, `app_language`).
 
-Todo serviço testa `window.api` e tem os dois ramos (padrão curto em `src/services/opendota.ts`;
-padrão longo em `stratzGql.ts`). Código novo de rede precisa cobrir os dois. Host novo exige
-liberação em **três** lugares independentes: a CSP em `vite.config.ts` (só produção — em dev não há
-CSP), a `EXTERNAL_HOST_ALLOWLIST` em `electron/main.cjs` (só para abrir link no browser do sistema)
-e um handler IPC. O handler `api:stratz-graphql` é genérico, então query nova na STRATZ não precisa
-de handler novo.
+Todo serviço cobre os dois ramos. O padrão é `openDotaGet(endpoint)` em `src/services/opendota.ts`:
+uma função, os dois caminhos, `null` em qualquer falha. Código novo de rede passa por ela. Host
+novo exige liberação em **três** lugares independentes: a CSP em `vite.config.ts` (só produção —
+em dev não há CSP), a `EXTERNAL_HOST_ALLOWLIST` em `electron/main.cjs` (só para abrir link no
+browser do sistema) e um handler IPC. O handler `api:opendota-fetch` é genérico (recebe só o
+endpoint), então rota nova de **leitura** da OpenDota não precisa de handler novo; o pedido de
+parse (`POST /request/{id}`) tem handler próprio, que só aceita um id numérico.
 
 ## Pipeline de dados de partida
 
-`fetchMatchDetails(matchId, apiKey)` → `mapStratzMatch(m)` → `MatchDetails`.
+`fetchOpenDotaMatchDetails(matchId)` → `mapOpenDotaMatch(m)` → `MatchDetails`
+(`src/services/openDotaMatch.ts`).
 
-`mapStratzMatch` é exportada, pura e testada (`tests/services/stratzGql.test.ts`) — é onde vive praticamente toda a
-tradução da resposta crua da STRATZ para o modelo do app, incluindo as funções `map*`/`normalize*`
-privadas do arquivo. Ela também chama `buildVisionData` e calcula
-`availability: MatchDataAvailability` via `computeAvailability`.
+`mapOpenDotaMatch` é exportada, pura e testada (`tests/services/openDotaMatch.test.ts`) contra
+`src/services/__fixtures__/match-parsed-opendota.json`: uma resposta 200 **real** e anonimizada
+de `GET /api/matches/{id}`, de partida parseada (e `match-uneven-lane-opendota.json`, segunda
+partida real, escolhida pelo que dispara). Use essas fixtures ao mexer em parsing em vez de
+montar objeto sintético à mão, e não as substitua por dado inventado. O cabeçalho do mapper
+lista o que a OpenDota **não** tem e sai **desligado, não aproximado**: `availability.imp`,
+`heroAverage`, `abilities` e `damageReport` são `false`. `laneOutcomes` não vem da OpenDota:
+sai da regra própria de `utils/laneVerdict.ts`.
 
-O teste roda contra `src/services/__fixtures__/match-parsed.json`: uma resposta 200 **real** e
-anonimizada da STRATZ, de partida parseada. É o único jeito de exercitar o mapper de ponta a ponta —
-use essa fixture ao mexer em parsing em vez de montar objeto sintético à mão, e não a substitua por
-dado inventado.
+**Partida não parseada é o caso comum.** A STRATZ parseava sozinha; a OpenDota parseia a pedido.
+Sem parse a partida abre só com o placar (`availability.parsePending`), e o `ParsePendingBanner`
+oferece "Pedir análise do replay". O pedido sai **só no clique** — cada um conta como 10 chamadas
+no limite da OpenDota — e a espera consulta a **partida**, não o job (`GET /request/{jobId}`
+devolve `null` tanto para "terminou" quanto para "não existe"), com recuo e teto de ~5 minutos.
+
+**A dashboard** vem de `src/services/openDotaProfile.ts`: perfil, vitórias, 40 partidas recentes,
+companheiros e heróis mais jogados. O cabeçalho dele lista o que a **lista de partidas** não tem
+(veredito de rota, posição, prêmio, participação em abates, patrimônio final) e fica ausente. Os
+heróis mais jogados são contados na lista completa de partidas, não em `/players/{id}/heroes`:
+essa rota devolvia `games: 0` para os 127 heróis de uma conta com 2.870 partidas, e a fixture
+`opendota-player.json` guarda a prova.
+
+**Os testes de motor rodam sobre a OpenDota.** `tests/support/fixtureMatches.ts` entrega as duas
+partidas reais pelo mapper real; o que só a STRATZ tinha (curva `heroAverage`, divisão
+físico/mágico/puro, controle sofrido, marcas forenses de morte) entra por sobreposição de
+domínio **com `Synthetic` no nome**, para cobrir as regras dormentes até a Fase 2 religá-las.
+Nenhum número dessas sobreposições foi copiado da STRATZ, e `placeholders.test.ts` lista à mão
+as regras sem disparo — perda de cobertura vira teste vermelho, não silêncio.
 
 Falha de rede ou de parsing devolve `null`, e o `App` mostra toast. **Não existe fallback para dados
 fabricados** — o antigo `src/services/mockData.ts` foi removido de propósito, porque ele fazia a tela
@@ -115,9 +147,9 @@ selecionada, slot selecionado e aba ativa; alterna entre a view de dashboard e a
 
 Boa parte do desenho do projeto existe para isso. Três mecanismos, todos tipados:
 
-1. **`MatchDataAvailability`** (`types/dota.ts`) — 10 flags (`parsed`, `perMinuteStats`,
-   `deathEvents`, `wards`, `heroAverage`, `laneOutcomes`…). Regra de coaching ou seção de UI que
-   exija uma flag ausente é **pulada**, não estimada.
+1. **`MatchDataAvailability`** (`types/dota.ts`) — 13 flags (`parsed`, `perMinuteStats`,
+   `deathEvents`, `wards`, `heroAverage`, `laneOutcomes`, `imp`, `glint`, `parsePending`…). Regra de
+   coaching ou seção de UI que exija uma flag ausente é **pulada**, não estimada.
 2. **`BenchmarkSource`** — `HERO_AVERAGE` | `HERO_STATS` | `MATCH_ONLY` | `ROLE_BASELINE`. Todo
    número de comparação carrega procedência e `sampleSize`, e a UI renderiza isso como chip.
    `ROLE_BASELINE` é constante estática e **precisa** aparecer rotulado como estimativa.
@@ -128,15 +160,27 @@ Quando faltar dado, as saídas legítimas são esconder a seção ou marcar a pr
 lacuna com estimativa não rotulada é regressão, mesmo que a tela fique mais bonita. Precisar de uma
 condição nova de disponibilidade → adicionar flag em `MatchDataAvailability`.
 
-**Veredito de rota vem só de `top/mid/bottomLaneOutcome`.** IMP, KDA, mortes, last hits e
-vitória/derrota medem a **partida inteira** e não podem receber rótulo de rota — a função
-`resolvePlayerLaneResult` (`services/stratzGql.ts`) recebe exatamente três coisas (lane, lado,
-outcomes) e nenhum sinal de resultado de partida, de propósito. A dashboard mantinha um segundo
+**Veredito de rota vem só de dado dos 10 primeiros minutos de quem estava na rota.** Desde
+2026-11-19 a fonte é a regra própria de `utils/laneVerdict.ts` (Fase 3, D1): patrimônio aos 10
+min, média por herói de cada lado, diferença relativa contra limiares fixados por **taxa de
+disparo** (empate = 25% das rotas, atropelo = 10%). "Quem estava na rota" é o campo geográfico
+`lane` da OpenDota (1 bot, 2 mid, 3 top), sem conversão safe/off. Aceite medido contra a STRATZ:
+direção igual em 98,8% das rotas de 7.42 em que as duas dizem que alguém venceu (IC95
+97,3–99,5%, n=428), 99,2% em 7.41. **Rota desigual** (2v1, 1v2) não passou (84,5% no treino) e
+nunca vira "Rota vencida": sai `UNKNOWN` com "Vantagem aos 10 min" e a diferença **por herói**
+ao lado (`laneAdvantage.kind = 'ADVANTAGE'`). O veredito mostra a própria base: o badge leva a
+diferença de patrimônio da rota e o tooltip, a regra e a concordância. Limiar sai de
+`scripts/fit-lane-verdict.cjs`, nunca do olho — e o script confere, rota a rota, que a função
+do app reproduz a regra medida. IMP, KDA, mortes, last hits e vitória/derrota medem a
+**partida inteira** e não podem receber rótulo de rota — `resolvePlayerLaneResult` recebe
+exatamente três coisas (rota, lado, outcomes) e nenhum sinal de resultado de partida, de
+propósito. A dashboard mantinha um segundo
 sistema, paralelo ao do detalhe da partida, que decidia rota por `deaths >= 7 && !isVictory`: uma
 safelane atropelada que perdeu o jogo depois saía como "Rota Difícil", e `WIN_LANE` exigia `isWin`,
-então ganhar a rota e perder o jogo era **impossível** de rotular. Sem os campos de outcome
-(partida não parseada) o veredito é `UNKNOWN` e a UI **omite o badge** — `utils/laneResult.ts`
-concentra o rótulo e o `hasLaneVerdict`. `MatchDynamicType` é sobre a forma da partida
+então ganhar a rota e perder o jogo era **impossível** de rotular. Sem medida (partida não
+parseada, série curta, lado vazio) o veredito é `UNKNOWN` e a UI **omite a seção** —
+`utils/laneResult.ts` concentra o rótulo, o `hasLaneVerdict` e o `laneVerdictView`. A lista de
+partidas ainda não tem badge de rota (vem de `/players/{id}/matches`, sem série por minuto). `MatchDynamicType` é sobre a forma da partida
 (`STOMP`/`COMEBACK`/`HIGH_IMPACT`/…), nunca sobre rota.
 
 **Janela importa tanto quanto procedência.** Métrica rotulada como de rota tem de vir dos 10
@@ -152,6 +196,38 @@ acumulado): na fixture real, 4 dos 10 jogadores estouravam o gatilho de elogio s
 lado "abaixo da média" nunca disparava. Não existe fallback para `ROLE_BASELINES.gpm` aqui — cair
 nele reintroduziria a mistura.
 
+## Glint experimental (`src/utils/glint.ts`)
+
+A nota de impacto do app, de 0 a 100. É uma **regressão linear sobre oito percentis da OpenDota**
+(onde o jogador ficou em cada estatística entre partidas do mesmo herói — partida inteira, todos
+os ranques), ajustada para reproduzir o IMP da STRATZ + 50 em partidas de 7.41 e testada em 7.42:
+r 0,82, erro médio 10,2, mesmo lado em 82%, mesmo melhor da partida em 49% (reajuste com 566
+partidas de treino; o primeiro, com 326, deu 51%). Isso está **abaixo**
+do aceite da Fase 4 do plano — é o que "experimental" quer dizer, e o rótulo não é enfeite:
+
+- **Todo número de Glint sai com a procedência.** O `GlintBadge` (`components/ui/`) carrega o
+  tooltip com as métricas do teste; quem mostra a nota fora dele usa `useGlintHint()`. Nota sem
+  rótulo de experimental é regressão.
+- **Não dizer "50 = esperado para herói e posição".** O centro medido é ~45 (a mediana do IMP é
+  negativa) e o percentil é por herói, não por posição nem por ranque.
+- **Sem composição no tooltip.** Ouro e dano saíram com peso negativo por colinearidade com
+  abates; "puxado por farm" seria causa inventada.
+- **Percentil faltando ⇒ `null`**, e a nota some daquela linha. Nunca `0`.
+- **Limiar não se converte somando 50.** A regressão comprime a escala (p10/p90 de 21/70 contra
+  17/76 do IMP + 50). `GLINT_THRESHOLDS` saiu por **quantil**: o Glint que dispara na mesma taxa
+  do limiar de IMP que o app usava.
+- **Peso e limiar saem de `scripts/fit-glint-experimental.cjs`**, nunca do olho. Rodar de novo a
+  cada lote grande de pares e colar o bloco em `GLINT_MODEL`.
+
+No detalhe da partida os percentis vêm prontos (`players[].benchmarks`); na lista de partidas
+saem dos totais crus mais a tabela pública `GET /benchmarks?hero_id=` (uma chamada por herói, com
+cache de 7 dias por patch), e batem com os da partida com diferença mediana de 0,002 a 0,003.
+Mortes entram invertidas na tabela — o `pct` da partida já é "menos morte = melhor".
+
+O IMP não existe mais no app. `player.imp` fica `0` (detalhe) ou `null` (lista) como marcador,
+e `availability.imp` é sempre `false`; `formatImp*`, `ImpBadge`, `calculateCustomImp` e a escala
+`IMP` do `awardEngine` saíram junto com o mapper da STRATZ.
+
 ## Destaques da partida (`src/utils/awardEngine.ts`)
 
 Mesma separacao do motor de coaching: **o motor devolve `AwardId` + numero cru**, e texto e
@@ -164,6 +240,14 @@ empate de dez — "o primeiro de uma lista" nao é destaque. Cada superlativo te
 **proprios da metrica**, calibrados sobre 60 partidas reais: a mediana da vantagem do 1º sobre o
 2º é 11% em assistencias e 202% em cura, entao um limiar unico ou premiaria cura sempre ou nunca
 premiaria assistencia. Lista vazia é resultado valido.
+
+**A nota dos premios de papel tem escala declarada.** `resolveScoreKind` devolve `GLINT` (algum
+jogador com nota numerica) ou `null`. Com `null` — partida sem percentis, ou jogador montado sem
+o campo `glint` — `TOP_CORE`, `TOP_SUPPORT`, `ROUGH_GAME` e o melhor por posicao sao
+**omitidos**: ordenar por uma nota que nao existe coroava o primeiro da lista (era o que o ramo
+`IMP`, removido na etapa 2, fazia com `imp: 0` em todos). O MVP sobrevive se alguem do time
+vencedor liderou categoria (unidade `NONE`, a UI mostra so o `basis`). O texto abaixo fala em
+IMP porque foi escrito e calibrado com ele; onde diz IMP, hoje leia "a nota da partida".
 
 **Tres slots sao fixos: MVP, melhor core e melhor suporte.** Sao os unicos premios sem
 exigencia de margem — toda partida tem cores e suportes, e "o core de maior IMP desta partida" e
@@ -227,8 +311,11 @@ desaparecer quando não houver mais nenhum.
   (A) `playbackData.wardEvents` → tempo de vida, autor e deward reais;
   (B) `players[].stats.wards` → só colocação, tempo de vida *estimado*;
   (C) nada → `source: 'NONE'`. Nunca inventar ward. `VISION_SOURCE_IS_ESTIMATED` diz à UI quando
-  avisar. Ele existe separado de `stratzGql.ts` justamente para ser testável — o bug que substituiu
-  (quatro wards hardcoded por jogador) sobreviveu porque nada verificava esse caminho.
+  avisar. Ele existia separado do mapper da STRATZ justamente para ser testável — o bug que
+  substituiu (quatro wards hardcoded por jogador) sobreviveu porque nada verificava esse caminho.
+  Desde a etapa 2 o `buildVisionData` (formato da STRATZ) não tem consumidor no app: o caminho
+  OpenDota monta a visão em `openDotaMatch.ts` e usa só os helpers; ele fica pelos testes de
+  `observerUptimePct`, até migrarem.
 - Coordenadas: `utils/minimapCoords.ts` + `constants/mapGeometry.ts`. **Quem chama declara o espaço
   de origem; a função nunca infere** — a versão que inferia pela faixa de valores plotava todo o lado
   Radiant errado. Células da STRATZ vão de 64 a 192 (128 unidades de mundo por célula) e o Y cresce
@@ -240,17 +327,15 @@ desaparecer quando não houver mais nenhum.
 
 ## Recomendação de build
 
-- `hooks/useBuildAdvice.ts` é chamado **só** pelo `CoachingInsightsTab`, nunca no
-  `handleSelectMatch` — assim overview, performance e vision não pagam o request. Ele resolve
-  posição e bracket (`rankBracket.ts`), busca os agregados e chama `computeBuildAdvice`.
-- `services/stratzHeroStats.ts` traz `itemFullPurchase` e `heroVsHeroMatchup` em **um** documento
-  GraphQL sob a raiz `heroStats` (1 request a frio). Trata `RateLimitedError` explicitamente.
-- `services/statsCache.ts` — cache em `localStorage` + memória, TTL de 7 dias, e a chave inclui o
-  patch vindo de `gameVersionService`. Trocar de aba não refaz request; patch novo invalida tudo.
-- `utils/buildAdvisor.ts` é puro e define "item de build" como "item presente no `itemFullPurchase`
-  deste herói/posição/ranque". Por isso não precisa de grafo de componentes: intersectar as compras
-  do jogador com esse conjunto já devolve a build real. Usa `wilson.ts` para não deixar amostra
-  pequena virar recomendação confiante.
+**Escondida desde 2026-11-19** (decisão D7 do plano). Ela vinha de `itemFullPurchase` e
+`heroVsHeroMatchup` da STRATZ, e a OpenDota não tem volume para substituir: os agregados
+equivalentes ficam abaixo do `MATCHUP_MIN_SAMPLE` do próprio app. A seção não renderiza e nada
+chama a rede; o `CoachingInsightsTab` passa `build: null` ao motor.
+
+`utils/buildAdvisor.ts` continua no repositório, puro e testado, porque é o que a Fase 5 vai
+religar quando houver agregado próprio de itens. Ele define "item de build" como "item presente
+no conjunto de compras daquele herói/posição/ranque" — por isso não precisa de grafo de
+componentes — e usa `wilson.ts` para não deixar amostra pequena virar recomendação confiante.
 
 ## i18n
 
@@ -276,7 +361,7 @@ afrouxadas** — com `strict: false` são praticamente a única rede de tipos di
   nas duas locales, e nenhuma chave órfã em `src/`. O guard de órfã varre `collectSources('src')`, e
   desde que a suíte saiu para `tests/` os próprios testes ficaram **fora** desse escopo: antes, chave
   citada só num teste passava no guard; agora não passa mais. A mudança de pasta apertou o gate de
-  graça — hoje são zero órfãs entre as 766 chaves.
+  graça — hoje são zero órfãs entre as 775 chaves.
 
 ## Ícones e marca
 
@@ -380,22 +465,20 @@ estão registradas aqui para não voltarem como "melhoria":
   aberto**. Com o app fechado não sincroniza, e a aba mostra **quantos dias** se passaram em vez de
   deixar o espelho envelhecer em silêncio.
 
-**Fontes de meta.** Precedência **OpenDota → STRATZ**: a que não exige token vem primeiro, e a
-feature fecha inteira sem token nenhum. Nenhum host novo, nenhuma mudança de CSP, nenhum handler IPC
-de rede novo — reaproveita `api:opendota-fetch` e o `api:stratz-graphql` genérico. Uma fonte fora ⇒
-`PARTIAL`, **escreve**, rotulado; as duas fora ⇒ `FAILURE`, **não escreve**, marcador de sucesso
-intacto.
-
-**`heroStats.winWeek` da STRATZ usa `bracketIds: [RankBracket]`** — enum **por medalha**, não o
-`RankBracketBasicEnum` que `itemFullPurchase` aceita e que o resto do projeto usa. Verificado por
-introspecção e 6 requisições reais; as quatro faixas somam exatamente o `ALL`. O mapper expande
-`RankBracketBasic` numa tabela de medalhas. Não trocar por palpite — é a terceira vez que o projeto
-evita pagar por semântica de campo assumida sem resposta real.
+**Fonte de meta: só a OpenDota.** A STRATZ era a segunda fonte e saiu em 2026-11-19 — removida
+da lista, não deixada falhando, porque fonte que só falha rotularia toda sincronização como
+`PARTIAL`. OpenDota respondeu ⇒ `SUCCESS`; OpenDota fora ⇒ `FAILURE`, **não escreve**, marcador
+de sucesso intacto. `PARTIAL` e `STRATZ_BRACKET` continuam nos tipos só para **ler** snapshot e
+histórico gravados por versões anteriores. Nenhum host novo, nenhuma mudança de CSP: reaproveita
+`api:opendota-fetch`.
 
 ## Segredos
 
 `.gitignore` cobre `.env*` inteiro (exceto `.env.example`), deliberadamente amplo para pegar
-`.env.bak` e afins. O token pessoal da STRATZ **não é revogável**: se vazar, fica válido até expirar.
-Não colar em issue, log, teste, fixture ou captura de tela. Ele vive em texto claro apenas no
-`userData` do Electron (`stratz_app_config.json`) ou no `localStorage` em dev, e nunca é embutido no
+`.env.bak` e afins. **O app não usa mais segredo nenhum** — a OpenDota é pública. O que sobra é o
+token pessoal da STRATZ que os scripts de medição de `scripts/` usam, e ele **não é revogável**:
+se vazar, fica válido até expirar. Não colar em issue, log, teste, fixture ou captura de tela. Ele
+vem de `STRATZ_API_KEY`, de `.gabarito/.stratz-token` (fora do git) ou da chave `stratzApiKey`
+que uma versão anterior do app tenha deixado no `stratz_app_config.json` — o app não lê, não
+grava e não apaga essa chave, de propósito. Nenhum script imprime o token, e nada o embute no
 bundle.

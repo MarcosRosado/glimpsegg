@@ -12,7 +12,7 @@ export interface UseGamePatchResult {
   refreshPatch: () => Promise<string>;
 }
 
-export function useGamePatch(stratzToken?: string): UseGamePatchResult {
+export function useGamePatch(): UseGamePatchResult {
   const [patch, setPatch] = useState<string>(() => getCachedGamePatch());
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isDynamic, setIsDynamic] = useState<boolean>(true);
@@ -20,13 +20,13 @@ export function useGamePatch(stratzToken?: string): UseGamePatchResult {
   const refreshPatch = useCallback(async (): Promise<string> => {
     setIsLoading(true);
     try {
-      const latest = await fetchLatestGamePatch(true, stratzToken);
+      const latest = await fetchLatestGamePatch(true);
       setPatch(latest);
       return latest;
     } finally {
       setIsLoading(false);
     }
-  }, [stratzToken]);
+  }, []);
 
   useEffect(() => {
     // Listen for patch updates from any service or component
@@ -35,7 +35,7 @@ export function useGamePatch(stratzToken?: string): UseGamePatchResult {
     });
 
     // Run silent background update on mount
-    fetchLatestGamePatch(false, stratzToken)
+    fetchLatestGamePatch(false)
       .then((resolved) => {
         setPatch(resolved);
       })
@@ -46,7 +46,7 @@ export function useGamePatch(stratzToken?: string): UseGamePatchResult {
     return () => {
       unsubscribe();
     };
-  }, [stratzToken]);
+  }, []);
 
   return {
     patch,

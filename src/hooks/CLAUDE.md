@@ -1,6 +1,6 @@
 # src/hooks/
 
-Os três hooks com estado assíncrono do app. Nenhum deles é testado (o vitest roda com
+Os dois hooks com estado assíncrono do app. Nenhum deles é testado (o vitest roda com
 `environment: 'node'`, sem DOM) — a lógica verificável vive nos módulos puros que eles chamam.
 
 ## Arquivos
@@ -8,15 +8,18 @@ Os três hooks com estado assíncrono do app. Nenhum deles é testado (o vitest 
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
 | `useGamePatch.ts` | Envolve `gameVersionService`: devolve `{ patch, isLoading, isDynamic, refreshPatch }`, assina `subscribeToPatchUpdates` e dispara um refresh silencioso na montagem | `layout/StatRail.tsx`, `settings/SettingsModal.tsx` |
-| `useBuildAdvice.ts` | Resolve posição e bracket (`utils/rankBracket.ts`), busca `fetchHeroBuildContext` e chama `computeBuildAdvice` + `buildThreatProfile`. Devolve `status` (`idle`/`loading`/`ready`/`error`/`unavailable`), `advice`, `threat` e `bracketIsPlayerSpecific` | `coaching/CoachingInsightsTab.tsx` |
-| `useHeroGridSync.ts` | Orquestra a sincronização inteira do layout espelho: preferências, agendamento, as três fontes de winrate, construção do espelho e escrita pela ponte. Expõe `UseHeroGridSyncResult` (fases, `blocker`, `scores`, `groups`, `mirrorSnapshot`, `syncNow`, `removeMirrorNow`, `restoreLatestBackup`…) | `App.tsx` (cria) → prop `sync` de `heroGrid/HeroGridTab.tsx` e `heroGrid/HeroGridMirrorScreen.tsx`; o `settings/SettingsModal.tsx` só recebe callbacks presos a ela |
+| `useHeroGridSync.ts` | Orquestra a sincronização inteira do layout espelho: preferências, agendamento, as duas buscas de winrate (meta da OpenDota e histórico pessoal), construção do espelho e escrita pela ponte. Expõe `UseHeroGridSyncResult` (fases, `blocker`, `scores`, `groups`, `mirrorSnapshot`, `syncNow`, `removeMirrorNow`, `restoreLatestBackup`…) | `App.tsx` (cria) → prop `sync` de `heroGrid/HeroGridTab.tsx` e `heroGrid/HeroGridMirrorScreen.tsx`; o `settings/SettingsModal.tsx` só recebe callbacks presos a ela |
 
 ## Regras locais
 
-- **`useBuildAdvice` é chamado só pelo `CoachingInsightsTab`, nunca no `handleSelectMatch`.** É o
-  que faz overview, performance e vision não pagarem o request: os insights de partida renderizam na
-  hora e os cards de build entram depois, com skeleton. Subir essa chamada para o `App.tsx`
-  reintroduz o custo em todas as abas.
+- **`useBuildAdvice` não existe mais.** Buscava `itemFullPurchase`/`heroVsHeroMatchup` na STRATZ;
+  foi removido em 2026-11-19 e a recomendação de build está **escondida** no `CoachingInsightsTab`
+  (não "sem dados"). `utils/buildAdvisor.ts` segue no repositório, puro e testado. Se voltar (Fase
+  5 de [docs/PLANO-OPENDOTA.md](../../docs/PLANO-OPENDOTA.md)), o hook continua sendo chamado só
+  pela aba de coaching, nunca no `handleSelectMatch` — senão todas as abas pagam o request.
+- **O primeiro parâmetro de `useHeroGridSync` é ignorado.** Era o token da STRATZ; fica na
+  assinatura enquanto o `App.tsx` chamar por posição (tirar deslocaria o token para
+  `steamAccountId`, e os dois são `string`). `useGamePatch` já não recebe token.
 - **`useHeroGridSync` é instância ÚNICA.** O `App.tsx` a cria uma vez e passa o resultado adiante.
   Instanciar de novo em outro componente cria um segundo agendador e uma segunda trava de escrita
   sobre o **mesmo arquivo do jogador** — que é trabalho manual e sem cópia em lugar nenhum.
@@ -34,7 +37,7 @@ Os três hooks com estado assíncrono do app. Nenhum deles é testado (o vitest 
 
 - `useGamePatch` é o **consumidor** da virada de patch: `subscribeToPatchUpdates` empurra o valor
   novo e o `StatRail` passa a exibi-lo sem recarregar o app. Nada a ajustar aqui.
-- `useBuildAdvice` e `useHeroGridSync` leem agregados através do `statsCache`, que invalida duro
+- `useHeroGridSync` lê a meta através do `statsCache`, que invalida duro
   quando o patch muda — a meta velha cai sozinha, sem passo manual. O que **não** invalida por patch
   é o cache pessoal de 1h do `personalWinrates.ts`, e isso é deliberado.
 - Herói novo chega pelas fontes de meta sem tocar em hook nenhum; o que falta até

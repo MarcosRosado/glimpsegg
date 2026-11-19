@@ -110,7 +110,6 @@ const BLOCKER_LABEL: Record<HeroGridBlocker, TranslationKey> = {
   SOURCE_INDEX_GONE: 'heroGridBlockSourceIndexGone',
   NAME_COLLISION: 'heroGridBlockNameCollision',
   DOTA_RUNNING: 'heroGridBlockDotaRunning',
-  RATE_LIMITED: 'heroGridBlockRateLimited',
   SOURCE_MUTATED: 'heroGridBlockSourceMutated',
   ALL_SOURCES_DOWN: 'heroGridBlockAllSourcesDown',
   WRITE_FAILED: 'heroGridBlockWriteFailed',
@@ -331,7 +330,7 @@ export const HeroGridTab: React.FC<HeroGridTabProps> = ({ sync: grid, onOpenMirr
 
   /**
    * I-13 / FR-020: "no seu ranque" SÓ quando o bracket é de fato o do jogador. Caindo em
-   * 'ALL', a frase é "media geral". Reaproveita as chaves que `useBuildAdvice` já usa para
+   * 'ALL', a frase é "media geral". Reaproveita as chaves que o `CoachingInsightsTab` já usa para
    * a mesma decisao — é a mesma afirmacao, e duas traducoes dela divergiriam com o tempo.
    */
   const bracketLabel = bracketIsPlayerSpecific

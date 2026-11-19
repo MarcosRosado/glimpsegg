@@ -12,7 +12,13 @@ export interface RecentFormStats {
   losses: number;
   /** Já arredondado, 0-100. */
   winRate: number;
-  avgImp: number;
+  /**
+   * Média do Glint (experimental, 0-100) SÓ das partidas que têm nota. `null` quando
+   * nenhuma tem: zero seria uma nota, e a UI esconde a métrica em vez de exibi-lo.
+   */
+  avgGlint: number | null;
+  /** Quantas partidas da amostra entraram em `avgGlint` — é o "N" que a UI declara. */
+  glintCount: number;
   avgKills: number;
   avgDeaths: number;
   avgAssists: number;
@@ -27,7 +33,8 @@ const EMPTY: RecentFormStats = {
   wins: 0,
   losses: 0,
   winRate: 0,
-  avgImp: 0,
+  avgGlint: null,
+  glintCount: 0,
   avgKills: 0,
   avgDeaths: 0,
   avgAssists: 0,
@@ -44,7 +51,7 @@ export function computeRecentFormStats(
   const count = sample.length;
   if (count === 0) return EMPTY;
 
-  // Os `|| 0` são obrigatórios: campos como `imp` podem vir nulos da API.
+  // Os `|| 0` são obrigatórios: campos numéricos podem vir nulos da API.
   const sum = (pick: (m: PlayerMatchSummary) => number) =>
     sample.reduce((acc, m) => acc + (pick(m) || 0), 0);
 
@@ -53,12 +60,19 @@ export function computeRecentFormStats(
   const totalDeaths = sum((m) => m.deaths);
   const totalAssists = sum((m) => m.assists);
 
+  // O Glint fica FORA do `sum` acima de propósito: ali nulo vira 0, e para uma nota de
+  // 0 a 100 isso puxaria a média para baixo a cada partida sem tabela de percentil.
+  const glints = sample
+    .map((m) => m.glint)
+    .filter((g): g is number => typeof g === 'number' && Number.isFinite(g));
+
   return {
     count,
     wins,
     losses: count - wins,
     winRate: Math.round((wins / count) * 100),
-    avgImp: Math.round(sum((m) => m.imp) / count),
+    avgGlint: glints.length > 0 ? Math.round(glints.reduce((a, g) => a + g, 0) / glints.length) : null,
+    glintCount: glints.length,
     avgKills: totalKills / count,
     avgDeaths: totalDeaths / count,
     avgAssists: totalAssists / count,

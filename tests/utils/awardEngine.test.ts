@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { mapStratzMatch } from '../../src/services/stratzGql';
-import fixture from '../../src/services/__fixtures__/match-parsed.json';
 import { computeMatchAwards, MatchAward } from '../../src/utils/awardEngine';
+import { GLINT_THRESHOLDS } from '../../src/utils/glint';
 import { MatchDetails, MatchPlayer } from '../../src/types/dota';
+import { referenceMatch, unevenLaneMatch } from '../support/fixtureMatches';
 
-const raw = (fixture as any).data.match;
-const match = mapStratzMatch(raw);
+/**
+ * Partida de referencia: a resposta real da OpenDota pelo mapper real (tests/support/).
+ * Ate 2026-11-19 era a fixture da STRATZ, com a nota na escala do IMP; o motor so conhece o
+ * Glint desde que o `mapStratzMatch` saiu.
+ */
+const match = referenceMatch();
 
 /** Partida sintetica de 10 jogadores, para controlar uma metrica por vez. */
 function fakeMatch(overrides: Partial<MatchPlayer>[], didRadiantWin = true): MatchDetails {
@@ -29,6 +33,7 @@ function fakeMatch(overrides: Partial<MatchPlayer>[], didRadiantWin = true): Mat
     towerDamage: 0,
     heroHealing: 0,
     imp: 0,
+    glint: null,
     role: 'POSITION_1' as const,
     lane: 'SAFE' as const,
     items: [],
@@ -124,21 +129,23 @@ describe('wards: undefined e [] sao coisas diferentes', () => {
   });
 });
 
-describe('MVP sai de fato medido, nao do IMP', () => {
-  const base = Array.from({ length: 10 }, () => ({ imp: 0 }));
+describe('MVP sai de fato medido, nao da nota', () => {
+  // 45 é a mediana medida do Glint (`utils/glint.ts`): o "jogador comum" destes elencos.
+  const base = Array.from({ length: 10 }, () => ({ glint: 45 }));
 
   it('REGRESSAO 8973449942: o MVP nao pode estar no time que perdeu', () => {
     // O caso real: carry do time vencedor com 21 abates, maior patrimonio e maior dano
     // levou IMP -10 da STRATZ, enquanto um suporte 2/6/20 do time DERROTADO levou +24.
-    // Pelo criterio antigo (maior IMP), o MVP era o suporte do time perdedor — e isso
-    // acontecia em 19% das partidas da amostra de calibracao.
+    // Pelo criterio antigo (maior nota), o MVP era o suporte do time perdedor — e isso
+    // acontecia em 19% das partidas da amostra de calibracao. Vale igual para o Glint, que
+    // foi ajustado para imitar o IMP.
     const m = fakeMatch(
       [
-        // Radiant (perdeu): suporte com IMP alto e nada medido.
-        { imp: 24 },
+        // Radiant (perdeu): suporte com nota alta e nada medido.
+        { glint: 75 },
         ...base.slice(1, 5),
-        // Dire (venceu): o carry que decidiu o jogo, com IMP negativo.
-        { imp: -10, kills: 21, networth: 40000, heroDamage: 90000, towerDamage: 20000 },
+        // Dire (venceu): o carry que decidiu o jogo, com nota baixa.
+        { glint: 40, kills: 21, networth: 40000, heroDamage: 90000, towerDamage: 20000 },
         ...base.slice(6),
       ],
       false,
@@ -146,7 +153,7 @@ describe('MVP sai de fato medido, nao do IMP', () => {
     const mvp = byId(computeMatchAwards(m).awards, 'MVP');
     expect(mvp).toBeDefined();
     expect(mvp!.playerSlot).toBe(128); // o carry do Dire (indice 5 do elenco sintetico)
-    // `basis` diz EM QUE ele liderou. Sem isso o cartao mostraria "-10 IMP" (o numero
+    // `basis` diz EM QUE ele liderou. Sem isso o cartao mostraria "Glint 40" (o numero
     // que justamente nao foi o criterio) ou "1 superlativo" — que tambem nao informa
     // nada. Com basis, a linha vira "Carrasco • Fazendeiro": as categorias lideradas.
     expect(mvp!.basis).toBeDefined();
@@ -154,39 +161,39 @@ describe('MVP sai de fato medido, nao do IMP', () => {
     expect(mvp!.basis!.length).toBeGreaterThan(0);
   });
 
-  it('sem liderar nada, o premio nao tem basis e o cartao mostra o IMP', () => {
-    const m = fakeMatch([{ imp: 20 }, { imp: 10 }, ...Array.from({ length: 8 }, () => ({ imp: 0 }))]);
+  it('sem liderar nada, o premio nao tem basis e o cartao mostra a nota', () => {
+    const m = fakeMatch([{ glint: 70 }, { glint: 60 }, ...base.slice(2)]);
     const mvp = byId(computeMatchAwards(m).awards, 'MVP');
     expect(mvp!.basis).toBeUndefined();
-    expect(mvp!.unit).toBe('IMP');
+    expect(mvp!.unit).toBe('GLINT');
   });
 
-  it('mais superlativos ganha de mais IMP dentro do time vencedor', () => {
+  it('mais superlativos ganha de nota maior dentro do time vencedor', () => {
     const m = fakeMatch([
-      { imp: 30 },
-      { imp: 1, kills: 25, networth: 45000, heroDamage: 95000 },
+      { glint: 80 },
+      { glint: 46, kills: 25, networth: 45000, heroDamage: 95000 },
       ...base.slice(2),
     ]);
     const mvp = byId(computeMatchAwards(m).awards, 'MVP');
     expect(mvp!.playerSlot).toBe(1);
   });
 
-  it('sem ninguem medido, o criterio passa a ser o IMP', () => {
-    const folgado = fakeMatch([{ imp: 20 }, { imp: 10 }, ...base.slice(2)]);
+  it('sem ninguem medido, o criterio passa a ser a nota', () => {
+    const folgado = fakeMatch([{ glint: 70 }, { glint: 60 }, ...base.slice(2)]);
     const mvp = byId(computeMatchAwards(folgado).awards, 'MVP');
     expect(mvp).toBeDefined();
-    expect(mvp!.unit).toBe('IMP');
-    expect(mvp!.value).toBe(20);
+    expect(mvp!.unit).toBe('GLINT');
+    expect(mvp!.value).toBe(70);
     expect(mvp!.basis).toBeUndefined();
   });
 
   it('MVP, melhor core e melhor suporte sao slots FIXOS do card', () => {
     // Sao os tres unicos premios sem exigencia de margem: toda partida tem cores e
-    // suportes, e "o core de maior IMP desta partida" e fato mesmo num placar apertado.
-    // O IMP fica ao lado, entao quem le percebe sozinho quando a diferenca foi minima.
+    // suportes, e "o core de maior nota desta partida" e fato mesmo num placar apertado.
+    // A nota fica ao lado, entao quem le percebe sozinho quando a diferenca foi minima.
     const apertado = fakeMatch(
       Array.from({ length: 10 }, (_, i) => ({
-        imp: i === 0 ? 12 : 11,
+        glint: i === 0 ? 52 : 51,
         role: (i < 3 || (i >= 5 && i < 8) ? 'POSITION_1' : 'POSITION_5') as any,
       })),
     );
@@ -199,10 +206,10 @@ describe('MVP sai de fato medido, nao do IMP', () => {
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it('IMP negativo em todo mundo ainda produz os tres premios', () => {
+  it('nota baixa em todo mundo ainda produz os tres premios', () => {
     const m = fakeMatch(
       Array.from({ length: 10 }, (_, i) => ({
-        imp: -30 + i,
+        glint: 10 + i,
         role: (i % 2 === 0 ? 'POSITION_2' : 'POSITION_4') as any,
       })),
     );
@@ -212,30 +219,46 @@ describe('MVP sai de fato medido, nao do IMP', () => {
     expect(byId(awards, 'TOP_SUPPORT')).toBeDefined();
   });
 
-  it('quem liderou uma metrica nao leva Dia Dificil, por pior que seja o IMP', () => {
+  it('quem liderou uma metrica nao leva Dia Dificil, por pior que seja a nota', () => {
     const m = fakeMatch([
-      ...base.slice(0, 9).map(() => ({ imp: 5 })),
-      { imp: -40, kills: 25, networth: 45000, heroDamage: 95000, towerDamage: 20000 },
+      ...base.slice(0, 9).map(() => ({ glint: 50 })),
+      { glint: 5, kills: 25, networth: 45000, heroDamage: 95000, towerDamage: 20000 },
     ]);
     expect(byId(computeMatchAwards(m).awards, 'ROUGH_GAME')).toBeUndefined();
   });
 
   it('Dia Dificil NAO virou slot fixo: continua exigindo margem', () => {
-    const m = fakeMatch([...base.slice(0, 9).map(() => ({ imp: -18 })), { imp: -20 }]);
+    // Abaixo do teto (41), mas so 2 pontos atras do penultimo: a folga é 4.
+    const m = fakeMatch([...base.slice(0, 9).map(() => ({ glint: 32 })), { glint: 30 }]);
     expect(byId(computeMatchAwards(m).awards, 'ROUGH_GAME')).toBeUndefined();
   });
 
   it('destoar do penultimo é', () => {
-    const m = fakeMatch([...base.slice(0, 9).map(() => ({ imp: 5 })), { imp: -30 }]);
+    const m = fakeMatch([...base.slice(0, 9).map(() => ({ glint: 50 })), { glint: 20 }]);
     const rg = byId(computeMatchAwards(m).awards, 'ROUGH_GAME');
     expect(rg).toBeDefined();
-    expect(rg!.value).toBe(-30);
+    expect(rg!.value).toBe(20);
   });
 
   it('o mesmo jogador nao aparece duas vezes no bloco de papeis', () => {
-    const { awards } = computeMatchAwards(match);
-    const slots = awards.map((a) => a.playerSlot);
-    expect(new Set(slots).size).toBe(slots.length);
+    for (const m of [match, unevenLaneMatch()]) {
+      const slots = computeMatchAwards(m).awards.map((a) => a.playerSlot);
+      expect(new Set(slots).size).toBe(slots.length);
+    }
+  });
+});
+
+describe('Dia Dificil numa partida real', () => {
+  it('dispara na fixture escolhida para isso, pelo criterio declarado', () => {
+    const m = unevenLaneMatch();
+    const { awards, superlatives } = computeMatchAwards(m);
+    const rg = byId(awards, 'ROUGH_GAME');
+    expect(rg).toBeDefined();
+    const notas = m.players.map((p) => p.glint).filter((g): g is number => typeof g === 'number').sort((a, b) => a - b);
+    expect(rg!.value).toBe(notas[0]);
+    expect(rg!.value).toBeLessThanOrEqual(GLINT_THRESHOLDS.poor);
+    expect(notas[1] - notas[0]).toBeGreaterThanOrEqual(4);
+    expect(superlatives.some((a) => a.playerSlot === rg!.playerSlot)).toBe(false);
   });
 });
 
@@ -247,20 +270,12 @@ describe('melhor de cada posicao', () => {
     expect(ps).toEqual([...ps].sort());
   });
 
-  it('escolhe o de maior IMP daquela posicao', () => {
-    const { positions } = computeMatchAwards(match);
-    for (const ph of positions) {
-      const naPosicao = match.players.filter((p) => (p.position || p.role) === ph.position);
-      expect(ph.imp).toBe(Math.max(...naPosicao.map((p) => p.imp || 0)));
-    }
-  });
-
   it('estatistica ausente vira null em vez de zero', () => {
     // Pos 5 mostra wards; sem dado de visao a celula tem de sumir, nao zerar.
     const semVisao = fakeMatch(
       Array.from({ length: 10 }, (_, i) => ({
         role: 'POSITION_5' as const,
-        imp: i,
+        glint: i,
         wardEvents: undefined,
       })),
     );
@@ -282,5 +297,70 @@ describe('agregados continuam intactos', () => {
     expect(vazia.awards).toEqual([]);
     expect(vazia.superlatives).toEqual([]);
     expect(vazia.positions).toEqual([]);
+  });
+});
+
+describe('sem campo de nota nao existe escala implicita', () => {
+  it('jogadores sem `glint` (nem null) nao caem numa escala com nota zero', () => {
+    // Antes da etapa 2, jogador sem o campo `glint` fazia o motor escolher a escala do IMP
+    // com `imp: 0` em todos — e o primeiro da lista virava melhor core. Hoje é "sem nota".
+    const semCampo = fakeMatch(
+      Array.from({ length: 10 }, (_, i) => ({ glint: undefined, role: (i % 2 ? 'POSITION_4' : 'POSITION_1') as any })),
+    );
+    const res = computeMatchAwards(semCampo);
+    expect(res.scoreKind).toBeNull();
+    expect(res.awards.some((a) => a.id === 'TOP_CORE' || a.id === 'TOP_SUPPORT' || a.id === 'ROUGH_GAME')).toBe(false);
+    expect(res.positions).toEqual([]);
+  });
+});
+
+/**
+ * O caminho que o app usa desde 2026-11-19: partida da OpenDota, nota = Glint experimental,
+ * sobre a fixture real `match-parsed-opendota.json`.
+ */
+describe('computeMatchAwards — partida da OpenDota (Glint)', () => {
+  const od = match;
+
+  it('a escala é GLINT, e todo premio de papel sai nela ou sem numero', () => {
+    const res = computeMatchAwards(od);
+    expect(res.scoreKind).toBe('GLINT');
+    for (const a of res.awards) expect(['GLINT', 'NONE']).toContain(a.unit);
+    for (const ph of res.positions) {
+      const naPosicao = od.players.filter((p) => p.position === ph.position);
+      expect(ph.score).toBe(Math.max(...naPosicao.map((p) => p.glint as number)));
+    }
+  });
+
+  it('melhor core e melhor suporte sao o maior Glint do grupo, fora o MVP', () => {
+    const { awards } = computeMatchAwards(od);
+    const mvp = awards.find((a) => a.id === 'MVP');
+    for (const [id, positions] of [
+      ['TOP_CORE', ['POSITION_1', 'POSITION_2', 'POSITION_3']],
+      ['TOP_SUPPORT', ['POSITION_4', 'POSITION_5']],
+    ] as const) {
+      const award = awards.find((a) => a.id === id)!;
+      const group = od.players.filter((p) => (positions as readonly string[]).includes(p.position!) && p.playerSlot !== mvp?.playerSlot);
+      expect(award.value).toBe(Math.max(...group.map((p) => p.glint as number)));
+    }
+  });
+
+  it('sem nota nenhuma, premio que depende de nota é omitido — ninguem é coroado por ordem de lista', () => {
+    const semNota: typeof od = {
+      ...od,
+      players: od.players.map((p) => ({ ...p, glint: null })),
+      availability: { ...od.availability, glint: false },
+    };
+    const res = computeMatchAwards(semNota);
+    expect(res.scoreKind).toBeNull();
+    expect(res.awards.some((a) => a.id === 'TOP_CORE' || a.id === 'TOP_SUPPORT' || a.id === 'ROUGH_GAME')).toBe(false);
+    expect(res.positions).toEqual([]);
+    // O MVP nunca dependeu da nota como criterio principal: se existe, veio de superlativo.
+    const mvp = res.awards.find((a) => a.id === 'MVP');
+    if (mvp) {
+      expect(mvp.unit).toBe('NONE');
+      expect(mvp.basis!.length).toBeGreaterThan(0);
+    }
+    // Os superlativos nao mudam com a nota.
+    expect(res.superlatives.map((a) => a.id)).toEqual(computeMatchAwards(od).superlatives.map((a) => a.id));
   });
 });

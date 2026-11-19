@@ -3,9 +3,11 @@ import { Flame, Zap, Coins, LucideIcon } from 'lucide-react';
 import { PlayerProfileSummary } from '../../types/dota';
 import { computeRecentFormStats } from '../../utils/recentFormStats';
 import { formatPercent } from '../../utils/dotaFormatters';
+import { formatGlint, getGlintColor } from '../../utils/glint';
 import { useGamePatch } from '../../hooks/useGamePatch';
 import { useLanguage } from '../../context/LanguageContext';
 import { PatchTransitionNotice } from '../ui/PatchTransitionNotice';
+import { useGlintHint } from '../ui/GlintBadge';
 
 interface StatRailProps {
   profile: PlayerProfileSummary;
@@ -48,11 +50,12 @@ const RailStat: React.FC<RailStatProps> = ({
 export const StatRail: React.FC<StatRailProps> = ({ profile }) => {
   const { t } = useLanguage();
   const { patch } = useGamePatch();
+  const glintHint = useGlintHint();
   const stats = computeRecentFormStats(profile.recentMatches);
 
   if (stats.count === 0) return null;
 
-  const sampleTooltip = (key: 'railFormTooltip' | 'railImpTooltip' | 'railKdaTooltip' | 'railFarmTooltip') =>
+  const sampleTooltip = (key: 'railFormTooltip' | 'railKdaTooltip' | 'railFarmTooltip') =>
     t(key, { count: stats.count });
 
   return (
@@ -81,18 +84,22 @@ export const StatRail: React.FC<StatRailProps> = ({ profile }) => {
           <span className="text-slate-500 tabular-nums">({stats.winRate}%)</span>
         </RailStat>
 
-        <RailStat
-          icon={Zap}
-          iconClassName="text-amber-400/80"
-          label={t('imp')}
-          tooltip={sampleTooltip('railImpTooltip')}
-        >
-          <span
-            className={`font-semibold tabular-nums ${stats.avgImp >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
+        {/* Glint médio só das partidas COM nota. Sem nenhuma, o item some da faixa —
+            zero aqui seria lido como nota. O tooltip diz de quantas partidas é a média
+            e carrega a procedência da nota experimental. */}
+        {stats.avgGlint !== null && (
+          <RailStat
+            icon={Zap}
+            iconClassName="text-amber-400/80"
+            label={t('glint')}
+            tooltip={`${t('railGlintTooltip', { count: stats.glintCount, total: stats.count })} ${glintHint}`}
           >
-            {stats.avgImp >= 0 ? `+${stats.avgImp}` : stats.avgImp}
-          </span>
-        </RailStat>
+            <span className={`font-semibold tabular-nums ${getGlintColor(stats.avgGlint)}`}>
+              {formatGlint(stats.avgGlint)}
+            </span>
+            <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">{t('glintBeta')}</span>
+          </RailStat>
+        )}
 
         <RailStat label={t('kda')} tooltip={sampleTooltip('railKdaTooltip')}>
           <span className="text-teal-300 font-semibold tabular-nums">

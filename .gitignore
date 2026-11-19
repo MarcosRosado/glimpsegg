@@ -47,3 +47,7 @@ test-*.ts
 test-*.js
 *.tmp
 
+# Gabarito da migracao para a OpenDota (docs/PLANO-OPENDOTA.md, Fase 0)
+# Pares OpenDota x STRATZ, fotografia de heroStats.stats e amostras de medicao. Regua
+# interna: nunca entra no repositorio nem no app (decisao D5).
+.gabarito/

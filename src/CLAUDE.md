@@ -7,15 +7,15 @@ nenhum número aparece na tela sem procedência (ver a doutrina em [../CLAUDE.md
 
 | Item | Papel |
 | --- | --- |
-| `App.tsx` | Orquestrador único. Guarda token, perfil atual, histórico de perfis, partida e slot selecionados, aba ativa e `panelView`. Alterna dashboard ↔ partida ↔ hero grid e monta as quatro abas |
+| `App.tsx` | Orquestrador único. Guarda a conta Steam configurada, o perfil atual, histórico de perfis, partida e slot selecionados, aba ativa e `panelView`. Alterna dashboard ↔ partida ↔ hero grid e monta as quatro abas |
 | `main.tsx` | Bootstrap do React (`createRoot` + `StrictMode`). Sem lógica de domínio |
 | `index.css` | Tema global: variáveis CSS, scrollbar, `.glass-card`, `.glow-*` |
 | `components/` | Toda a UI, agrupada por tela ([CLAUDE.md](components/CLAUDE.md)) |
 | `constants/` | Metadados estáticos do Dota e constantes de domínio ([CLAUDE.md](constants/CLAUDE.md)) — **é aqui que patch novo dá trabalho** |
 | `context/` | `LanguageContext.tsx` — provider de i18n (`t()`, `language`, `setLanguage`), persiste em `window.api.store` ou `localStorage`. Pasta de um arquivo só, sem CLAUDE.md próprio |
-| `hooks/` | Os três hooks com estado assíncrono ([CLAUDE.md](hooks/CLAUDE.md)) |
+| `hooks/` | Os dois hooks com estado assíncrono ([CLAUDE.md](hooks/CLAUDE.md)) |
 | `i18n/` | Os dois dicionários e os testes que os seguram ([CLAUDE.md](i18n/CLAUDE.md)) |
-| `services/` | Rede: STRATZ, OpenDota, cache, resolução de patch ([CLAUDE.md](services/CLAUDE.md)) |
+| `services/` | Rede: OpenDota, cache, resolução de patch (a STRATZ saiu do runtime em 2026-11-19) ([CLAUDE.md](services/CLAUDE.md)) |
 | `types/` | Contratos de domínio ([CLAUDE.md](types/CLAUDE.md)) |
 | `utils/` | Motores puros e testáveis ([CLAUDE.md](utils/CLAUDE.md)) |
 

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { AlertTriangle, CheckCircle, Info, Lightbulb, Loader2, Package } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Lightbulb } from 'lucide-react';
 import { CoachingInsight, MatchDetails, MatchPlayer } from '../../types/dota';
 import { generateMatchInsights } from '../../utils/insights';
 import { CATEGORY_LABEL, RULE_TEXT, SOURCE_LABEL } from '../../utils/insights/ruleText';
@@ -8,7 +8,8 @@ import { RuleId } from '../../utils/insights/types';
 import { getHero } from '../../constants/heroes';
 import { getItem } from '../../constants/items';
 import { useLanguage } from '../../context/LanguageContext';
-import { useBuildAdvice } from '../../hooks/useBuildAdvice';
+import { buildThreatProfile } from '../../utils/insights/threatProfile';
+import { resolveBracket } from '../../utils/rankBracket';
 import { formatDuration } from '../../utils/dotaFormatters';
 import { handleHeroImageError, handleItemImageError } from '../../utils/imageFallback';
 import { PatchTransitionNotice } from '../ui/PatchTransitionNotice';
@@ -16,7 +17,6 @@ import { PatchTransitionNotice } from '../ui/PatchTransitionNotice';
 interface CoachingInsightsTabProps {
   player: MatchPlayer;
   match: MatchDetails;
-  apiKey?: string;
 }
 
 /** Chip de procedencia: diz de onde veio o numero, e com que amostra. */
@@ -140,19 +140,34 @@ const InsightCard: React.FC<{
 export const CoachingInsightsTab: React.FC<CoachingInsightsTabProps> = ({
   player,
   match,
-  apiKey,
 }) => {
   const { t } = useLanguage();
   const hero = getHero(player.heroId);
-  const build = useBuildAdvice(player, match, apiKey);
-  const bracketLabel = build.bracketIsPlayerSpecific
+  const bracketLabel = resolveBracket(match, player).isPlayerSpecific
     ? t('coachBracketYours')
     : t('coachBracketGeneric');
 
+  /**
+   * A recomendacao de build esta ESCONDIDA, nao "sem dados".
+   *
+   * Ela saia de `itemFullPurchase`/`heroVsHeroMatchup` da STRATZ (hook `useBuildAdvice` +
+   * `services/stratzHeroStats.ts`, removidos em 2026-11-19, quando o app deixou de falar
+   * com a STRATZ). A OpenDota nao tem volume para sustentar o mesmo agregado por heroi,
+   * posicao e ranque (decisao D7 de `docs/PLANO-OPENDOTA.md`), entao a saida legitima é
+   * esconder: sem faixa de carregamento, sem aviso de "indisponivel", sem numero.
+   *
+   * `build: null` desliga as regras de build no motor. O perfil de ameaca continua, porque
+   * sai só da propria partida — sem matchups (`null`), que tambem vinham da STRATZ.
+   *
+   * `utils/buildAdvisor.ts` e os testes dele seguem no repositorio: a funcao é pura e
+   * volta a ser ligada aqui se a Fase 5 do plano encontrar fonte com procedencia e amostra.
+   */
+  const threat = useMemo(() => buildThreatProfile(player, match, null), [player, match]);
+
   // Antes o motor rodava solto no corpo do render, a cada re-render.
   const insights = useMemo(
-    () => generateMatchInsights(player, match, { threat: build.threat, build: build.advice }),
-    [player, match, build.threat, build.advice],
+    () => generateMatchInsights(player, match, { threat, build: null }),
+    [player, match, threat],
   );
 
   const isUnparsed = !match.availability?.parsed;
@@ -170,14 +185,6 @@ export const CoachingInsightsTab: React.FC<CoachingInsightsTabProps> = ({
             <p className="text-xs text-slate-400">
               {t('coachingSubtitle')} • {hero.displayName} (
               {player.role.replace('POSITION_', 'Pos ')})
-              {build.status === 'ready' && (
-                <>
-                  {' • '}
-                  {build.bracketIsPlayerSpecific
-                    ? t('coachBracketYours')
-                    : t('coachBracketGeneric')}
-                </>
-              )}
             </p>
           </div>
         </div>
@@ -195,23 +202,6 @@ export const CoachingInsightsTab: React.FC<CoachingInsightsTabProps> = ({
             <h4 className="text-xs font-bold text-slate-200 mb-1">{t('coachUnparsedTitle')}</h4>
             <p className="text-[11px] text-slate-400 leading-relaxed">{t('coachUnparsedBody')}</p>
           </div>
-        </div>
-      )}
-
-      {/* Estado dos dados de build */}
-      {build.status !== 'ready' && !isUnparsed && (
-        <div className="glass-card rounded-xl p-3 border border-slate-800 bg-slate-900/40 flex items-center gap-2">
-          {build.status === 'loading' ? (
-            <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin shrink-0" />
-          ) : (
-            <Package className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-          )}
-          <span className="text-[11px] text-slate-400">
-            {build.status === 'loading' && t('coachBuildLoading')}
-            {build.status === 'unavailable' && t('coachBuildUnavailable')}
-            {build.status === 'error' && t('coachBuildError')}
-            {build.status === 'idle' && t('coachBuildEmpty')}
-          </span>
         </div>
       )}
 

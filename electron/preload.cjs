@@ -8,13 +8,13 @@ contextBridge.exposeInMainWorld('api', {
     getAll: () => ipcRenderer.invoke('store:getAll'),
   },
 
-  // STRATZ GraphQL Proxy
-  stratzQuery: (query, variables, customApiKey) =>
-    ipcRenderer.invoke('api:stratz-graphql', { query, variables, customApiKey }),
-
   // OpenDota REST Proxy
   openDotaFetch: (endpoint) =>
     ipcRenderer.invoke('api:opendota-fetch', { endpoint }),
+
+  // OpenDota: pedido de parse do replay (POST /request/{match_id})
+  openDotaRequestParse: (matchId) =>
+    ipcRenderer.invoke('api:opendota-request-parse', { matchId }),
 
   // Steam ID Resolver
   resolveSteamId: (input) =>

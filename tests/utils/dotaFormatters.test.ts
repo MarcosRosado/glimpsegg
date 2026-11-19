@@ -1,96 +1,44 @@
 import { describe, it, expect } from 'vitest';
-import {
-  IMP_EXTREME,
-  formatImp,
-  formatImpMarked,
-  getImpBadgeStyle,
-  getImpColor,
-  getImpIconKind,
-  getImpSymbol,
-  isExtremeImp,
-} from '../../src/utils/dotaFormatters';
+import { resolveMatchType } from '../../src/utils/dotaFormatters';
 
 /**
- * O IMP da STRATZ NAO e limitado em +-50. Medido em 400 jogadores reais (60 partidas,
- * bracket 6): apareceram -52 e -51, e o maior positivo foi +42. Um teste de igualdade
- * (`imp === -50`) deixaria justamente os dois casos mais extremos de fora.
+ * `resolveMatchType` existe para NAO inventar dado: a lista da home precisa poder dizer
+ * "nao sei" em vez de rotular uma partida casual como ranqueada.
+ *
+ * Ate 2026-11-19 estes testes moravam em `matchContext.test.ts`, nomeado por tema, junto com
+ * `derivePartySize`, `deriveTeamShares` e `ALL_TOWERS_STANDING` — funcoes do mapper da
+ * STRATZ, que saiu com ele (etapa 2 da D4). Os formatadores de IMP que este arquivo testava
+ * sairam junto: o IMP nao existe mais na tela, e o ultimo consumidor era o caminho legado.
  */
-describe('extremo de IMP', () => {
-  it('e faixa aberta, nao igualdade: -51 e -52 contam', () => {
-    for (const imp of [-50, -51, -52, -80]) {
-      expect(isExtremeImp(imp), `${imp} deveria ser extremo`).toBe(true);
-      expect(getImpSymbol(imp)).toBe('☠');
-    }
-    for (const imp of [50, 51, 99]) {
-      expect(isExtremeImp(imp), `${imp} deveria ser extremo`).toBe(true);
-      expect(getImpSymbol(imp)).toBe('★');
-    }
+describe('resolveMatchType', () => {
+  it('reconhece fila ranqueada e casual pelo lobby, cru ou numerico', () => {
+    expect(resolveMatchType('ALL_PICK_RANKED', 'RANKED')).toBe('RANKED');
+    expect(resolveMatchType(22, 7)).toBe('RANKED');
+    expect(resolveMatchType('ALL_PICK', 'UNRANKED')).toBe('UNRANKED');
+    expect(resolveMatchType(1, 0)).toBe('UNRANKED');
   });
 
-  it('nao dispara logo abaixo do limite', () => {
-    for (const imp of [49, 42, 0, -42, -49]) {
-      expect(isExtremeImp(imp), `${imp} nao deveria ser extremo`).toBe(false);
-      expect(getImpSymbol(imp)).toBe('');
-    }
+  it('nao confunde UNRANKED com RANKED (UNRANKED contem RANKED)', () => {
+    expect(resolveMatchType(undefined, 'UNRANKED')).toBe('UNRANKED');
+    expect(resolveMatchType(undefined, 'LOBBY_TYPE_UNRANKED')).toBe('UNRANKED');
+    expect(resolveMatchType('UNRANKED_ALL_PICK', undefined)).toBe('UNRANKED');
   });
 
-  it('o limite e simetrico', () => {
-    expect(isExtremeImp(IMP_EXTREME)).toBe(true);
-    expect(isExtremeImp(-IMP_EXTREME)).toBe(true);
-    expect(isExtremeImp(IMP_EXTREME - 1)).toBe(false);
-    expect(isExtremeImp(-IMP_EXTREME + 1)).toBe(false);
-  });
-});
-
-describe('formatacao de IMP', () => {
-  it('formatImp so poe o sinal — o chip usa este, porque o icone ja e o simbolo', () => {
-    expect(formatImp(24)).toBe('+24');
-    expect(formatImp(0)).toBe('+0');
-    expect(formatImp(-52)).toBe('-52');
-    expect(formatImp(50)).toBe('+50');
+  it('turbo ganha do lobby: turbo em lobby ranqueado continua turbo', () => {
+    expect(resolveMatchType('TURBO', 'RANKED')).toBe('TURBO');
+    expect(resolveMatchType(23, 7)).toBe('TURBO');
   });
 
-  it('formatImpMarked poe o simbolo — para texto puro, sem icone ao lado', () => {
-    expect(formatImpMarked(24)).toBe('+24');
-    expect(formatImpMarked(50)).toBe('★ +50');
-    expect(formatImpMarked(-52)).toBe('☠ -52');
-    expect(formatImpMarked(-49)).toBe('-49');
-  });
-});
-
-describe('destaque do extremo: cor, icone e simbolo juntos', () => {
-  it('estrela no topo, caveira no fundo, raio no resto', () => {
-    for (const imp of [50, 51, 99]) expect(getImpIconKind(imp)).toBe('STAR');
-    for (const imp of [-50, -51, -52]) expect(getImpIconKind(imp)).toBe('SKULL');
-    for (const imp of [49, 25, 0, -25, -49]) expect(getImpIconKind(imp)).toBe('ZAP');
+  it('reconhece torneio, battle cup e bots', () => {
+    expect(resolveMatchType(undefined, 'TOURNAMENT')).toBe('TOURNAMENT');
+    expect(resolveMatchType(undefined, 9)).toBe('BATTLE_CUP');
+    expect(resolveMatchType(undefined, 'COOP_BOT')).toBe('BOTS');
   });
 
-  it('sai da escala verde/vermelha nos dois extremos', () => {
-    // Verde e vermelho ja significam bom/ruim na escala normal; um verde mais forte para
-    // +50 se perderia entre os +25. Magenta nao e usado por mais nada.
-    for (const imp of [50, -50, -52]) {
-      expect(getImpColor(imp)).toContain('fuchsia');
-      expect(getImpBadgeStyle(imp).border).toContain('fuchsia');
-    }
-  });
-
-  it('o chip extremo continua TRANSLUCIDO, como o resto da escala', () => {
-    // Uma versao com fundo solido foi tentada e rejeitada: pesava demais e quebrava a
-    // consistencia com os outros chips.
-    for (const imp of [50, -50, -52]) {
-      expect(getImpBadgeStyle(imp).bg, `${imp} deveria ser translucido`).toContain('/');
-    }
-  });
-
-  it('a escala normal continua intacta', () => {
-    expect(getImpColor(30)).toContain('emerald');
-    expect(getImpColor(10)).toContain('emerald');
-    expect(getImpColor(0)).toContain('zinc');
-    expect(getImpColor(-10)).toContain('amber');
-    expect(getImpColor(-30)).toContain('rose');
-    for (const imp of [30, 10, 0, -10, -30]) {
-      expect(getImpColor(imp)).not.toContain('fuchsia');
-      expect(getImpBadgeStyle(imp).bg).not.toContain('fuchsia');
-    }
+  it('devolve null quando nao sabe, em vez de cair em ranqueada', () => {
+    expect(resolveMatchType(undefined, undefined)).toBeNull();
+    expect(resolveMatchType(null, null)).toBeNull();
+    expect(resolveMatchType('', '')).toBeNull();
+    expect(resolveMatchType('ALGO_DESCONHECIDO', 'LOBBY_ESQUISITO')).toBeNull();
   });
 });

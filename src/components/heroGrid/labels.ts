@@ -38,6 +38,7 @@ export const NO_DATA_LABEL: Record<NoDataReason, TranslationKey> = {
  */
 export function metaSourceKey(value: string): TranslationKey | null {
   if (value === 'OPENDOTA_BRACKET') return 'heroGridSourceOpenDota';
+  // Legado de leitura: nada mais produz este valor, mas foto e historico antigos o contem.
   if (value === 'STRATZ_BRACKET') return 'heroGridSourceStratz';
   return null;
 }

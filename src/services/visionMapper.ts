@@ -15,7 +15,12 @@ import { isStratzCell } from '../utils/minimapCoords';
 /**
  * Constroi os dados de visao da partida a partir da resposta crua da STRATZ.
  *
- * Funcao pura: sem React, sem fetch, sem estado. Existe separada de stratzGql.ts
+ * SOBRA DA STRATZ: desde 2026-11-19 (etapa 2 da D4) `buildVisionData` nao tem consumidor
+ * no app — o caminho OpenDota monta a visao em `openDotaMatch.ts` e usa so os helpers
+ * abaixo. Fica porque os testes de `observerUptimePct` montam a visao por ele; sai quando
+ * esses testes migrarem para a fixture da OpenDota.
+ *
+ * Funcao pura: sem React, sem fetch, sem estado. Existia separada do mapper da STRATZ
  * exatamente para ser testavel — o bug que ela substitui (quatro wards hardcoded
  * por jogador) sobreviveu porque nao havia nada verificando este caminho.
  *

@@ -9,7 +9,8 @@ import { handleHeroImageError, handleRankImageError } from '../../utils/imageFal
 import { useLanguage } from '../../context/LanguageContext';
 import { TranslationKey } from '../../i18n/translations';
 import { hasLaneVerdict, isLaneWin, isLaneLoss } from '../../utils/laneResult';
-import { formatImpMarked } from '../../utils/dotaFormatters';
+import { GLINT_THRESHOLDS, formatGlint } from '../../utils/glint';
+import { useGlintHint } from '../ui/GlintBadge';
 
 interface StratzTrendsCardProps {
   matches: PlayerMatchSummary[];
@@ -73,10 +74,16 @@ function mixHex(from: string, to: string, t: number): string {
   return `#${ch(r1, r2)}${ch(g1, g2)}${ch(b1, b2)}`;
 }
 
+const hasGlint = (g: number | null | undefined): g is number => typeof g === 'number' && Number.isFinite(g);
+
+/** Media arredondada das notas somadas, ou `null` se nenhuma partida do grupo tem nota. */
+const avgOf = (b: { glintSum: number; glintCount: number }): number | null =>
+  b.glintCount > 0 ? Math.round(b.glintSum / b.glintCount) : null;
+
 /** O que o painel central esta mostrando no momento. */
 type Focus =
-  | { kind: 'hero'; role: string; heroId: number; name: string; avatarUrl: string; count: number; wins: number; avgImp: number }
-  | { kind: 'role'; role: string; count: number; wins: number; avgImp: number }
+  | { kind: 'hero'; role: string; heroId: number; name: string; avatarUrl: string; count: number; wins: number; avgGlint: number | null }
+  | { kind: 'role'; role: string; count: number; wins: number; avgGlint: number | null }
   | null;
 
 export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
@@ -86,26 +93,12 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
   leaderboardRank,
 }) => {
   const { t } = useLanguage();
+  const glintHint = useGlintHint();
   const [range, setRange] = useState<25 | 100>(25);
   const [focus, setFocus] = useState<Focus>(null);
   const [barFocus, setBarFocus] = useState<PlayerMatchSummary | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartDimensions, setChartDimensions] = useState({ width: 320, height: 300 });
-
-  useLayoutEffect(() => {
-    if (!chartContainerRef.current) return;
-    const el = chartContainerRef.current;
-    const updateDims = () => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        setChartDimensions({ width: rect.width, height: rect.height });
-      }
-    };
-    updateDims();
-    const ro = new ResizeObserver(updateDims);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const displayedMatches = useMemo(() => matches.slice(0, range), [matches, range]);
 
@@ -114,13 +107,19 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
     const total = displayedMatches.length;
     const wins = displayedMatches.filter((m) => m.isVictory).length;
 
-    const roleMap: Record<string, { count: number; wins: number; impSum: number; heroes: Record<number, { count: number; wins: number; impSum: number }> }> = {};
+    type Agg = { count: number; wins: number; glintSum: number; glintCount: number };
+    const roleMap: Record<string, Agg & { heroes: Record<number, Agg> }> = {};
     ROLE_ORDER.forEach((r) => {
-      roleMap[r] = { count: 0, wins: 0, impSum: 0, heroes: {} };
+      roleMap[r] = { count: 0, wins: 0, glintSum: 0, glintCount: 0, heroes: {} };
     });
+    // Partidas COM posicao conhecida — a base do donut. A lista da OpenDota nao traz
+    // posicao (`role: 'UNKNOWN'`), e a versao anterior jogava tudo que nao reconhecia em
+    // POSITION_1: o donut inteiro sairia como "Pos 1 (Safe Carry)".
+    let positioned = 0;
+    let positionedWins = 0;
 
     // Placar de rota, so das partidas que TEM veredito real. Antes contava
-    // `!m.isVictory && m.imp <= -8` como rota perdida — ou seja, o resultado do jogo
+    // derrota com nota de impacto baixa como rota perdida — ou seja, o resultado do jogo
     // inteiro. `laneMeasured` é o denominador honesto: sem ele o card mostrava 100%
     // das partidas classificadas, incluindo as nao parseadas.
     let laneWon = 0;
@@ -129,17 +128,26 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
     let laneMeasured = 0;
 
     displayedMatches.forEach((m) => {
-      const role = roleMap[m.role] ? m.role : 'POSITION_1';
-      const bucket = roleMap[role];
-      bucket.count++;
-      bucket.impSum += m.imp || 0;
-      if (m.isVictory) bucket.wins++;
+      const bucket = roleMap[m.role];
+      if (bucket) {
+        positioned++;
+        if (m.isVictory) positionedWins++;
+        bucket.count++;
+        if (m.isVictory) bucket.wins++;
 
-      if (!bucket.heroes[m.heroId]) bucket.heroes[m.heroId] = { count: 0, wins: 0, impSum: 0 };
-      const hero = bucket.heroes[m.heroId];
-      hero.count++;
-      hero.impSum += m.imp || 0;
-      if (m.isVictory) hero.wins++;
+        if (!bucket.heroes[m.heroId]) bucket.heroes[m.heroId] = { count: 0, wins: 0, glintSum: 0, glintCount: 0 };
+        const hero = bucket.heroes[m.heroId];
+        hero.count++;
+        if (m.isVictory) hero.wins++;
+
+        // Nota so entra na media de quem tem nota; `|| 0` puxaria a media para baixo.
+        if (hasGlint(m.glint)) {
+          bucket.glintSum += m.glint;
+          bucket.glintCount++;
+          hero.glintSum += m.glint;
+          hero.glintCount++;
+        }
+      }
 
       if (hasLaneVerdict(m.laneResult)) {
         laneMeasured++;
@@ -154,6 +162,8 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
       wins,
       losses: total - wins,
       winRate: total ? Math.round((wins / total) * 100) : 0,
+      positioned,
+      positionedWins,
       roleMap,
       playedRoles: ROLE_ORDER.filter((r) => roleMap[r].count > 0),
       laneWon,
@@ -162,6 +172,26 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
       laneMeasured,
     };
   }, [displayedMatches]);
+
+  /** Sem nenhuma partida posicionada, donut, legenda e subtitulo somem. */
+  const showPositions = stats.positioned > 0;
+
+  // Depois de `stats` de proposito: o container do donut so existe quando ha partida com
+  // posicao, entao o observer precisa (re)ligar quando ele aparece.
+  useLayoutEffect(() => {
+    if (!chartContainerRef.current) return;
+    const el = chartContainerRef.current;
+    const updateDims = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setChartDimensions({ width: rect.width, height: rect.height });
+      }
+    };
+    updateDims();
+    const ro = new ResizeObserver(updateDims);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [showPositions]);
 
   /**
    * Raios do donut. O buraco central e grande de proposito: e ele que abriga o
@@ -204,14 +234,14 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
       avatarUrl: string;
       count: number;
       wins: number;
-      avgImp: number;
+      avgGlint: number | null;
       x: number;
       y: number;
       size: number;
       fits: boolean;
     }> = [];
 
-    const total = Math.max(1, stats.total);
+    const total = Math.max(1, stats.positioned);
     const maxAvatar = Math.max(18, Math.min(28, Math.round(geometry.heroR1 - geometry.heroR0 - 10)));
     let angle = 0;
 
@@ -250,7 +280,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
             avatarUrl: hero.avatarUrl,
             count: h.count,
             wins: h.wins,
-            avgImp: Math.round(h.impSum / h.count),
+            avgGlint: avgOf(h),
             x: geometry.heroMid * Math.cos(rad),
             y: geometry.heroMid * Math.sin(rad),
             size: avatarSize,
@@ -275,7 +305,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
   const sunburstOption = useMemo(() => {
     // O vao entre fatias e a propria superficie. Com 100 partidas ha fatias de
     // 3,6°, e 2px de vao passam a competir com o dado — entao afina.
-    const gap = stats.total > 40 ? 1 : 2;
+    const gap = stats.positioned > 40 ? 1 : 2;
 
     const data = stats.playedRoles.map((role) => {
       const bucket = stats.roleMap[role];
@@ -327,6 +357,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
   // (direita) — leitura temporal padrao.
   const equalizer = useMemo(() => [...displayedMatches].reverse(), [displayedMatches]);
   const dense = equalizer.length > 40;
+  const hasAnyGlint = useMemo(() => displayedMatches.some((m) => hasGlint(m.glint)), [displayedMatches]);
 
   const ranksList = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -416,6 +447,11 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
         </div>
       </div>
 
+      {/* Donut de posicoes: so com partida que TENHA posicao. Na lista da OpenDota
+          `role` vem 'UNKNOWN' em todas, e a secao inteira some — agrupar por outra coisa
+          sob o rotulo "Pos N" seria afirmar posicao que ninguem mediu. */}
+      {showPositions && (
+      <>
       <p className="text-[11px] text-slate-500 mb-1">{t('positionShareHint')}</p>
 
       {/* ------------------------------------------------- donut + detalhe */}
@@ -445,7 +481,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
                   avatarUrl: hero.avatarUrl,
                   count: h.count,
                   wins: h.wins,
-                  avgImp: Math.round(h.impSum / h.count),
+                  avgGlint: avgOf(h),
                 });
               } else {
                 const bucket = stats.roleMap[params.name];
@@ -455,7 +491,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
                   role: params.name,
                   count: bucket.count,
                   wins: bucket.wins,
-                  avgImp: Math.round(bucket.impSum / bucket.count),
+                  avgGlint: avgOf(bucket),
                 });
               }
             },
@@ -493,7 +529,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
                   avatarUrl: n.avatarUrl,
                   count: n.count,
                   wins: n.wins,
-                  avgImp: n.avgImp,
+                  avgGlint: n.avgGlint,
                 })
               }
             >
@@ -516,14 +552,16 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
         >
           {focus === null ? (
             <>
-              <div className="text-3xl font-black text-white leading-none">{stats.total}</div>
+              <div className="text-3xl font-black text-white leading-none">{stats.positioned}</div>
               <div className="text-[11px] text-slate-400 mt-1">{t('matches')}</div>
               <div className="mt-2 text-xs font-mono">
-                <span className="text-emerald-400 font-bold">{stats.wins}</span>
+                <span className="text-emerald-400 font-bold">{stats.positionedWins}</span>
                 <span className="text-slate-600"> - </span>
-                <span className="text-rose-400 font-bold">{stats.losses}</span>
+                <span className="text-rose-400 font-bold">{stats.positioned - stats.positionedWins}</span>
               </div>
-              <div className="text-[11px] text-slate-500 font-mono">{stats.winRate}%</div>
+              <div className="text-[11px] text-slate-500 font-mono">
+                {Math.round((stats.positionedWins / stats.positioned) * 100)}%
+              </div>
             </>
           ) : (
             <>
@@ -559,7 +597,8 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
                 <span className="text-rose-400 font-bold">{focus.count - focus.wins}</span>
               </div>
               <div className="text-[10px] text-slate-400 font-mono">
-                {Math.round((focus.wins / focus.count) * 100)}% · {formatImpMarked(focus.avgImp)} IMP
+                {Math.round((focus.wins / focus.count) * 100)}%
+                {focus.avgGlint !== null && ` · ${t('badgeGlint', { value: formatGlint(focus.avgGlint) })}`}
               </div>
             </>
           )}
@@ -572,13 +611,13 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
         {stats.playedRoles.map((role) => {
           const bucket = stats.roleMap[role];
           const isFocused = focus?.role === role;
-          const avgImp = Math.round(bucket.impSum / bucket.count);
+          const avgGlint = avgOf(bucket);
 
           return (
             <div
               key={role}
               onMouseEnter={() =>
-                setFocus({ kind: 'role', role, count: bucket.count, wins: bucket.wins, avgImp })
+                setFocus({ kind: 'role', role, count: bucket.count, wins: bucket.wins, avgGlint })
               }
               onMouseLeave={() => setFocus(null)}
               className={`flex items-center gap-2 px-1.5 py-1 rounded-md text-[11px] cursor-default transition ${
@@ -596,20 +635,32 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
                 <span className="text-slate-600">-</span>
                 <span className="text-rose-400">{bucket.count - bucket.wins}</span>
               </span>
+              {/* Glint medio da posicao, so das partidas com nota; vazio se nenhuma tem. */}
               <span
-                className={`font-mono w-9 text-right ${avgImp >= 0 ? 'text-slate-300' : 'text-slate-500'}`}
+                title={avgGlint !== null ? glintHint : undefined}
+                className={`font-mono w-9 text-right ${
+                  avgGlint !== null && avgGlint >= GLINT_THRESHOLDS.neutral ? 'text-slate-300' : 'text-slate-500'
+                }`}
               >
-                {formatImpMarked(avgImp)}
+                {avgGlint !== null ? formatGlint(avgGlint) : ''}
               </span>
             </div>
           );
         })}
       </div>
+      </>
+      )}
 
-      {/* --------------------------------------------------- equalizador IMP */}
+      {/* ------------------------------------------------- equalizador Glint
+          Some inteiro quando nenhuma partida da janela tem nota: sobraria uma linha
+          de base vazia com o titulo de uma metrica que nao foi medida. */}
+      {hasAnyGlint && (
       <div className="mt-3 pt-3 border-t border-slate-800/80">
         <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
-          <span>{t('impPerMatch')}</span>
+          <span title={glintHint} className="cursor-help">
+            {t('glintPerMatch')}{' '}
+            <span className="text-[8px] font-bold uppercase tracking-wider text-slate-600">{t('glintBeta')}</span>
+          </span>
           <span className="font-mono text-slate-600">{t('oldestToNewest')}</span>
         </div>
 
@@ -624,10 +675,17 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
             }}
           >
             {equalizer.map((m, idx) => {
-              const imp = m.imp || 0;
-              const isPositive = imp >= 0;
-              const magnitude = Math.min(50, Math.abs(imp)) / 50;
-              const heightPercent = Math.max(6, Math.round(magnitude * 100)) * 0.46;
+              // O centro é `GLINT_THRESHOLDS.neutral` (48), nao 50: acima dele a barra
+              // sobe, abaixo desce, cada lado normalizado pelo proprio alcance (48→100 e
+              // 48→0). Partida sem nota mantem a COLUNA (para os pontos de vitoria/derrota
+              // continuarem alinhados) e nao ganha barra — nem o piso de 6%, que a faria
+              // parecer uma nota no centro.
+              const glint = hasGlint(m.glint) ? m.glint : null;
+              const center = GLINT_THRESHOLDS.neutral;
+              const isPositive = glint !== null && glint >= center;
+              const magnitude =
+                glint === null ? 0 : isPositive ? (glint - center) / (100 - center) : (center - glint) / center;
+              const heightPercent = Math.max(6, Math.round(Math.min(1, magnitude) * 100)) * 0.46;
               const isFocused = barFocus?.matchId === m.matchId;
 
               return (
@@ -640,18 +698,20 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
                 >
                   {/* Alvo de hover maior que a barra — a barra tem 1-6px */}
                   <span className="absolute inset-y-0 -inset-x-0.5" />
-                  <div
-                    className={`absolute rounded-[1px] transition-colors ${
-                      dense ? 'w-1' : 'w-1.5'
-                    } ${isPositive ? 'bottom-1/2' : 'top-1/2'} ${
-                      isFocused
-                        ? 'bg-cyan-300'
-                        : isPositive
-                        ? 'bg-slate-300'
-                        : 'bg-slate-600'
-                    }`}
-                    style={{ height: `${heightPercent}%` }}
-                  />
+                  {glint !== null && (
+                    <div
+                      className={`absolute rounded-[1px] transition-colors ${
+                        dense ? 'w-1' : 'w-1.5'
+                      } ${isPositive ? 'bottom-1/2' : 'top-1/2'} ${
+                        isFocused
+                          ? 'bg-cyan-300'
+                          : isPositive
+                          ? 'bg-slate-300'
+                          : 'bg-slate-600'
+                      }`}
+                      style={{ height: `${heightPercent}%` }}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -700,8 +760,12 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
               <span className={barFocus.isVictory ? 'text-emerald-400' : 'text-rose-400'}>
                 {barFocus.isVictory ? t('win') : t('loss')}
               </span>
-              <span className="text-slate-600">·</span>
-              <span className="text-slate-300">{formatImpMarked(barFocus.imp || 0)} IMP</span>
+              {hasGlint(barFocus.glint) && (
+                <>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-300">{t('badgeGlint', { value: formatGlint(barFocus.glint) })}</span>
+                </>
+              )}
               <span className="text-slate-600">·</span>
               <span className="text-slate-400">
                 {barFocus.kills}/{barFocus.deaths}/{barFocus.assists}
@@ -712,6 +776,7 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
           )}
         </div>
       </div>
+      )}
 
       {/* --------------------------------------------------------------- KPIs */}
       <div className="grid grid-cols-3 gap-x-3 gap-y-3 mt-3 pt-3 border-t border-slate-800/80 text-[11px]">
@@ -732,25 +797,25 @@ export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
           </div>
         </div>
 
-        <div>
-          <div className="text-slate-500">{t('laneHistory')}</div>
-          {stats.laneMeasured > 0 ? (
-            <>
-              <div className="text-sm font-black font-mono mt-0.5">
-                <span className="text-emerald-400">{stats.laneWon}</span>
-                <span className="text-slate-600">-</span>
-                <span className="text-yellow-400">{stats.laneEven}</span>
-                <span className="text-slate-600">-</span>
-                <span className="text-rose-400">{stats.laneLost}</span>
-              </div>
-              <div className="text-[9px] text-slate-600 font-sans mt-0.5">
-                {t('laneSampleOf', { measured: stats.laneMeasured, total: stats.total })}
-              </div>
-            </>
-          ) : (
-            <div className="text-xs text-slate-600 font-sans mt-1">{t('laneNoParsedMatches')}</div>
-          )}
-        </div>
+        {/* Historico de rota: so com veredito real em alguma partida. O texto "nenhuma
+            partida parseada" que ficava aqui passou a ser FALSO — na lista da OpenDota o
+            veredito vem 'UNKNOWN' mesmo em partida parseada (a regra propria é a Fase 3
+            do plano). Sem veredito, o KPI some. */}
+        {stats.laneMeasured > 0 && (
+          <div>
+            <div className="text-slate-500">{t('laneHistory')}</div>
+            <div className="text-sm font-black font-mono mt-0.5">
+              <span className="text-emerald-400">{stats.laneWon}</span>
+              <span className="text-slate-600">-</span>
+              <span className="text-yellow-400">{stats.laneEven}</span>
+              <span className="text-slate-600">-</span>
+              <span className="text-rose-400">{stats.laneLost}</span>
+            </div>
+            <div className="text-[9px] text-slate-600 font-sans mt-0.5">
+              {t('laneSampleOf', { measured: stats.laneMeasured, total: stats.total })}
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="text-slate-500">{t('matchAvgRank')}</div>

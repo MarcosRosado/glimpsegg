@@ -1,4 +1,5 @@
 import { MatchDetails, MatchPlayer, Role } from '../types/dota';
+import { GLINT_THRESHOLDS } from './glint';
 
 /**
  * Destaques da partida.
@@ -18,7 +19,7 @@ import { MatchDetails, MatchPlayer, Role } from '../types/dota';
  */
 
 export type AwardId =
-  // Destaques de papel. `IMP` assinado, entao a margem e absoluta, nao percentual.
+  // Destaques de papel: saem da nota da partida (o Glint experimental), sem margem percentual.
   | 'MVP'
   | 'TOP_CORE'
   | 'TOP_SUPPORT'
@@ -33,8 +34,27 @@ export type AwardId =
   | 'MOST_DENIES'
   | 'MOST_WARDS';
 
-/** Como a UI deve formatar `value`. */
-export type AwardUnit = 'IMP' | 'GOLD' | 'DAMAGE' | 'COUNT';
+/**
+ * Como a UI deve formatar `value`. `NONE` = o premio nao tem numero proprio (MVP eleito
+ * por superlativos numa partida sem nota de impacto): a UI mostra o `basis` e nada mais.
+ */
+export type AwardUnit = 'GLINT' | 'GOLD' | 'DAMAGE' | 'COUNT' | 'NONE';
+
+/**
+ * De onde sai a nota de impacto desta partida. `GLINT` = a nota propria experimental
+ * (`utils/glint.ts`), a unica que o app tem; `null` = partida sem nota nenhuma, e ai os
+ * premios que dependem dela sao OMITIDOS.
+ *
+ * Ate 2026-11-19 havia um terceiro valor, `IMP` (o da STRATZ), escolhido sempre que nenhum
+ * jogador trazia o campo `glint`. Saiu com o `mapStratzMatch` (etapa 2 da D4): sem ele,
+ * qualquer partida montada sem `glint` caia em IMP com `imp: 0` em todos — e ordenar por
+ * IMP coroava o primeiro da lista.
+ */
+export type ScoreKind = 'GLINT' | null;
+
+export function resolveScoreKind(match: MatchDetails): ScoreKind {
+  return (match.players || []).some((p) => typeof p.glint === 'number') ? 'GLINT' : null;
+}
 
 export interface MatchAward {
   id: AwardId;
@@ -45,7 +65,7 @@ export interface MatchAward {
   /** Numero CRU que ganhou o premio. Quem renderiza decide o formato e o idioma. */
   value: number;
   unit: AwardUnit;
-  /** Vantagem sobre o segundo colocado, em %. `null` nos premios de IMP. */
+  /** Vantagem sobre o segundo colocado, em %. `null` nos premios de papel (saem da nota). */
   marginPct: number | null;
   /**
    * Em que este jogador liderou. So nos premios de papel, e so quando foi isso que o
@@ -61,7 +81,8 @@ export interface PositionHighlight {
   heroId: number;
   playerName: string;
   isRadiant: boolean;
-  imp: number;
+  /** Nota de impacto do jogador, na escala de `MatchAwards.scoreKind`. `null` = sem nota. */
+  score: number | null;
   /** Estatistica caracteristica da posicao. `null` quando a partida nao trouxe. */
   stat: { unit: AwardUnit; value: number; id: AwardId } | null;
 }
@@ -74,6 +95,8 @@ export interface MatchAwards {
   /** Melhor de cada posicao, de POSITION_1 a POSITION_5. */
   positions: PositionHighlight[];
   aggregates: TeamAggregates;
+  /** A escala das notas em `awards` e `positions`. `null` = partida sem nota de impacto. */
+  scoreKind: ScoreKind;
 }
 
 /**
@@ -128,9 +151,16 @@ const SUPERLATIVES: SuperlativeSpec[] = [
  * superlativos, com o IMP so como desempate. Sem nenhum superlativo no time vencedor
  * (5% das partidas), o criterio passa a ser o IMP.
  */
-/** Dia dificil: 32% das partidas. So quando o ultimo destoa mesmo do penultimo. */
-const ROUGH_GAME_MAX_IMP = -10;
-const ROUGH_GAME_MIN_LEAD = 5;
+/**
+ * Dia dificil: so quando o ultimo destoa mesmo do penultimo. Na escala do IMP eram teto -10 e
+ * folga 5 (32% das partidas); na do Glint o teto é `GLINT_THRESHOLDS.poor` (41, o quantil de
+ * IMP <= -10). A folga saiu por taxa de disparo: em 197 partidas de 7.42
+ * (2026-11-19), sem a clausula do superlativo, a regra de IMP dispara em 61% e a de Glint em
+ * 74% / 63% / 58% com folga de 3 / 4 / 5 — fica 4. Onde as duas disparam (85 partidas), o
+ * jogador é o mesmo em 60.
+ */
+const ROUGH_GAME_MAX_GLINT = GLINT_THRESHOLDS.poor;
+const ROUGH_GAME_MIN_LEAD_GLINT = 4;
 
 const CORE_POSITIONS: Role[] = ['POSITION_1', 'POSITION_2', 'POSITION_3'];
 const SUPPORT_POSITIONS: Role[] = ['POSITION_4', 'POSITION_5'];
@@ -206,7 +236,7 @@ function pickSuperlative(players: MatchPlayer[], spec: SuperlativeSpec): MatchAw
 }
 
 /**
- * Melhor por IMP dentro de um grupo.
+ * Melhor pela nota (Glint) dentro de um grupo.
  *
  * MVP, melhor core e melhor suporte sao slots FIXOS do card: toda partida tem cores e
  * suportes, e "o core de maior IMP desta partida" e um fato, com ou sem folga sobre o
@@ -217,40 +247,59 @@ function pickSuperlative(players: MatchPlayer[], spec: SuperlativeSpec): MatchAw
  * Os SUPERLATIVOS e o `ROUGH_GAME` seguem exigindo margem: aqueles sao afirmacoes sobre
  * destaque, e "o primeiro de uma lista empatada" nao e destaque.
  */
-function pickByImp(group: MatchPlayer[], id: AwardId): MatchAward | null {
-  const ranked = [...group].sort((a, b) => (b.imp || 0) - (a.imp || 0));
+function pickByScore(group: MatchPlayer[], id: AwardId, kind: ScoreKind): MatchAward | null {
+  if (!kind) return null;
+  const ranked = group
+    .map((p) => ({ p, v: scoreOf(p, kind) }))
+    .filter((x): x is { p: MatchPlayer; v: number } => x.v !== null)
+    .sort((a, b) => b.v - a.v);
   if (ranked.length === 0) return null;
-  return toAward(ranked[0], id, 'IMP', ranked[0].imp || 0, null);
+  return toAward(ranked[0].p, id, kind, ranked[0].v, null);
+}
+
+/** A nota do jogador; `null` quando a partida nao tem nota ou ele nao tem percentil. */
+function scoreOf(p: MatchPlayer, kind: ScoreKind): number | null {
+  if (kind === 'GLINT') return typeof p.glint === 'number' ? p.glint : null;
+  return null;
 }
 
 /**
- * MVP: quem levou mais superlativos no time vencedor, IMP so como desempate.
+ * MVP: quem levou mais superlativos no time vencedor, a nota so como desempate.
  *
- * Vale so para o MVP. `TOP_CORE` e `TOP_SUPPORT` continuam saindo do IMP, e de
- * proposito: eles perguntam "quem jogou melhor NA FUNCAO", que e exatamente o que o IMP
+ * Vale so para o MVP. `TOP_CORE` e `TOP_SUPPORT` continuam saindo da nota, e de
+ * proposito: eles perguntam "quem jogou melhor NA FUNCAO", que e exatamente o que a nota
  * mede. Contar superlativo ali daria "melhor suporte" a um Earth Spirit 3/10/26 com IMP
  * -17, so por liderar assistencias, na frente de uma Crystal Maiden com +24.
+ *
+ * Sem nota nenhuma na partida (`kind` nulo), o MVP ainda existe se alguem do time vencedor
+ * liderou categoria — o criterio principal nunca foi a nota. Sem superlativo e sem nota,
+ * nao ha MVP: nao sobra criterio.
  */
 function pickStandout(
   group: MatchPlayer[],
   superlatives: MatchAward[],
   id: AwardId,
+  kind: ScoreKind,
 ): MatchAward | null {
   if (group.length === 0) return null;
   const count = (slot: number) => superlatives.filter((a) => a.playerSlot === slot).length;
+  const tiebreak = (p: MatchPlayer) => scoreOf(p, kind) ?? -Infinity;
   const ranked = [...group].sort(
-    (a, b) => count(b.playerSlot) - count(a.playerSlot) || (b.imp || 0) - (a.imp || 0),
+    (a, b) => count(b.playerSlot) - count(a.playerSlot) || tiebreak(b) - tiebreak(a),
   );
   const top = ranked[0];
 
   const held = superlatives.filter((a) => a.playerSlot === top.playerSlot);
   if (held.length > 0) {
-    return toAward(top, id, 'IMP', top.imp || 0, null, held.map((a) => a.id));
+    const score = scoreOf(top, kind);
+    return score === null
+      ? toAward(top, id, 'NONE', 0, null, held.map((a) => a.id))
+      : toAward(top, id, kind as AwardUnit, score, null, held.map((a) => a.id));
   }
 
-  // Ninguem no time vencedor liderou categoria alguma: o criterio passa a ser o IMP, e
-  // o cartao mostra o IMP. Slot fixo, entao sempre ha MVP.
-  return pickByImp(group, id);
+  // Ninguem no time vencedor liderou categoria alguma: o criterio passa a ser a nota, e
+  // o cartao mostra a nota.
+  return pickByScore(group, id, kind);
 }
 
 export interface TeamAggregates {
@@ -300,6 +349,7 @@ export function computeMatchAwards(match: MatchDetails): MatchAwards {
         direSentries: 0,
         wardsMeasured: false,
       },
+      scoreKind: null,
     };
   }
 
@@ -360,7 +410,12 @@ export function computeMatchAwards(match: MatchDetails): MatchAwards {
   };
 
 
-  const sortedByImp = [...players].sort((a, b) => (b.imp || 0) - (a.imp || 0));
+  const kind = resolveScoreKind(match);
+  // So quem tem nota entra na disputa de "dia dificil".
+  const sortedByScore = players
+    .map((p) => ({ p, v: scoreOf(p, kind) }))
+    .filter((x): x is { p: MatchPlayer; v: number } => x.v !== null)
+    .sort((a, b) => b.v - a.v);
 
   // 1. Superlativos primeiro: os destaques de papel se apoiam neles.
   const superlatives = SUPERLATIVES.map((spec) => pickSuperlative(players, spec))
@@ -372,35 +427,38 @@ export function computeMatchAwards(match: MatchDetails): MatchAwards {
   const winners = players.filter(
     (p) => (p.isRadiant && match.didRadiantWin) || (!p.isRadiant && !match.didRadiantWin),
   );
-  const mvp = pickStandout(winners, superlatives, 'MVP');
+  const mvp = pickStandout(winners, superlatives, 'MVP', kind);
   if (mvp) awards.push(mvp);
 
   const cores = players.filter(
     (p) => CORE_POSITIONS.includes(positionOf(p)) && p.playerSlot !== mvp?.playerSlot,
   );
-  const topCore = pickByImp(cores, 'TOP_CORE');
+  const topCore = pickByScore(cores, 'TOP_CORE', kind);
   if (topCore) awards.push(topCore);
 
   const supports = players.filter(
     (p) => SUPPORT_POSITIONS.includes(positionOf(p)) && p.playerSlot !== mvp?.playerSlot,
   );
-  const topSupport = pickByImp(supports, 'TOP_SUPPORT');
+  const topSupport = pickByScore(supports, 'TOP_SUPPORT', kind);
   if (topSupport) awards.push(topSupport);
 
   // "Dia dificil" substituiu o EXTREME LVP. So aparece quando o ultimo destoa do
   // penultimo — ser o ultimo de uma lista apertada nao e diagnostico.
-  const worst = sortedByImp[sortedByImp.length - 1];
-  const secondWorst = sortedByImp[sortedByImp.length - 2];
+  const worst = sortedByScore[sortedByScore.length - 1];
+  const secondWorst = sortedByScore[sortedByScore.length - 2];
   const worstLevouSuperlativo =
-    !!worst && superlatives.some((a) => a.playerSlot === worst.playerSlot);
+    !!worst && superlatives.some((a) => a.playerSlot === worst.p.playerSlot);
+  const roughMax = ROUGH_GAME_MAX_GLINT;
+  const roughLead = ROUGH_GAME_MIN_LEAD_GLINT;
   if (
+    kind &&
     worst &&
-    // Quem liderou uma metrica da partida nao teve um dia dificil, seja qual for o IMP.
+    // Quem liderou uma metrica da partida nao teve um dia dificil, seja qual for a nota.
     !worstLevouSuperlativo &&
-    (worst.imp || 0) <= ROUGH_GAME_MAX_IMP &&
-    (!secondWorst || (secondWorst.imp || 0) - (worst.imp || 0) >= ROUGH_GAME_MIN_LEAD)
+    worst.v <= roughMax &&
+    (!secondWorst || secondWorst.v - worst.v >= roughLead)
   ) {
-    awards.push(toAward(worst, 'ROUGH_GAME', 'IMP', worst.imp || 0, null));
+    awards.push(toAward(worst.p, 'ROUGH_GAME', kind, worst.v, null));
   }
 
   // 3. Melhor de cada posicao. Posicao sem jogador (partida sem `position` nem `role`
@@ -409,7 +467,13 @@ export function computeMatchAwards(match: MatchDetails): MatchAwards {
   for (const position of POSITION_ORDER) {
     const inPosition = players.filter((p) => positionOf(p) === position);
     if (inPosition.length === 0) continue;
-    const best = [...inPosition].sort((a, b) => (b.imp || 0) - (a.imp || 0))[0];
+    // Sem nota, nao ha "melhor da posicao": a posicao fica fora da lista.
+    const rankedInPosition = inPosition
+      .map((p) => ({ p, v: scoreOf(p, kind) }))
+      .filter((x): x is { p: MatchPlayer; v: number } => x.v !== null)
+      .sort((a, b) => b.v - a.v);
+    if (rankedInPosition.length === 0) continue;
+    const best = rankedInPosition[0].p;
     const spec = POSITION_STAT[position];
     const value = spec.value(best);
     positions.push({
@@ -418,10 +482,10 @@ export function computeMatchAwards(match: MatchDetails): MatchAwards {
       heroId: best.heroId,
       playerName: best.name,
       isRadiant: best.isRadiant,
-      imp: best.imp || 0,
+      score: rankedInPosition[0].v,
       stat: value === null ? null : { unit: spec.unit, value, id: spec.id },
     });
   }
 
-  return { awards, superlatives, positions, aggregates };
+  return { awards, superlatives, positions, aggregates, scoreKind: kind };
 }

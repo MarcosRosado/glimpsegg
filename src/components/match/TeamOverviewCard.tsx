@@ -4,7 +4,9 @@ import { MatchDetails, Role } from '../../types/dota';
 import { AwardId, AwardUnit, MatchAward, computeMatchAwards } from '../../utils/awardEngine';
 import { TranslationKey } from '../../i18n/translations';
 import { getHero } from '../../constants/heroes';
-import { formatGold, formatImpMarked } from '../../utils/dotaFormatters';
+import { formatGold } from '../../utils/dotaFormatters';
+import { formatGlint } from '../../utils/glint';
+import { useGlintHint } from '../ui/GlintBadge';
 import { handleHeroImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -63,11 +65,7 @@ const AWARD_HINT: Record<AwardId, TranslationKey> = {
  * template deixa cada idioma escolher a ordem e o substantivo ("27 denies",
  * "3,8 mil de cura").
  */
-const AWARD_VALUE: Record<AwardId, TranslationKey> = {
-  MVP: 'awardValueImp',
-  TOP_CORE: 'awardValueImp',
-  TOP_SUPPORT: 'awardValueImp',
-  ROUGH_GAME: 'awardValueImp',
+const AWARD_VALUE: Record<Exclude<AwardId, 'MVP' | 'TOP_CORE' | 'TOP_SUPPORT' | 'ROUGH_GAME'>, TranslationKey> = {
   MOST_HERO_DAMAGE: 'awardValueHeroDamage',
   MOST_TOWER_DAMAGE: 'awardValueTowerDamage',
   MOST_HEALING: 'awardValueHealing',
@@ -76,6 +74,14 @@ const AWARD_VALUE: Record<AwardId, TranslationKey> = {
   MOST_NETWORTH: 'awardValueNetworth',
   MOST_DENIES: 'awardValueDenies',
   MOST_WARDS: 'awardValueWards',
+};
+
+/**
+ * Premio de papel: a frase depende da ESCALA da nota, nao do premio. `GLINT` é a nota
+ * propria experimental (a unica desde 2026-11-19). `NONE` nao tem frase.
+ */
+const SCORE_VALUE: Partial<Record<AwardUnit, TranslationKey>> = {
+  GLINT: 'awardValueGlint',
 };
 
 const AWARD_STYLE: Record<AwardId, string> = {
@@ -97,17 +103,19 @@ type Translate = (key: TranslationKey, params?: Record<string, string | number>)
 
 /** So o numero, ja abreviado. Quem chama decide se ele vira frase. */
 function formatAwardNumber(value: number, unit: AwardUnit): string {
-  if (unit === 'IMP') return formatImpMarked(value);
+  if (unit === 'GLINT') return formatGlint(value);
   if (unit === 'GOLD' || unit === 'DAMAGE') return formatGold(value);
   return String(value);
 }
 
 /**
- * A frase completa: "27 denies", "19,6k em torres", "+24 IMP". O motor devolve numero
+ * A frase completa: "27 denies", "19,6k em torres", "Glint 72". O motor devolve numero
  * cru justamente para que idioma e unidade sejam decididos aqui.
  */
 function formatAwardValue(award: { value: number; unit: AwardUnit; id: AwardId }, t: Translate): string {
-  return t(AWARD_VALUE[award.id], { value: formatAwardNumber(award.value, award.unit) });
+  if (award.unit === 'NONE') return '';
+  const key = SCORE_VALUE[award.unit] ?? AWARD_VALUE[award.id as keyof typeof AWARD_VALUE];
+  return key ? t(key, { value: formatAwardNumber(award.value, award.unit) }) : '';
 }
 
 const AwardBadge: React.FC<{ id: AwardId; t: Translate; small?: boolean }> = ({ id, t, small }) => (
@@ -251,7 +259,8 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
   onSelectPlayer,
 }) => {
   const { t } = useLanguage();
-  const { awards, superlatives, positions, aggregates } = computeMatchAwards(match);
+  const { awards, superlatives, positions, aggregates, scoreKind } = computeMatchAwards(match);
+  const glintHint = useGlintHint();
 
   const totalGoldCombined = (aggregates.radiantNetworth + aggregates.direNetworth) || 1;
   const radGoldPct = Math.round((aggregates.radiantNetworth / totalGoldCombined) * 100);
@@ -348,9 +357,14 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
                       <span className="block text-[11px] font-bold text-slate-200 truncate">
                         {hero.displayName}
                       </span>
-                      <span className="block text-[10px] font-mono text-slate-400 truncate">
-                        {t('awardValueImp', { value: formatImpMarked(ph.imp) })}
-                        {ph.stat && ` \u2022 ${formatAwardValue({ ...ph.stat }, t)}`}
+                      {/* A nota na escala da partida. No Glint, o `title` carrega a procedencia:
+                          a nota é experimental e isso fica a um hover de qualquer numero. */}
+                      <span
+                        className="block text-[10px] font-mono text-slate-400 truncate"
+                        title={scoreKind === 'GLINT' ? glintHint : undefined}
+                      >
+                        {ph.score !== null && t('awardValueGlint', { value: formatGlint(ph.score) })}
+                        {ph.stat && `${ph.score !== null ? ' \u2022 ' : ''}${formatAwardValue({ ...ph.stat }, t)}`}
                       </span>
                     </span>
                   </button>

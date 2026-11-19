@@ -6,7 +6,8 @@ A aba `OVERVIEW` da análise de partida. Todos montados pelo `App.tsx` quando h�
 
 | Arquivo | Papel |
 | --- | --- |
-| `MatchHeader.tsx` | Cabeçalho: placar, duração e o veredito de forma da partida vindo da STRATZ |
+| `MatchHeader.tsx` | Cabeçalho: placar, duração e o veredito de forma da partida (`analysisOutcome`, que a OpenDota não tem — some quando nulo) |
+| `ParsePendingBanner.tsx` | Aviso de partida não parseada com o botão "Pedir análise do replay", e `PARSE_POLL_DELAYS_MS` (recuo e teto da espera). Montado pelo `App.tsx` quando `availability.parsePending` |
 | `TeamOverviewCard.tsx` | Pódio de destaques (MVP, melhor core, melhor suporte, superlativos) e comparativo entre times |
 | `AdvantageTimeline.tsx` | Curva de vantagem de ouro e XP (`recharts`) |
 | `ScoreboardTable.tsx` | Tabela dos 10 jogadores com itens e tempo de compra |
@@ -19,6 +20,9 @@ A aba `OVERVIEW` da análise de partida. Todos montados pelo `App.tsx` quando h�
   dentro dele, e a versão en-US exibia português.
 - **Número sem métrica não informa.** Todo valor de prêmio sai por template de i18n (`AWARD_VALUE`),
   e todo selo tem tooltip com o critério (`AWARD_HINT`).
+- **A nota dos prêmios de papel é o Glint experimental**, formatado por `SCORE_VALUE` conforme a
+  unidade do prêmio (`GLINT`, ou `NONE` sem número; a escala `IMP` saiu em 2026-11-19). O `title` com a procedência
+  (`useGlintHint`) acompanha a nota; a coluna do placar só existe quando a partida tem nota.
 - **Lista de destaques vazia é resultado válido.** Superlativo exige margem sobre o segundo
   colocado; "o primeiro de uma lista empatada" não é destaque.
 - `ScoreboardTable.tsx` filtra consumível por `GENERIC_CONSUMABLES` (conjunto de nomes `item_*`)

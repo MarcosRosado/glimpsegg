@@ -97,9 +97,10 @@ constante**. Alvo das tags de destaque: 5% a 15%. Foi exatamente assim que o ant
 | --- | --- | --- |
 | `src/components/dashboard/MatchList.tsx` | `FARM_GPM`, `KILL_PARTICIPATION_PCT`, `DAMAGE_SHARE_PCT`, `CS_PER_MIN`, `TOWER_DAMAGE`, `HERO_HEALING`, `DENIES`, `MAX_LEVEL`, `MARATHON_MIN`, `UNSPENT_GOLD` | 100 partidas, bracket 6, 2026-08-30 |
 | `src/utils/awardEngine.ts` | `SUPERLATIVES` (`margin`/`floor` por métrica), `ROUGH_GAME_MAX_IMP`, `ROUGH_GAME_MIN_LEAD` | 60 partidas reais |
-| `src/utils/dotaFormatters.ts` | `IMP_EXTREME` | 400 jogadores (60 partidas) |
+| `src/utils/glint.ts` | `GLINT_MODEL`, `GLINT_THRESHOLDS` | `scripts/fit-glint-experimental.cjs` (pares do gabarito) |
+| `src/utils/laneVerdict.ts` | `LANE_VERDICT_MODEL` (empate, atropelo) | `scripts/fit-lane-verdict.cjs` (pares do gabarito, taxa de disparo) |
 | `src/constants/baselines.ts` | `ROLE_BASELINES` | curadoria manual |
-| `src/utils/performance.ts` | baselines do `calculateCustomImp` e do radar | curadoria manual |
+| `src/utils/performance.ts` | baselines do radar | curadoria manual |
 | `src/utils/insights/rank.ts` | `IMPROVEMENT_SCORE_FLOOR`, `MAX_PER_CATEGORY`, `MAX_IMPROVEMENTS`, `MAX_STRENGTHS` | corte de relevância |
 | `src/utils/insights/rules/*.ts` | limiares por regra | ver o comentário de cada uma |
 | `src/components/performance/PlayerPerformanceTab.tsx` | `deltaSec <= -45` / `>= 60` (item adiantado/atrasado) | — |
@@ -107,11 +108,11 @@ constante**. Alvo das tags de destaque: 5% a 15%. Foi exatamente assim que o ant
 Ao mexer: registre a nova amostra, a data e a taxa de disparo no comentário. Número sem
 procedência é o que este projeto inteiro existe para evitar.
 
-## 7. Enums novos da STRATZ e da Valve
+## 7. Enums novos da OpenDota e da Valve
 
-- `mapStratzRole` e `mapStratzLane` (`src/services/stratzGql.ts`) devolvem `UNKNOWN` para valor
-  desconhecido — de propósito: chutar `SAFE` dava a um roamer o veredito da safelane. O efeito
-  visível é o badge sumir, não um erro.
+- `mapPosition` e `mapLane` (`src/services/openDotaMatch.ts`) devolvem `UNKNOWN` para valor
+  desconhecido — de propósito: chutar `POSITION_1` ou `SAFE` produziria rótulo errado. O efeito
+  visível é a informação sumir, não um erro. (Os equivalentes da STRATZ saíram em 2026-11-19.)
 - `formatGameMode` e `formatLobbyType` (`src/utils/dotaFormatters.ts`) formatam o enum cru quando
   não reconhecem (`ABILITY_DRAFT` → "Ability Draft"), o que é aceitável. **Mas com entrada vazia o
   default é "All Pick Ranqueado"** — uma suposição, não uma medição. Modo de jogo novo entra aqui.

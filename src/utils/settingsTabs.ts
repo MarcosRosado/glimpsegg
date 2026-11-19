@@ -14,7 +14,7 @@ import type { TranslationKey } from '../i18n/translations';
  * explicitos — chave montada em runtime some do guard de chave orfa de
  * `i18n/translations.test.ts`.
  */
-export type SettingsTab = 'ACCOUNT' | 'STRATZ' | 'HERO_GRID' | 'APP';
+export type SettingsTab = 'ACCOUNT' | 'HERO_GRID' | 'APP';
 
 export interface SettingsTabDef {
   id: SettingsTab;
@@ -24,7 +24,6 @@ export interface SettingsTabDef {
 /** Ordem de exibicao. A primeira é a aba inicial do modal. */
 export const SETTINGS_TABS: readonly SettingsTabDef[] = [
   { id: 'ACCOUNT', labelKey: 'settingsTabAccount' },
-  { id: 'STRATZ', labelKey: 'settingsTabStratz' },
   { id: 'HERO_GRID', labelKey: 'settingsTabHeroGrid' },
   { id: 'APP', labelKey: 'settingsTabApp' },
 ];

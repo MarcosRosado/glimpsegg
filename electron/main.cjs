@@ -17,8 +17,9 @@ function loadConfig() {
   } catch (err) {
     console.error('Error loading config:', err);
   }
+  // Config NOVA nao nasce com token: o app nao usa a STRATZ desde 2026-11-19. Um config
+  // antigo que ja tenha `stratzApiKey` é devolvido inteiro acima e a chave fica onde esta.
   return {
-    stratzApiKey: process.env.STRATZ_API_KEY || '',
     steamAccountId: process.env.DEFAULT_STEAM_ACCOUNT_ID || '',
     theme: 'dark',
     autoRefresh: true,
@@ -80,10 +81,9 @@ function setupAutoUpdater() {
 // Hosts que o app tem motivo legitimo para abrir no browser do sistema.
 // Qualquer outro destino e descartado silenciosamente: um link malicioso vindo
 // de dado de API nao deve conseguir abrir uma janela nem navegar o renderer.
+// Os hosts da STRATZ sairam em 2026-11-19: nenhuma tela abre mais link para stratz.com
+// (conferido por grep em src/ depois da remocao do onboarding de token e da aba de token).
 const EXTERNAL_HOST_ALLOWLIST = new Set([
-  'stratz.com',
-  'www.stratz.com',
-  'api.stratz.com',
   'steamcommunity.com',
   'www.steamcommunity.com',
   'opendota.com',
@@ -211,54 +211,9 @@ ipcMain.handle('store:getAll', () => {
   return appConfig;
 });
 
-// IPC Handler: STRATZ GraphQL Request
-ipcMain.handle('api:stratz-graphql', async (event, { query, variables, customApiKey }) => {
-  const token = customApiKey || appConfig.stratzApiKey || process.env.STRATZ_API_KEY || '';
-  
-  try {
-    const headers = {
-      'Content-Type': 'application/json',
-      'User-Agent': 'STRATZ_API',
-    };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token.trim()}`;
-    }
-
-    const response = await fetch('https://api.stratz.com/graphql', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ query, variables }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText,
-      };
-    }
-
-    const json = await response.json();
-    // `success` tem de significar a mesma coisa nos dois transportes (IPC e fetch direto
-    // do navegador em `npm run dev`). Antes daqui saia `success: true` para qualquer HTTP 200,
-    // mesmo com `json.errors` preenchido, enquanto o caminho browser usava `!json.errors`.
-    // A divergencia fazia um erro parcial de GraphQL funcionar no Electron e cair
-    // silenciosamente no mock em dev.
-    return {
-      success: !json.errors || json.errors.length === 0,
-      data: json.data,
-      errors: json.errors,
-    };
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : String(err),
-    };
-  }
-});
+// O handler `api:stratz-graphql` morava aqui. Saiu em 2026-11-19: o app nao fala mais com
+// a STRATZ em tempo de execucao. A chave `stratzApiKey` do config em disco NAO foi apagada
+// de proposito — scripts de medicao fora do app ainda leem esse arquivo.
 
 // IPC Handler: OpenDota REST Fetch
 ipcMain.handle('api:opendota-fetch', async (event, { endpoint }) => {
@@ -288,6 +243,37 @@ ipcMain.handle('api:opendota-fetch', async (event, { endpoint }) => {
       success: false,
       error: err instanceof Error ? err.message : String(err),
     };
+  }
+});
+
+// IPC Handler: pedido de parse na OpenDota (POST /request/{match_id})
+//
+// Handler proprio, e nao um `method` no `api:opendota-fetch`: aquele recebe um endpoint
+// livre do renderer, e deixar o renderer escolher o verbo abriria qualquer POST da API.
+// Este so aceita um id numerico e monta a URL aqui. O parse e assincrono: a resposta
+// diz so que o pedido entrou na fila.
+// Formato verificado com uma chamada real em 2026-11-19: 200 com {"job":{"jobId":<numero>}}.
+// Cada pedido conta como 10 chamadas no limite da OpenDota (especificacao publica).
+ipcMain.handle('api:opendota-request-parse', async (event, { matchId }) => {
+  const id = Number(matchId);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return { success: false, error: 'invalid match id' };
+  }
+  try {
+    const response = await fetch(`https://api.opendota.com/api/request/${id}`, {
+      method: 'POST',
+      headers: {
+        'User-Agent': 'GlimpseGG_Dota2_Desktop/1.0',
+      },
+    });
+    if (!response.ok) {
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+    const json = await response.json();
+    const jobId = json && json.job ? json.job.jobId : undefined;
+    return { success: true, jobId: typeof jobId === 'number' ? jobId : undefined };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 });
 

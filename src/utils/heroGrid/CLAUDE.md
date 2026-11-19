@@ -12,7 +12,7 @@ feature inteira testável sem levantar Electron.
 | `mirrorBuilder.ts` | `buildMirror`/`removeMirror`, `MIRROR_NAME_SUFFIX`, `defaultMirrorName`. Decide o conteúdo do layout espelho |
 | `valveJson.ts` | `serializeHeroGridFile`/`parseHeroGridFile`, `formatValveNumber`, `HeroGridParseError`. Serializador próprio |
 | `ranking.ts` | `rankHeroes`, `scoreHero`, `personalWeight`, `PERSONAL_WEIGHT_K`, `compareHeroScores`, `recomputeScoreFromBreakdown` |
-| `sourcePrecedence.ts` | `resolveMetaWinrates`, `classifyOutcome`, `resolveMetaBracket`, `SEGMENTED_BRACKETS`. Precedência **OpenDota → STRATZ** |
+| `sourcePrecedence.ts` | `resolveMetaWinrates`, `classifyOutcome`, `resolveMetaBracket`, `SEGMENTED_BRACKETS`. **Uma fonte só (OpenDota)** desde 2026-11-19; a lista de slots segue sendo lista |
 | `syncScheduler.ts` | `shouldSyncNow`, `syncPhase`, `nextDueAt`, `backoffMs`, `daysSinceLastSuccess`, `recordSyncOutcome`; `SYNC_INTERVAL_MS`, `BACKOFF_BASE_MS`, `BACKOFF_MAX_MS` |
 | `preferences.ts` | Preferências e estado de sync no `AppConfig`: `HERO_GRID_DEFAULTS`, `SYNC_STATE_DEFAULTS`, `MAX_SYNC_HISTORY`, e o `HeroGridConfigIO` nos dois caminhos (`electronConfigIO`/`browserConfigIO`) |
 | `mirrorLayout.ts` | Geometria da réplica visual: `buildMirrorCanvas`, `scaleCanvas`, `fitScale`, `resolveMirrorLayout`; `MIRROR_UNIT_SCALE`, `MIRROR_MIN_SCALE`/`MAX_SCALE`, `MIRROR_LEGIBLE_SCALE`, `SCORE_QUALITY_MIN_SAMPLE` |
@@ -40,8 +40,11 @@ feature inteira testável sem levantar Electron.
 - **O winrate é o geral do herói, não por posição** — não há como inferir a função de um grupo pelo
   nome (`"Supps principais"`), então a ordem de um grupo de suportes **não** é um ranking de
   suportes, e a tela tem de dizer isso.
-- Uma fonte de meta fora ⇒ `PARTIAL`, **escreve**, rotulado; as duas fora ⇒ `FAILURE`, **não
-  escreve**. `classifyOutcome` é quem decide.
+- A meta tem **uma** fonte: OpenDota respondeu ⇒ `SUCCESS`; fora ⇒ `FAILURE`, **não escreve**.
+  `classifyOutcome` é quem decide, contando "quantas responderam de quantas" — por isso `PARTIAL`
+  continua no tipo (o histórico gravado o contém, e ele volta sozinho com um segundo slot).
+  `STRATZ_BRACKET` em `MetaSource` é **legado de leitura**: nada mais o produz, mas foto e
+  histórico de versões anteriores o contêm, e o validador de `preferences.ts` precisa aceitá-lo.
 - `heroTooltip.ts` **duplica de propósito** o `NO_DATA_REASON_KEY` que existe como `NO_DATA_LABEL`
   em `components/heroGrid/labels.ts` — `utils/` não importa de `components/`. As duas cópias não
   podem divergir em silêncio: `tests/utils/heroGrid/heroTooltip.test.ts` compara as tabelas chave

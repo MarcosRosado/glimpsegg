@@ -2,42 +2,6 @@ import { MatchPlayer, RadarStats, Role } from '../types/dota';
 import { getRoleBaseline } from '../constants/baselines';
 
 /**
- * Calculates a custom IMP (Individual Match Performance) rating between -50 and +50
- * calibrated against real STRATZ benchmarks (+41 on Spectre, -11 on Vengeful Spirit).
- */
-export function calculateCustomImp(player: MatchPlayer, teamTotalKills: number, matchDurationSec: number): number {
-  // If native STRATZ IMP is already provided and non-null, prioritize the ground-truth benchmark
-  if (player.imp !== undefined && player.imp !== null && player.imp !== 0) {
-    return player.imp;
-  }
-
-  const baseline = getRoleBaseline(player.role);
-  const durationMin = Math.max(15, matchDurationSec / 60);
-
-  // 1. Kill Participation Delta (-15 to +15)
-  const playerKP = teamTotalKills > 0 ? ((player.kills + player.assists) / teamTotalKills) * 100 : 50;
-  const kpDelta = ((playerKP - baseline.killParticipationPct) / 20) * 8.0;
-
-  // 2. Hero Damage Contribution per minute
-  const hdPerMin = player.heroDamage > 0 ? player.heroDamage / durationMin : baseline.heroDamagePerMin;
-  const dmgDelta = ((hdPerMin - 700) / 350) * 8.0;
-
-  // 3. Deaths Penalty / Survivability Bonus
-  const deathDelta = (4.5 - player.deaths) * 2.2;
-
-  // 4. GPM Delta
-  const gpmDelta = ((player.goldPerMinute - 650) / 100) * 3.0;
-
-  // 5. KDA Ratio
-  const playerKda = player.deaths === 0 ? (player.kills + player.assists) * 1.2 : (player.kills + player.assists) / player.deaths;
-  const kdaDelta = (playerKda - baseline.kda) * 2.0;
-
-  const totalImp = Math.round(kpDelta + dmgDelta + deathDelta + gpmDelta + kdaDelta);
-  // Clamp between -50 and +50
-  return Math.max(-50, Math.min(50, totalImp));
-}
-
-/**
  * Calculates a 5-axis Radar chart score (0 to 100) for the player
  */
 export function calculateRadarStats(player: MatchPlayer, teamTotalKills: number, matchDurationSec: number): RadarStats {

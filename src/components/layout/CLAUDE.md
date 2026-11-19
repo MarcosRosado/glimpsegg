@@ -7,14 +7,14 @@ O chrome do app — a moldura que não pertence a nenhuma tela.
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
 | `Navbar.tsx` | Topbar: marca, identidade do jogador, busca, configurações, toggle do hero grid | `App.tsx` |
-| `StatRail.tsx` | Segunda faixa: forma recente, IMP, KDA, farm e **a versão do patch** (via `useGamePatch`) | `Navbar.tsx` |
+| `StatRail.tsx` | Segunda faixa: forma recente, Glint médio (experimental; some sem partida com nota), KDA, farm e **a versão do patch** (via `useGamePatch`) | `Navbar.tsx` |
 
 ## Regras locais
 
 - O `StatRail` exibe o patch (o `SettingsModal` é o outro consumidor de `useGamePatch`). O valor vem
   do hook, nunca de constante — `CURRENT_GAME_PATCH` é só o piso do fallback de
   `services/gameVersionService.ts`.
-- O corte de cor daqui (`avgImp >= 0`) é decisão visual, não calibração de gameplay.
+- A cor do Glint médio vem de `getGlintColor` (`utils/glint.ts`), a mesma dos chips — não há mais corte de cor próprio aqui.
 
 ## Ao sair um patch
 

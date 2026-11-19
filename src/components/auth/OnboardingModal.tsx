@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  KeyRound,
-  ExternalLink,
   ShieldCheck,
   Globe,
   Sparkles,
@@ -10,120 +8,118 @@ import {
   CheckCircle2,
   X,
   Lock,
+  User,
+  Eye,
+  Search,
+  Loader2,
 } from 'lucide-react';
 import { BrandMark } from '../brand/BrandMark';
 import { useLanguage } from '../../context/LanguageContext';
-import { extractSteamIdFromStratzToken, validateStratzApiKey, ValidatedTokenInfo } from '../../utils/stratzToken';
-import { getRankTierInfo } from '../../constants/ranks';
+import { resolveSteamId } from '../../services/steamResolver';
+import type { SteamResolveResult } from '../../types/electron';
 
 interface OnboardingModalProps {
   isOpen: boolean;
   onClose?: () => void;
-  onComplete: (apiKey: string, steamAccountId: string) => void;
-  initialApiKey?: string;
+  /** Recebe SEMPRE o account id (SteamID32) ja resolvido, nunca o texto digitado. */
+  onComplete: (steamAccountId: string) => void;
   initialSteamId?: string;
   mode?: 'onboarding' | 'guide';
 }
 
+/**
+ * Primeira execucao: o app pede só a conta Steam. Nao ha token — todos os dados vem da
+ * OpenDota, que é publica.
+ *
+ * O fluxo tem DOIS passos de proposito (buscar → confirmar). Um link de perfil com nome
+ * personalizado é resolvido por busca de nome, e a busca devolve o primeiro resultado:
+ * salvar direto abriria o app na conta de outra pessoa sem aviso. A conta resolvida
+ * aparece antes do botao de salvar, com o ID sempre visivel e nome/avatar só quando o
+ * resolver os devolve — ID numerico puro nao traz nome, e a tela nao inventa um.
+ */
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isOpen,
   onClose,
   onComplete,
-  initialApiKey = '',
   initialSteamId = '',
   mode = 'onboarding',
 }) => {
   const { language, setLanguage, t } = useLanguage();
-  const [tokenInput, setTokenInput] = useState<string>(initialApiKey);
-  const [manualSteamId, setManualSteamId] = useState<string>(initialSteamId);
-  const [isValidating, setIsValidating] = useState<boolean>(false);
-  const [validationResult, setValidationResult] = useState<ValidatedTokenInfo | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [accountInput, setAccountInput] = useState<string>(initialSteamId);
+  const [isResolving, setIsResolving] = useState<boolean>(false);
+  const [resolved, setResolved] = useState<SteamResolveResult | null>(null);
+  const [hasError, setHasError] = useState<boolean>(false);
+  /** Avatar que falhou ao carregar cai na inicial, em vez de numa imagem de outra conta. */
+  const [avatarFailed, setAvatarFailed] = useState<boolean>(false);
+  /** Descarta resposta de uma busca antiga que chegue depois de o campo ter mudado. */
+  const requestSeq = useRef(0);
 
   useEffect(() => {
     if (isOpen) {
-      setTokenInput(initialApiKey);
-      setManualSteamId(initialSteamId);
-      setValidationError(null);
-
-      if (initialApiKey.trim()) {
-        handleValidate(initialApiKey.trim(), initialSteamId.trim() || undefined);
-      }
+      requestSeq.current += 1;
+      setAccountInput(initialSteamId);
+      setResolved(null);
+      setHasError(false);
+      setIsResolving(false);
+      setAvatarFailed(false);
     }
-  }, [isOpen, initialApiKey, initialSteamId]);
+  }, [isOpen, initialSteamId]);
 
   if (!isOpen) return null;
 
-  const handleValidate = async (rawToken: string, explicitId?: string) => {
-    const cleanToken = rawToken.trim().replace(/^Bearer\s+/i, '');
-    if (!cleanToken) return;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Mudou o texto, a conta confirmada deixa de valer: o botao volta a ser "buscar".
+    requestSeq.current += 1;
+    setAccountInput(e.target.value);
+    setResolved(null);
+    setHasError(false);
+    setIsResolving(false);
+    setAvatarFailed(false);
+  };
 
-    setIsValidating(true);
-    setValidationError(null);
+  const handleResolve = async () => {
+    const input = accountInput.trim();
+    if (!input) return;
+
+    const seq = ++requestSeq.current;
+    setIsResolving(true);
+    setHasError(false);
+    setResolved(null);
+    setAvatarFailed(false);
 
     try {
-      const res = await validateStratzApiKey(cleanToken, explicitId || manualSteamId || undefined);
-      if (res.success) {
-        setValidationResult(res);
-        if (res.steamAccountId) {
-          setManualSteamId(res.steamAccountId);
-        }
+      const res = await resolveSteamId(input);
+      if (seq !== requestSeq.current) return;
+      if (res.success && res.steamAccountId) {
+        setResolved(res);
       } else {
-        setValidationResult(null);
-        setValidationError(res.error || t('stratzTokenError'));
+        // `res.error` é literal em ingles vindo do resolver; a tela usa o texto traduzido.
+        setHasError(true);
       }
-    } catch (err: any) {
-      setValidationResult(null);
-      setValidationError(err.message || t('stratzTokenError'));
+    } catch {
+      if (seq !== requestSeq.current) return;
+      setHasError(true);
     } finally {
-      setIsValidating(false);
+      if (seq === requestSeq.current) setIsResolving(false);
     }
   };
 
-  const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setTokenInput(val);
-    const clean = val.trim().replace(/^Bearer\s+/i, '');
-    
-    // If user pasted a JWT, automatically extract Steam ID immediately
-    const autoSteamId = extractSteamIdFromStratzToken(clean);
-    if (autoSteamId) {
-      setManualSteamId(autoSteamId);
-    }
-
-    // Auto-trigger validation if token length is reasonable
-    if (clean.length > 20) {
-      handleValidate(clean, autoSteamId || undefined);
+  const handlePrimaryAction = () => {
+    if (resolved?.steamAccountId) {
+      onComplete(resolved.steamAccountId);
     } else {
-      setValidationResult(null);
-      setValidationError(null);
+      void handleResolve();
     }
   };
 
-  const handleOpenStratzApi = () => {
-    window.open('https://stratz.com/api', '_blank');
-  };
-
-  const handleAvatarError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    e.currentTarget.src = 'https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb.jpg';
-  };
-
-  const handleSaveAndLaunch = () => {
-    const finalToken = tokenInput.trim().replace(/^Bearer\s+/i, '');
-    const autoExtracted = extractSteamIdFromStratzToken(finalToken);
-    const finalSteamId = manualSteamId.trim() || validationResult?.steamAccountId || autoExtracted || '';
-    if (finalToken && finalSteamId) {
-      onComplete(finalToken, finalSteamId);
-    } else if (finalToken && !finalSteamId) {
-      setValidationError(t('manualSteamIdRequired'));
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handlePrimaryAction();
     }
   };
 
-  const rankInfo = validationResult?.seasonRank
-    ? getRankTierInfo(validationResult.seasonRank, validationResult.leaderboardRank)
-    : null;
-
-  const canSave = Boolean(tokenInput.trim() && (manualSteamId.trim() || validationResult?.steamAccountId || extractSteamIdFromStratzToken(tokenInput)));
+  const canAct = Boolean(accountInput.trim()) && !isResolving;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -213,167 +209,118 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             </div>
           </div>
 
-          {/* Step-by-Step Interactive Guide */}
+          {/* O guia aparece nos dois modos: quem mais precisa do aviso de dados publicos é
+              justamente quem esta configurando pela primeira vez — sem a opcao ligada no
+              Dota, o perfil carrega vazio e parece defeito do app. */}
           <div className="space-y-2.5">
             <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{t('howToGetKey')}</span>
+              <span>{t('accountGuideTitle')}</span>
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {/* Step 1 */}
-              <div className="p-3.5 rounded-xl bg-[#0e1628] border border-slate-800 hover:border-slate-700 transition space-y-2 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between text-cyan-300 font-bold text-xs">
-                    <span>{t('onboardingStep1Title')}</span>
-                    <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                    {t('onboardingStep1Desc')}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleOpenStratzApi}
-                  className="mt-2 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition shadow-sm"
-                >
-                  <span>{t('openStratzApi')}</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
-              </div>
-
-              {/* Step 2 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="p-3.5 rounded-xl bg-[#0e1628] border border-slate-800 hover:border-slate-700 transition space-y-2">
-                <div className="flex items-center justify-between text-amber-300 font-bold text-xs">
-                  <span>{t('onboardingStep2Title')}</span>
-                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                <div className="flex items-center justify-between text-cyan-300 font-bold text-xs">
+                  <span>{t('guideSteamIdTitle')}</span>
+                  <User className="w-3.5 h-3.5 text-cyan-400" />
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                  {t('onboardingStep2Desc')}
+                  {t('guideSteamIdDesc')}
                 </p>
               </div>
 
-              {/* Step 3 */}
               <div className="p-3.5 rounded-xl bg-[#0e1628] border border-slate-800 hover:border-slate-700 transition space-y-2">
-                <div className="flex items-center justify-between text-emerald-300 font-bold text-xs">
-                  <span>{t('onboardingStep3Title')}</span>
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="flex items-center justify-between text-amber-300 font-bold text-xs">
+                  <span>{t('guidePublicDataTitle')}</span>
+                  <Eye className="w-3.5 h-3.5 text-amber-400" />
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                  {t('onboardingStep3Desc')}
+                  {t('guidePublicDataDesc')}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Token Input & Real-Time Validation Box */}
+          {/* Campo da conta + conta resolvida */}
           <div className="space-y-3 pt-1">
             <label className="text-xs font-mono font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
-              <span>{t('stratzApiKey')}</span>
-              {isValidating && (
-                <span className="text-[11px] text-cyan-400 flex items-center gap-1 font-sans lowercase">
+              <span>{t('onboardingAccountLabel')}</span>
+              {isResolving && (
+                <span className="text-[11px] text-cyan-400 flex items-center gap-1 font-sans normal-case">
                   <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                  {t('validatingToken')}
+                  {t('onboardingResolving')}
                 </span>
               )}
             </label>
 
-            <div className="relative">
-              <textarea
-                value={tokenInput}
-                onChange={handleTokenChange}
-                placeholder={t('pasteTokenPlaceholder')}
-                rows={3}
-                className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none transition resize-none ${
-                  validationResult?.success
-                    ? 'border-emerald-500/70 focus:border-emerald-400 ring-1 ring-emerald-500/30'
-                    : validationError
-                    ? 'border-rose-500/70 focus:border-rose-400 ring-1 ring-rose-500/30'
-                    : 'border-slate-700 focus:border-cyan-500/60'
-                }`}
-              />
-            </div>
+            <input
+              type="text"
+              value={accountInput}
+              onChange={handleInputChange}
+              onKeyDown={handleInputKeyDown}
+              placeholder={t('steamAccountPlaceholder')}
+              autoFocus
+              className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none transition ${
+                resolved
+                  ? 'border-emerald-500/70 focus:border-emerald-400 ring-1 ring-emerald-500/30'
+                  : hasError
+                  ? 'border-rose-500/70 focus:border-rose-400 ring-1 ring-rose-500/30'
+                  : 'border-slate-700 focus:border-cyan-500/60'
+              }`}
+            />
 
-            {/* Validation Error Banner */}
-            {validationError && (
+            {hasError && (
               <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/40 text-rose-300 text-xs flex items-start gap-2 animate-in fade-in duration-150">
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <span>{validationError}</span>
+                <span>{t('steamIdResolveError')}</span>
               </div>
             )}
 
-            {/* Validation Success Card (Profile Preview) */}
-            {validationResult?.success && (
-              <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between gap-3 animate-in fade-in duration-200 shadow-lg shadow-emerald-950/20">
-                <div className="flex items-center gap-3">
-                  {validationResult.avatar ? (
-                    <img
-                      src={validationResult.avatar}
-                      alt={validationResult.name}
-                      className="w-10 h-10 rounded-xl border border-emerald-500/40 object-cover shadow-sm"
-                      onError={handleAvatarError}
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40 text-emerald-300 font-bold">
-                      {validationResult.name?.charAt(0) || 'P'}
-                    </div>
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-sm text-white">{validationResult.name}</span>
-                      {rankInfo && (
-                        <span
-                          className="text-[10px] font-bold px-1.5 py-0.2 rounded border"
-                          style={{
-                            backgroundColor: `${rankInfo.color}15`,
-                            borderColor: `${rankInfo.color}40`,
-                            color: rankInfo.color,
-                          }}
-                        >
-                          {rankInfo.fullName}
-                        </span>
+            {resolved?.steamAccountId && (
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between gap-3 shadow-lg shadow-emerald-950/20">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {resolved.avatar && !avatarFailed ? (
+                      <img
+                        src={resolved.avatar}
+                        alt={resolved.personaname || resolved.steamAccountId}
+                        className="w-10 h-10 rounded-xl border border-emerald-500/40 object-cover shadow-sm shrink-0"
+                        onError={() => setAvatarFailed(true)}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40 text-emerald-300 font-bold shrink-0">
+                        {resolved.personaname ? resolved.personaname.charAt(0) : <User className="w-4 h-4" />}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      {resolved.personaname && (
+                        <div className="font-black text-sm text-white truncate">{resolved.personaname}</div>
                       )}
-                    </div>
-                    <div className="text-[11px] text-emerald-300/80 font-mono mt-0.5">
-                      <span>{t('tokenDetectedId')} </span>
-                      <strong className="text-white">{validationResult.steamAccountId}</strong>
+                      <div className="text-[11px] text-emerald-300/80 font-mono mt-0.5">
+                        {t('onboardingAccountId', { id: resolved.steamAccountId })}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold shrink-0">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{t('tokenValidated')}</span>
+                  {/* "Encontrada" só quando o resolver trouxe o nome: ID numerico puro é
+                      convertido sem consulta nenhuma, entao nada foi de fato encontrado. */}
+                  {resolved.personaname && (
+                    <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{t('onboardingAccountFound')}</span>
+                    </div>
+                  )}
                 </div>
+                <p className="text-[11px] text-slate-400">{t('onboardingConfirmHint')}</p>
               </div>
             )}
-
-            {/* Manual SteamID input fallback */}
-            <div className="space-y-1.5 pt-1">
-              <label className="text-[11px] font-mono text-slate-300 flex items-center justify-between">
-                <span>{t('manualSteamIdPrompt')}</span>
-                <span className="text-[10px] text-slate-500">{t('steamIdFormatHint')}</span>
-              </label>
-              <input
-                type="text"
-                value={manualSteamId}
-                onChange={(e) => {
-                  setManualSteamId(e.target.value);
-                  if (tokenInput.trim() && e.target.value.trim()) {
-                    handleValidate(tokenInput, e.target.value.trim());
-                  }
-                }}
-                placeholder={t('manualSteamIdPlaceholder')}
-                className="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700 text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
-              />
-            </div>
           </div>
         </div>
 
         {/* Footer Actions */}
         <div className="px-6 py-4 border-t border-slate-800 bg-[#080d16] flex items-center justify-between gap-3">
           <div className="text-[11px] text-slate-400 font-mono hidden sm:block">
-            <span>{t('requiresFreeKey')}</span>
+            <span>{t('onboardingFooterNote')}</span>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -389,12 +336,25 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
             <button
               type="button"
-              onClick={handleSaveAndLaunch}
-              disabled={!canSave || isValidating}
+              onClick={handlePrimaryAction}
+              disabled={!canAct}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-xs transition shadow-lg shadow-cyan-950/40 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>{t('saveAndStart')}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              {resolved ? (
+                <>
+                  <span>{t('saveAndStart')}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              ) : (
+                <>
+                  <span>{t('onboardingFindAccount')}</span>
+                  {isResolving ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Search className="w-3.5 h-3.5" />
+                  )}
+                </>
+              )}
             </button>
           </div>
         </div>

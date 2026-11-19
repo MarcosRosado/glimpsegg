@@ -1,7 +1,7 @@
 import React from 'react';
-import { Crown, Zap } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { getHero, NEW_HERO_IDS } from '../../constants/heroes';
-import { formatImpMarked, formatPercent, getImpColor } from '../../utils/dotaFormatters';
+import { formatPercent } from '../../utils/dotaFormatters';
 import { handleHeroImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -11,8 +11,8 @@ interface MostPlayedHeroesProps {
     matchCount: number;
     winCount: number;
     winRate: number;
-    avgKda: number;
-    avgImp: number;
+    /** `null` = a fonte nao trouxe KDA por heroi; a coluna some naquela linha. */
+    avgKda: number | null;
   }>;
   onFilterHero?: (heroId: number) => void;
 }
@@ -73,20 +73,16 @@ export const MostPlayedHeroes: React.FC<MostPlayedHeroesProps> = ({ heroes, onFi
                   <div className="text-[9px] text-slate-500">{t('winRate')}</div>
                 </div>
 
-                {/* KDA */}
-                <div className="text-right hidden sm:block">
-                  <div className="font-bold text-slate-300">{h.avgKda.toFixed(1)}</div>
-                  <div className="text-[9px] text-slate-500">{t('kda')}</div>
-                </div>
-
-                {/* Avg IMP */}
-                <div className="text-right min-w-[48px]">
-                  <div className={`font-black flex items-center justify-end gap-0.5 ${getImpColor(h.avgImp)}`}>
-                    <Zap className="w-3 h-3 text-amber-400" />
-                    <span>{formatImpMarked(h.avgImp)}</span>
+                {/* KDA — so quando ha valor. Sem nota media por heroi: exigiria os oito
+                    insumos do Glint em TODAS as partidas do heroi, que a lista nao traz
+                    (ver services/openDotaProfile.ts). A coluna de IMP que havia aqui saiu
+                    junto com a STRATZ, em vez de virar zero. */}
+                {typeof h.avgKda === 'number' && (
+                  <div className="text-right hidden sm:block">
+                    <div className="font-bold text-slate-300">{h.avgKda.toFixed(1)}</div>
+                    <div className="text-[9px] text-slate-500">{t('kda')}</div>
                   </div>
-                  <div className="text-[9px] text-slate-500">{t('imp')}</div>
-                </div>
+                )}
               </div>
             </div>
           );

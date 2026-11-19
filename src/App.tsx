@@ -11,6 +11,7 @@ import { ProfileHeader } from './components/dashboard/ProfileHeader';
 import { ActivityHeatmap } from './components/dashboard/ActivityHeatmap';
 import { PerformanceTrendChart } from './components/dashboard/PerformanceTrendChart';
 import { MatchHeader } from './components/match/MatchHeader';
+import { ParsePendingBanner, PARSE_POLL_DELAYS_MS, type ParseState } from './components/match/ParsePendingBanner';
 import { ScoreboardTable } from './components/match/ScoreboardTable';
 import { AdvantageTimeline } from './components/match/AdvantageTimeline';
 import { TeamOverviewCard } from './components/match/TeamOverviewCard';
@@ -24,7 +25,8 @@ import { Notice } from './components/heroGrid/primitives';
 import { SearchPlayerModal } from './components/search/SearchPlayerModal';
 import { OnboardingModal } from './components/auth/OnboardingModal';
 import { MatchDetails, PlayerProfileSummary, ProfileHistoryItem } from './types/dota';
-import { fetchMatchDetails, fetchPlayerProfile } from './services/stratzGql';
+import { fetchPlayerProfile } from './services/openDotaProfile';
+import { fetchOpenDotaMatchDetails, requestOpenDotaParse } from './services/openDotaMatch';
 import { resolveSteamId } from './services/steamResolver';
 import { configuredProfileTier } from './utils/heroGrid/sourcePrecedence';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -38,7 +40,6 @@ import {
   UserX,
 } from 'lucide-react';
 
-import { extractSteamIdFromStratzToken } from './utils/stratzToken';
 import { useHeroGridSync } from './hooks/useHeroGridSync';
 
 type MatchTab = 'OVERVIEW' | 'PERFORMANCE' | 'VISION' | 'COACHING';
@@ -56,7 +57,6 @@ type PanelView = 'DASHBOARD' | 'HERO_GRID_PANEL' | 'HERO_GRID_MIRROR';
 function MainAppContent() {
   const { t } = useLanguage();
   const [isAppInitializing, setIsAppInitializing] = useState<boolean>(true);
-  const [apiKey, setApiKey] = useState<string>('');
   const [configuredSteamId, setConfiguredSteamId] = useState<string>('');
   const [currentSteamId, setCurrentSteamId] = useState<string>('');
   /**
@@ -98,7 +98,6 @@ function MainAppContent() {
    * o hook por conta propria.
    */
   const heroGridSync = useHeroGridSync(
-    apiKey,
     configuredSteamId,
     // O tier sai de `configuredSeasonRank`, NUNCA de `profile` — ver o estado acima.
     configuredProfileTier({
@@ -214,14 +213,12 @@ function MainAppContent() {
     async function init() {
       setIsAppInitializing(true);
       setIsLoading(true);
-      let loadedApiKey = '';
       let loadedSteamId = '';
       let loadedHistory: ProfileHistoryItem[] = [];
 
       if (window.api && typeof window.api.store?.getAll === 'function') {
         try {
           const config = await window.api.store.getAll();
-          if (config.stratzApiKey) loadedApiKey = config.stratzApiKey;
           if (config.steamAccountId) loadedSteamId = config.steamAccountId;
           if (Array.isArray(config.profileHistory)) loadedHistory = config.profileHistory;
         } catch (e) {
@@ -229,10 +226,8 @@ function MainAppContent() {
         }
       } else {
         // LocalStorage fallback
-        const savedKey = localStorage.getItem('stratz_api_key');
         const savedSteam = localStorage.getItem('stratz_steam_id');
         const savedHistoryStr = localStorage.getItem('stratz_profile_history');
-        if (savedKey) loadedApiKey = savedKey;
         if (savedSteam) loadedSteamId = savedSteam;
         if (savedHistoryStr) {
           try {
@@ -246,35 +241,32 @@ function MainAppContent() {
 
       setProfileHistory(loadedHistory);
 
-      // If user has a token configured, attempt to load their account
-      const cleanToken = (loadedApiKey || '').trim();
-      if (cleanToken) {
-        setApiKey(cleanToken);
-        const resolvedSteamId = loadedSteamId.trim() || extractSteamIdFromStratzToken(cleanToken) || '';
-        
-        if (resolvedSteamId) {
-          setConfiguredSteamId(resolvedSteamId);
-          setCurrentSteamId(resolvedSteamId);
+      // O app nao usa token nenhum desde 2026-11-19 (docs/PLANO-OPENDOTA.md): basta o Steam
+      // ID. A chave `stratzApiKey` que possa existir no config NAO é lida nem regravada
+      // aqui — os scripts de medicao de `scripts/` ainda a leem daquele arquivo.
+      const resolvedSteamId = loadedSteamId.trim();
+      if (resolvedSteamId) {
+        setConfiguredSteamId(resolvedSteamId);
+        setCurrentSteamId(resolvedSteamId);
 
-          try {
-            const profileData = await fetchPlayerProfile(resolvedSteamId, cleanToken);
-            if (profileData && profileData.steamAccountId) {
-              setProfile(profileData);
-              // Aqui `resolvedSteamId === configuredSteamId` por construção.
-              setConfiguredSeasonRank(profileData.seasonRank ?? null);
-              upsertProfileHistory(profileData);
-              setIsOnboardingOpen(false);
-              setIsAppInitializing(false);
-              setIsLoading(false);
-              return;
-            }
-          } catch (err) {
-            console.warn('Failed to load profile on startup:', err);
+        try {
+          const profileData = await fetchPlayerProfile(resolvedSteamId);
+          if (profileData && profileData.steamAccountId) {
+            setProfile(profileData);
+            // Aqui `resolvedSteamId === configuredSteamId` por construção.
+            setConfiguredSeasonRank(profileData.seasonRank ?? null);
+            upsertProfileHistory(profileData);
+            setIsOnboardingOpen(false);
+            setIsAppInitializing(false);
+            setIsLoading(false);
+            return;
           }
+        } catch (err) {
+          console.warn('Failed to load profile on startup:', err);
         }
       }
 
-      // If no token exists or token validation failed to fetch profile, open onboarding
+      // Sem Steam ID configurado, ou o perfil nao carregou: onboarding.
       setIsOnboardingOpen(true);
       setOnboardingMode('onboarding');
       setProfile(null);
@@ -314,16 +306,16 @@ function MainAppContent() {
    * no mesmo tique em que faz `setConfiguredSteamId`, então `configuredSteamId` aqui ainda
    * seria o valor ANTIGO e o `seasonRank` da conta nova não seria guardado.
    */
-  const loadProfileData = async (steamId: string, token: string, configuredIdOverride?: string) => {
+  const loadProfileData = async (steamId: string, configuredIdOverride?: string) => {
     setIsLoading(true);
     try {
-      const data = await fetchPlayerProfile(steamId, token);
+      const data = await fetchPlayerProfile(steamId);
       setProfile(data);
       // Só o perfil da conta configurada alimenta o ranque de referência do espelho.
       if (steamId === (configuredIdOverride ?? configuredSteamId)) {
         setConfiguredSeasonRank(data?.seasonRank ?? null);
       }
-      if (data && data.steamAccountId && token) {
+      if (data && data.steamAccountId) {
         upsertProfileHistory(data);
       }
     } catch (err) {
@@ -336,7 +328,7 @@ function MainAppContent() {
   const handleSelectMatch = async (matchId: string) => {
     setIsLoading(true);
     try {
-      const match = await fetchMatchDetails(matchId, apiKey);
+      const match = await fetchOpenDotaMatchDetails(matchId);
       // `fetchMatchDetails` devolvia o dataset de demonstracao quando a API falhava,
       // entao este caminho nunca existia: a tela abria com a partida errada em vez de
       // avisar. Agora a falha é `null` e fica visivel.
@@ -365,7 +357,7 @@ function MainAppContent() {
       const res = await resolveSteamId(input);
       if (res.success && res.steamAccountId) {
         setCurrentSteamId(res.steamAccountId);
-        await loadProfileData(res.steamAccountId, apiKey);
+        await loadProfileData(res.steamAccountId);
         setSelectedMatch(null);
         showToast(t('profileLoaded', { name: res.personaname || res.steamAccountId }));
       } else {
@@ -382,7 +374,7 @@ function MainAppContent() {
     if (steamAccountId === currentSteamId) return;
     setCurrentSteamId(steamAccountId);
     setSelectedMatch(null);
-    await loadProfileData(steamAccountId, apiKey);
+    await loadProfileData(steamAccountId);
   };
 
   const handleToggleFavoriteProfile = (steamAccountId: string) => {
@@ -408,34 +400,74 @@ function MainAppContent() {
     if (!configuredSteamId || currentSteamId === configuredSteamId) return;
     setCurrentSteamId(configuredSteamId);
     setSelectedMatch(null);
-    await loadProfileData(configuredSteamId, apiKey);
+    await loadProfileData(configuredSteamId);
     showToast(t('returnedToPrimary'));
   };
 
-  const handleSaveSettings = async (newApiKey: string, newSteamId: string) => {
-    setApiKey(newApiKey);
+  const handleSaveSettings = async (newSteamId: string) => {
     setConfiguredSteamId(newSteamId);
     setCurrentSteamId(newSteamId);
     // Conta nova, ranque desconhecido até o perfil chegar. Manter o anterior derivaria o
     // bracket da conta antiga — o mesmo erro, só que mais difícil de ver.
     if (newSteamId !== configuredSteamId) setConfiguredSeasonRank(null);
 
+    // So o Steam ID. `stratzApiKey` nao é escrito de proposito: ver o comentario em `init`.
     if (window.api && typeof window.api.store?.set === 'function') {
-      await window.api.store.set('stratzApiKey', newApiKey);
       await window.api.store.set('steamAccountId', newSteamId);
     } else {
-      localStorage.setItem('stratz_api_key', newApiKey);
       localStorage.setItem('stratz_steam_id', newSteamId);
     }
 
-    showToast('Configurações salvas com sucesso!');
-    await loadProfileData(newSteamId, newApiKey, newSteamId);
+    showToast(t('settingsSavedAlert'));
+    await loadProfileData(newSteamId, newSteamId);
   };
 
-  const handleOnboardingComplete = async (newApiKey: string, newSteamId: string) => {
+  const handleOnboardingComplete = async (newSteamId: string) => {
     setIsOnboardingOpen(false);
-    await handleSaveSettings(newApiKey, newSteamId);
-    showToast('Bem-vindo(a) ao GlimpseGG!');
+    await handleSaveSettings(newSteamId);
+    showToast(t('welcomeToast'));
+  };
+
+  /**
+   * Partida nao parseada: pede o parse do replay e acompanha a PARTIDA (nao o job — o
+   * estado do job volta `null` tanto para "terminou" quanto para "nao existe").
+   *
+   * So no clique: cada pedido conta como 10 chamadas no limite da OpenDota. A espera tem
+   * recuo e teto (`PARSE_POLL_DELAYS_MS`, ~5 min); passou disso a tela avisa e o jogador
+   * pode tentar de novo — parse de replay antigo pode simplesmente nao acontecer.
+   */
+  const [parseState, setParseState] = useState<ParseState>('idle');
+  const parseRunRef = React.useRef(0);
+  useEffect(() => {
+    // Trocou de partida (ou voltou para a dashboard): a espera anterior nao vale mais.
+    parseRunRef.current += 1;
+    setParseState('idle');
+  }, [selectedMatch?.id]);
+
+  const handleRequestParse = async () => {
+    if (!selectedMatch) return;
+    const matchId = selectedMatch.id;
+    const run = ++parseRunRef.current;
+    setParseState('requesting');
+    const res = await requestOpenDotaParse(matchId);
+    if (parseRunRef.current !== run) return;
+    if (!res.success) {
+      setParseState('error');
+      return;
+    }
+    setParseState('waiting');
+    for (const delay of PARSE_POLL_DELAYS_MS) {
+      await new Promise((r) => setTimeout(r, delay));
+      if (parseRunRef.current !== run) return;
+      const fresh = await fetchOpenDotaMatchDetails(matchId);
+      if (parseRunRef.current !== run) return;
+      if (fresh && fresh.availability.parsed) {
+        setSelectedMatch(fresh);
+        showToast(t('parseReadyToast'));
+        return;
+      }
+    }
+    setParseState('timeout');
   };
 
   const handleOpenGuide = () => {
@@ -503,7 +535,6 @@ function MainAppContent() {
       {/* Top Navbar with Integrated Profile Header & Statuses */}
       <Navbar
         profile={profile}
-        hasApiKey={!!apiKey}
         isLoading={isLoading}
         isViewingDifferentAccount={isViewingDifferentAccount}
         configuredSteamId={configuredSteamId}
@@ -522,7 +553,7 @@ function MainAppContent() {
         onReturnToConfiguredAccount={handleReturnToConfigured}
         onRefresh={() => {
           if (selectedMatch) handleSelectMatch(selectedMatch.id);
-          else if (currentSteamId || configuredSteamId) loadProfileData(currentSteamId || configuredSteamId, apiKey);
+          else if (currentSteamId || configuredSteamId) loadProfileData(currentSteamId || configuredSteamId);
         }}
       />
 
@@ -577,7 +608,7 @@ function MainAppContent() {
                 }}
                 className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-xs transition shadow-lg shadow-cyan-950/50"
               >
-                {t('configureStratzKey')}
+                {t('configureSteamAccount')}
               </button>
             </div>
           ) : (
@@ -676,6 +707,10 @@ function MainAppContent() {
               match={selectedMatch}
               onBack={() => setSelectedMatch(null)}
             />
+
+            {selectedMatch.availability.parsePending && (
+              <ParsePendingBanner state={parseState} onRequest={handleRequestParse} />
+            )}
 
             {/* Match View Sub-Navigation Tabs */}
             <div className="flex border border-cyan-500/20 bg-[#090d16]/90 backdrop-blur-md rounded-xl p-1.5 gap-1.5 overflow-x-auto shadow-lg shadow-black/40">
@@ -801,20 +836,18 @@ function MainAppContent() {
               <CoachingInsightsTab
                 player={activeMatchPlayer}
                 match={selectedMatch}
-                apiKey={apiKey}
               />
             )}
           </div>
         )}
       </main>
 
-      {/* Onboarding & How-To-Get-Key Modal */}
+      {/* Onboarding e ajuda de conta Steam */}
       <OnboardingModal
         isOpen={isOnboardingOpen}
         mode={onboardingMode}
         onClose={() => setIsOnboardingOpen(false)}
         onComplete={handleOnboardingComplete}
-        initialApiKey={apiKey}
         initialSteamId={configuredSteamId}
       />
 
@@ -839,7 +872,6 @@ function MainAppContent() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        currentApiKey={apiKey}
         currentSteamId={configuredSteamId}
         profileHistory={profileHistory}
         onSave={handleSaveSettings}

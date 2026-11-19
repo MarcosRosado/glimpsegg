@@ -70,8 +70,7 @@ export type HeroGridParseErrorCode = 'INVALID_JSON' | 'INVALID_CONFIGS';
  * sobrescreve nada — tratar como vazio destruiria os grids do jogador.
  *
  * Escolhemos lancar (em vez de devolver `{ ok: false }`) para manter `parseHeroGridFile`
- * componivel com `serializeHeroGridFile` no caminho felizo, seguindo o precedente de
- * `RateLimitedError` em `services/stratzHeroStats.ts`. O erro e tipado e esperado — quem
+ * componivel com `serializeHeroGridFile` no caminho felizo. O erro e tipado e esperado — quem
  * chama captura e mapeia para `HeroGridErrorCode.INVALID_JSON`.
  */
 export class HeroGridParseError extends Error {

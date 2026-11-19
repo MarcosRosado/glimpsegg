@@ -9,17 +9,18 @@ em `tests/utils/`, espelhando esta pasta — ver [../../tests/CLAUDE.md](../../t
 
 | Arquivo | Papel |
 | --- | --- |
-| `awardEngine.ts` | Destaques da partida: `computeMatchAwards` devolve `AwardId` + número cru. `SUPERLATIVES` traz `margin` e `floor` **próprios de cada métrica**; `ROUGH_GAME_MAX_IMP`/`ROUGH_GAME_MIN_LEAD` seguram o prêmio de partida difícil |
-| `performance.ts` | `calculateCustomImp` (só quando a STRATZ não devolve IMP — o caso do herói recém-lançado) e `calculateRadarStats`. Ambos ancorados em `ROLE_BASELINES` e multiplicadores fixos |
+| `awardEngine.ts` | Destaques da partida: `computeMatchAwards` devolve `AwardId` + número cru. `SUPERLATIVES` traz `margin` e `floor` **próprios de cada métrica**; `ROUGH_GAME_MAX_GLINT`/`ROUGH_GAME_MIN_LEAD_GLINT` seguram o prêmio de partida difícil. `resolveScoreKind` diz se a partida tem nota (`GLINT`) ou não (`null`) — e sem nota os prêmios que dependem dela são omitidos. A escala `IMP` saiu em 2026-11-19 |
+| `glint.ts` | **A nota de impacto do app, experimental.** `computeGlint` (regressão sobre oito percentis da OpenDota), `GLINT_MODEL` (pesos + métricas do teste), `GLINT_THRESHOLDS` (por quantil), `percentileFromTable`/`glintPercentilesFromRaw` (o caminho da lista de partidas) e os formatadores `formatGlint`/`getGlintColor`/`getGlintBadgeStyle`. Pesos e limiares saem de `scripts/fit-glint-experimental.cjs` |
+| `performance.ts` | `calculateRadarStats`, ancorado em `ROLE_BASELINES` e multiplicadores fixos. O `calculateCustomImp` saiu em 2026-11-19 com o mapper da STRATZ |
 | `performanceEnricher.ts` | `getEnrichedCombatStats`/`FarmStats`/`AbilityUpgrades` e `getItemBenchmarkSeconds`. Contém `ITEM_BENCHMARKS` |
 | `buildAdvisor.ts` | `computeBuildAdvice`: "item de build" = item presente no `itemFullPurchase` daquele herói/posição/ranque. Usa `insights/wilson.ts` |
-| `dotaFormatters.ts` | Formatação de duração, ouro, IMP (`IMP_EXTREME`, `formatImp*`, `getImpBadgeStyle`), `resolveMatchType`, `formatGameMode`/`formatLobbyType`, `formatRoleName`/`formatLaneName` |
-| `laneResult.ts` | **Ponto único** do rótulo de veredito de rota: `LANE_RESULT_KEY`, `hasLaneVerdict`, `isLaneWin`/`isLaneLoss` |
+| `dotaFormatters.ts` | Formatação de duração, ouro, `resolveMatchType`, `formatGameMode`/`formatLobbyType`, `formatRoleName`/`formatLaneName`. Os formatadores de IMP saíram em 2026-11-19 (o IMP não existe mais no app) |
+| `laneResult.ts` | **Ponto único** do rótulo de veredito de rota: `LANE_RESULT_KEY`, `hasLaneVerdict`, `isLaneWin`/`isLaneLoss` e `laneVerdictView` (o que a tela mostra: veredito com a diferença da rota, "Vantagem aos 10 min" em rota desigual, ou `null` para omitir) |
+| `laneVerdict.ts` | **O veredito de rota próprio (Fase 3).** `measureLanes` (patrimônio aos 10 min, média por herói, diferença relativa), `laneOutcomesFrom`, `resolvePlayerLaneResult` (rota geográfica, lado, outcomes — nada mais) e `playerLaneAdvantage`. `LANE_VERDICT_MODEL` traz limiares e aceite; sai de `scripts/fit-lane-verdict.cjs` |
 | `rankBracket.ts` | `tierToBracket`, `resolveBracket` (com `isPlayerSpecific`) e `effectivePosition` |
 | `minimapCoords.ts` | `isStratzCell`, `stratzCellToMap`/`ToPercent`/`ToWorld`, `worldToStratzCell`, `cellsToPercent` |
-| `recentFormStats.ts` | `computeRecentFormStats` — agregados compartilhados por `StatRail`, `ProfileHeader` e `RecentFormCard` |
+| `recentFormStats.ts` | `computeRecentFormStats` — agregados compartilhados por `StatRail`, `ProfileHeader` e `RecentFormCard`. `avgGlint` é a média **só das partidas com nota** (`null` se nenhuma tem) e `glintCount` diz quantas entraram; não há mais `avgImp` |
 | `settingsTabs.ts` | `SETTINGS_TABS`, `tabsWithErrors`, `firstTabWithError` — impede erro escondido em aba fechada |
-| `stratzToken.ts` | `extractSteamIdFromStratzToken`: lê o claim `SteamId` do JWT. Nunca logar o token |
 | `imageFallback.ts` | Placeholders SVG inline e os `handle*ImageError` |
 | `cn.ts` | `cn()` = `twMerge(clsx(...))` |
 | `insightsEngine.ts` | **Shim de compatibilidade** para imports antigos de `insights/`. Deve desaparecer |
@@ -34,20 +35,21 @@ em `tests/utils/`, espelhando esta pasta — ver [../../tests/CLAUDE.md](../../t
 - **Superlativo exige margem.** "O primeiro de uma lista" não é destaque: cada entrada de
   `SUPERLATIVES` tem `margin` (mediana da vantagem do 1º sobre o 2º naquela métrica) e `floor`
   (p10 do valor do líder), calibrados sobre 60 partidas reais. Lista vazia é resultado válido. O MVP
-  **não sai do IMP** — ver [../../CLAUDE.md](../../CLAUDE.md).
+  **não sai da nota** (nem do IMP de antes, nem do Glint de hoje) — ver [../../CLAUDE.md](../../CLAUDE.md).
 - `minimapCoords`: **quem chama declara o espaço de origem; a função nunca infere.** A versão que
   inferia pela faixa de valores plotava todo o lado Radiant errado.
-- Veredito de rota só de `top/mid/bottomLaneOutcome`. Sem outcomes, `UNKNOWN` e a UI **omite** o
-  badge — nada de deduzir rota de IMP, mortes ou vitória.
+- **Glint nunca sem rótulo de experimental, e nunca `0` no lugar de `null`.** Limiar novo sai por
+  quantil do script de ajuste, não somando 50 a um limiar de IMP — a escala é comprimida.
+- **Veredito de rota só de dado dos 10 primeiros minutos de quem estava na rota** (`laneVerdict.ts`).
+  Rota sem medida fica `UNKNOWN` e a UI **omite** a seção; rota desigual nunca vira "Rota vencida"
+  (não passou no aceite) — nada de deduzir rota de Glint, mortes ou vitória. Limiar novo sai do
+  script de ajuste, por taxa de disparo, e se o aceite cair muda o rótulo, não o limiar.
 - Nada aqui importa de `components/`. A dependência só vai no sentido UI → utils; onde uma tabela
   precisa existir dos dois lados, ela é duplicada com teste de sincronia (caso de
   `heroGrid/heroTooltip.ts`).
 
-## Navegação: dois nomes que enganam
+## Navegação: um nome que engana
 
-- **`matchContext.ts` não existe.** `tests/utils/matchContext.test.ts` é teste nomeado por *tema*:
-  cobre `resolveMatchType` (de `dotaFormatters.ts`) e `ALL_TOWERS_STANDING`/`derivePartySize`/
-  `deriveTeamShares` (de `services/stratzGql.ts`).
 - `insightsEngine.ts` não contém motor nenhum — só reexporta `./insights`.
 
 ## Ao sair um patch

@@ -2,60 +2,60 @@ import type { MetaSource, MetaWinrate, SyncOutcome } from '../../types/heroGrid'
 import { tierToBracket, type RankBracketBasic, type ResolvedBracket } from '../rankBracket';
 
 /**
- * Resolucao de precedencia entre as duas fontes de meta da feature de layout espelho
+ * Resolucao das fontes de meta da feature de layout espelho
  * (specs/001-meta-hero-grid, `contracts/meta-sources.md`). T055, T057 e T061.
  *
- * Modulo PURO: recebe as listas que `services/heroGrid/openDotaWinrates.ts` e
- * `services/heroGrid/stratzWinrates.ts` ja buscaram e devolve a resolucao. Nenhuma rede,
- * nenhum cache, nenhum acesso a config — é o que permite testar a degradacao inteira
- * (`SUCCESS`/`PARTIAL`/`FAILURE`) sem simular API.
+ * Modulo PURO: recebe as linhas que `services/heroGrid/openDotaWinrates.ts` ja buscou e
+ * devolve a resolucao. Nenhuma rede, nenhum cache, nenhum acesso a config — é o que
+ * permite testar a degradacao inteira (`SUCCESS`/`FAILURE`) sem simular API.
  *
  * Ele tambem NAO decide texto de UI. Produz procedencia tipada (fonte, amostra, bracket e
  * a flag de honestidade) e a formatacao por locale acontece na UI, exatamente como
  * `insights/ruleText.ts` impede que uma regra de coaching carregue frase.
  *
- * ## Precedencia: OpenDota -> STRATZ (FR-015)
+ * ## Uma fonte so: OpenDota
  *
- * FIXA, e nao escolhida pelo tamanho da amostra: a OpenDota vem primeiro porque é publica
- * e nao exige token, entao a feature funciona sem configuracao alguma (FR-015a). A STRATZ
- * PREENCHE heroi que a OpenDota nao devolveu. Cada linha que sai daqui carrega a fonte que
- * efetivamente prevaleceu — nenhuma camada acima infere fonte, mesma disciplina de
- * `BenchmarkSource` em `types/dota.ts`.
+ * A precedencia era OpenDota -> STRATZ, com a STRATZ preenchendo heroi que a OpenDota nao
+ * devolvia. Em 2026-11-19 o app deixou de falar com a STRATZ em tempo de execucao, e o
+ * slot dela foi REMOVIDO da lista, nao deixado falhando: com dois slots e um sempre fora,
+ * toda sincronizacao sairia `PARTIAL` e o jogador leria "faltou uma fonte" para sempre,
+ * sobre uma fonte que o app nem tenta mais consultar.
  *
- * ## Os tres estados de ausencia de uma fonte
+ * A lista de slots continua sendo uma lista, e a tabela de degradacao continua contando
+ * "quantas responderam de quantas": fonte nova entra como mais um slot e o `PARTIAL` volta
+ * a existir sozinho. Cada linha que sai daqui segue carregando a fonte que a sustentou —
+ * nenhuma camada acima infere fonte, mesma disciplina de `BenchmarkSource` em
+ * `types/dota.ts`.
+ *
+ * ## Os estados de uma fonte
  *
  * O envelope `MetaSourceInput` existe porque `MetaWinrate[] | null` juntaria situacoes que
  * a tabela de degradacao (contrato § 5) trata de forma diferente:
  *
- * - `OK`       — respondeu com linhas. Disponivel e contribuiu.
- * - `EMPTY`    — respondeu, sem linha nenhuma para o bracket. A fonte FUNCIONOU: nao é
- *                falha, nao entra em `sourcesFailed`, e nao dispara backoff. "Respondeu
- *                sem dados" nao é "nao respondeu".
- * - `NO_TOKEN` — I-21 / FR-015a: ausencia do token da STRATZ é fonte INDISPONIVEL, nao
- *                erro. Nunca sozinha causa `FAILURE`, e nao entra em `sourcesFailed`
- *                porque nao houve tentativa que pudesse falhar.
- * - `ERROR`    — rede/API falhou de fato. Esta, sim, entra em `sourcesFailed`.
+ * - `OK`    — respondeu com linhas. Disponivel e contribuiu.
+ * - `EMPTY` — respondeu, sem linha nenhuma para o bracket. A fonte FUNCIONOU: nao é
+ *             falha, nao entra em `sourcesFailed`, e nao dispara backoff. "Respondeu sem
+ *             dados" nao é "nao respondeu".
+ * - `ERROR` — rede/API falhou de fato. Esta, sim, entra em `sourcesFailed`.
  *
- * Sao os mesmos quatro literais de `StratzWinratesStatus`, de proposito: o envelope
- * daquele servico é estruturalmente aceito aqui sem adaptador e sem import de `services/`
- * para dentro de `utils/`. Para a convencao da OpenDota (`MetaWinrate[] | null`) existe
- * `openDotaSourceInput()`.
+ * `NO_TOKEN` saiu junto com a STRATZ: nenhuma fonte restante exige token. Para a convencao
+ * da OpenDota (`MetaWinrate[] | null`) existe `openDotaSourceInput()`.
  */
 
 /* ------------------------------------------------------------------ *
  * 1. Entrada
  * ------------------------------------------------------------------ */
 
-export type MetaSourceStatus = 'OK' | 'EMPTY' | 'NO_TOKEN' | 'ERROR';
+export type MetaSourceStatus = 'OK' | 'EMPTY' | 'ERROR';
 
 /**
  * O minimo que uma linha de fonte precisa trazer: heroi, vitorias e amostra.
  *
  * Sem `source`, sem `bracket` e sem flag de honestidade de proposito — esses tres sao
  * estampados AQUI, pela resolucao, nunca copiados do que a linha diz sobre si mesma. Uma
- * linha que chega pelo slot da STRATZ se autodeclarando `OPENDOTA_BRACKET` (bug de cache,
- * copiar/colar num mapper) faria a procedencia mentir, e procedencia que mente é pior que
- * procedencia ausente. `MetaWinrate` completo é estruturalmente aceito como entrada; os
+ * linha que chega por um slot se autodeclarando de outra fonte (bug de cache, copiar/colar
+ * num mapper) faria a procedencia mentir, e procedencia que mente é pior que procedencia
+ * ausente. `MetaWinrate` completo é estruturalmente aceito como entrada; os
  * campos extras sao simplesmente ignorados.
  */
 export interface MetaSampleRow {
@@ -72,13 +72,12 @@ export interface MetaSourceInput {
   status: MetaSourceStatus;
   /** Só `status: 'OK'` contribui linha. Vazio/ausente em todo o resto. */
   rows?: readonly MetaSampleRow[] | null;
-  /** S-2: mensagem curta para exibir/logar. NUNCA carrega token. */
+  /** S-2: mensagem curta para exibir/logar. NUNCA carrega segredo. */
   reason?: string;
 }
 
 export interface ResolveMetaWinratesInput {
   openDota: MetaSourceInput;
-  stratz: MetaSourceInput;
   /** Patch de `gameVersionService`, usado quando a linha nao traz o proprio (I-12). */
   patch: string;
   /** `HeroGridPreferences.bracket`: escolha explicita do jogador. `null` => derivar. */
@@ -93,7 +92,7 @@ export interface ResolveMetaWinratesInput {
  * 2. Saida
  * ------------------------------------------------------------------ */
 
-export type UnavailableReason = 'NO_TOKEN' | 'ERROR';
+export type UnavailableReason = 'ERROR';
 
 /** Por que a fonte nao entrou. É o que a UI rotula em FR-016 ("qual faltou"). */
 export interface SourceUnavailability {
@@ -108,9 +107,9 @@ export interface OutcomeClassification {
   shouldWrite: boolean;
   /** Fontes que contribuiram pelo menos uma linha. */
   sourcesUsed: MetaSource[];
-  /** So fonte TENTADA que FALHOU. Sem token nao entra aqui — ver `unavailable`. */
+  /** Fonte TENTADA que FALHOU. */
   sourcesFailed: MetaSource[];
-  /** Tudo que nao respondeu (falha + sem token). O rotulo de FR-016 sai daqui. */
+  /** Tudo que nao respondeu. O rotulo de FR-016 sai daqui. */
   sourcesMissing: MetaSource[];
   /** `sourcesMissing` com o motivo, porque `SyncRecord.sourcesFailed` nao distingue. */
   unavailable: SourceUnavailability[];
@@ -133,13 +132,12 @@ export interface MetaWinrateResolution extends OutcomeClassification {
  * ------------------------------------------------------------------ */
 
 /**
- * Brackets que as fontes de meta realmente segmentam, na particao de `tierToBracket()`.
+ * Brackets que a fonte de meta realmente segmenta, na particao de `tierToBracket()`.
  *
  * `UNCALIBRATED` esta FORA: `/api/heroStats` da OpenDota nao publica bucket de nao
  * calibrado (os buckets 1..8 sao as oito medalhas), entao pedir esse recorte é pedir a
- * media geral. A STRATZ segmenta `UNCALIBRATED`, mas o grid usa UM ranque de referencia
- * para as duas fontes, e o denominador honesto é a interseccao — o resultado sai como
- * `ALL` rotulado, que é literalmente o que o jogador vai ver de qualquer forma.
+ * media geral — o resultado sai como `ALL` rotulado, que é literalmente o que o jogador
+ * vai ver de qualquer forma.
  *
  * `ALL` tambem esta fora porque nao é segmento: é o destino da degradacao de FR-020.
  */
@@ -236,39 +234,38 @@ export function configuredProfileTier(input: ConfiguredTierInput): number | null
  * 4. Degradacao (contrato § 5, I-21, I-24)
  * ------------------------------------------------------------------ */
 
-/** Disponivel = RESPONDEU. `EMPTY` responde; sem token e erro nao. */
+/** Disponivel = RESPONDEU. `EMPTY` responde; erro nao. */
 export function sourceAvailable(status: MetaSourceStatus): boolean {
   return status === 'OK' || status === 'EMPTY';
 }
 
 export interface ClassifyOutcomeInput {
   openDota: MetaSourceStatus;
-  stratz: MetaSourceStatus;
   openDotaReason?: string;
-  stratzReason?: string;
 }
 
 /**
  * Tabela de degradacao do contrato, como funcao pura:
  *
- * | Situacao                | outcome   | escreve |
- * | ---                     | ---       | ---     |
- * | as duas responderam     | `SUCCESS` | sim     |
- * | só uma respondeu        | `PARTIAL` | sim     |
- * | nenhuma respondeu       | `FAILURE` | NAO     |
+ * | Situacao                    | outcome   | escreve |
+ * | ---                         | ---       | ---     |
+ * | todas as fontes responderam | `SUCCESS` | sim     |
+ * | só parte respondeu          | `PARTIAL` | sim     |
+ * | nenhuma respondeu           | `FAILURE` | NAO     |
  *
- * I-21: `NO_TOKEN` na STRATZ com a OpenDota de pé é `PARTIAL`, jamais `FAILURE` — a
- * feature conclui inteira só com a OpenDota e rotula.
+ * Com a OpenDota como unica fonte, a linha do meio é inalcancavel: OpenDota de pé é
+ * `SUCCESS` pleno, OpenDota fora é `FAILURE` e nada é escrito. `PARTIAL` segue no tipo
+ * `SyncOutcome` porque o historico gravado por versoes anteriores o contem, e porque a
+ * contagem abaixo o devolve sozinha no dia em que houver um segundo slot.
  *
- * Duas fontes `EMPTY` dao `SUCCESS` com zero linhas, e isso é deliberado: as duas APIs
- * responderam, entao chamar isso de `FAILURE` zeraria `lastSuccessfulSyncAt` e ligaria o
- * backoff por causa de fonte saudavel. A escrita resultante é um no-op (todo heroi fica
- * "sem dado" e mantem a ordem relativa da origem, I-9), nao um layout inventado.
+ * Fonte `EMPTY` da `SUCCESS` com zero linhas, e isso é deliberado: a API respondeu, entao
+ * chamar isso de `FAILURE` zeraria `lastSuccessfulSyncAt` e ligaria o backoff por causa de
+ * fonte saudavel. A escrita resultante é um no-op (todo heroi fica "sem dado" e mantem a
+ * ordem relativa da origem, I-9), nao um layout inventado.
  */
 export function classifyOutcome(input: ClassifyOutcomeInput): OutcomeClassification {
   const slots: { source: MetaSource; status: MetaSourceStatus; reason?: string }[] = [
     { source: 'OPENDOTA_BRACKET', status: input.openDota, reason: input.openDotaReason },
-    { source: 'STRATZ_BRACKET', status: input.stratz, reason: input.stratzReason },
   ];
 
   const sourcesUsed: MetaSource[] = [];
@@ -287,12 +284,13 @@ export function classifyOutcome(input: ClassifyOutcomeInput): OutcomeClassificat
     }
 
     sourcesMissing.push(slot.source);
-    const reason: UnavailableReason = slot.status === 'NO_TOKEN' ? 'NO_TOKEN' : 'ERROR';
-    if (reason === 'ERROR') sourcesFailed.push(slot.source);
+    sourcesFailed.push(slot.source);
+    const reason: UnavailableReason = 'ERROR';
     unavailable.push(slot.reason ? { source: slot.source, reason, message: slot.reason } : { source: slot.source, reason });
   }
 
-  const outcome: SyncOutcome = available === 2 ? 'SUCCESS' : available === 1 ? 'PARTIAL' : 'FAILURE';
+  const outcome: SyncOutcome =
+    available === slots.length ? 'SUCCESS' : available > 0 ? 'PARTIAL' : 'FAILURE';
 
   return {
     outcome,
@@ -307,7 +305,7 @@ export function classifyOutcome(input: ClassifyOutcomeInput): OutcomeClassificat
 /**
  * Adaptador da convencao de `fetchOpenDotaMetaWinrates()`: `null` => a fonte nao
  * respondeu; `[]` => respondeu e o bracket é que esta vazio. Sem isso o chamador colapsaria
- * os dois em "sem dado" e a classificacao de `PARTIAL` vs `FAILURE` ficaria errada.
+ * os dois em "sem dado" e a classificacao de `SUCCESS` vs `FAILURE` ficaria errada.
  */
 export function openDotaSourceInput(
   result: readonly MetaSampleRow[] | null | undefined,
@@ -376,7 +374,7 @@ function normalizeRow(
  * ------------------------------------------------------------------ */
 
 /**
- * Aplica a precedencia OpenDota -> STRATZ e classifica o desfecho.
+ * Normaliza as linhas da fonte de meta e classifica o desfecho.
  *
  * `status: 'OK'` sem NENHUMA linha aproveitavel é rebaixado para `EMPTY` antes da
  * classificacao: a fonte respondeu (nao falhou), mas nao pode entrar em `sourcesUsed`
@@ -392,11 +390,10 @@ export function resolveMetaWinrates(input: ResolveMetaWinratesInput): MetaWinrat
   const winrates: MetaWinrate[] = [];
   let discarded = 0;
 
-  // A ordem deste array É a precedencia (FR-015). A OpenDota vem primeiro porque nao
-  // exige token; a STRATZ só ocupa heroi que ficou vago.
+  // A ordem deste array É a precedencia (FR-015). Hoje tem um slot só; fonte nova entra
+  // DEPOIS da OpenDota e só ocupa heroi que ficou vago.
   const slots: { source: MetaSource; input: MetaSourceInput }[] = [
     { source: 'OPENDOTA_BRACKET', input: input.openDota },
-    { source: 'STRATZ_BRACKET', input: input.stratz },
   ];
 
   const contributed: Record<string, boolean> = {};
@@ -429,9 +426,7 @@ export function resolveMetaWinrates(input: ResolveMetaWinratesInput): MetaWinrat
 
   const classification = classifyOutcome({
     openDota: effective(input.openDota, 'OPENDOTA_BRACKET'),
-    stratz: effective(input.stratz, 'STRATZ_BRACKET'),
     openDotaReason: input.openDota?.reason,
-    stratzReason: input.stratz?.reason,
   });
 
   // I-24 / FR-017: sem nenhuma fonte, nada é publicado. Devolver as linhas aqui deixaria

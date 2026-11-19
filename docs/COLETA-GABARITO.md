@@ -1,0 +1,157 @@
+# Coleta do gabarito — roteiro do dia a dia
+
+O que rodar, em que ordem e o que olhar para ir agregando os dados de
+[PLANO-OPENDOTA.md](PLANO-OPENDOTA.md). Este arquivo é o **como**; o plano é o **porquê** e o
+estado. Tudo roda da raiz do repositório e grava em `.gabarito/`, que está fora do git e do app
+(decisão D5).
+
+**Por que não pode esperar:** a STRATZ é o gabarito e está se degradando. Ela não conhece o 7.42
+(marca tudo como 7.41f), e o IMP já falta em parte das partidas. Cada dia sem coleta é rótulo que
+não volta. A OpenDota, por outro lado, só libera 3.000 chamadas por dia sem chave — a coleta é
+uma corrida curta todo dia, não um job que se deixa rodando uma vez.
+
+## De onde vem o token
+
+Os scripts de coleta são agora a **única** coisa que fala com a STRATZ: o app parou de usá-la
+em 2026-11-19 e não pede nem grava token. `scripts/lib/sources.cjs` procura o token em
+`STRATZ_API_KEY`, depois em `.gabarito/.stratz-token` (um arquivo de uma linha, fora do git) e
+por último na chave `stratzApiKey` que tenha sobrado no config do app. Nesta máquina a chave
+antiga continua no config e a coleta segue funcionando; para não depender disso, grave o token
+em `.gabarito/.stratz-token` (`chmod 600`). Nenhum script copia o token por você.
+
+## A rotina (uma vez por dia)
+
+A cota da OpenDota zera à meia-noite UTC (21h de Brasília). Um coletor por vez — o script se
+recusa a abrir o segundo.
+
+```bash
+# 1. Como está
+node scripts/collect-pairs.cjs --status
+
+# 2. Colher até a cota do dia acabar (para sozinho, com 150 chamadas de reserva).
+#    Enquanto a trilha 7.41 tiver célula abaixo de 50, é ela:
+node scripts/collect-pairs.cjs --lane 7.41
+#    Depois, a 7.42:
+node scripts/collect-pairs.cjs
+
+# 3. Medir (offline, não gasta cota)
+node scripts/accept-phase1.cjs          # aceite da Fase 1 sobre os pares
+node scripts/benchmark-coverage.cjs     # critério de corte + curva própria; grava no histórico
+node scripts/build-benchmarks.cjs       # regrava as curvas próprias (Fase 2)
+```
+
+Interromper com Ctrl+C é seguro: o coletor termina a partida atual, grava o índice e retoma
+depois do mesmo ponto.
+
+**Prioridade da cota**, enquanto as duas APIs responderem:
+
+1. **Pares de 7.41** — é onde os modelos das Fases 3 e 4 são ajustados (§5 do plano) e é o
+   rótulo mais antigo, o primeiro que a STRATZ pode deixar de servir.
+2. **Pares de 7.42** — o conjunto de teste.
+3. **Volume** — vem de graça junto: partida que passa na triagem e cai em célula de par já cheia
+   é gravada só com a metade OpenDota em `.gabarito/matches/`. Quando as células de par enchem,
+   a cota inteira do dia vira volume, que é o que alimenta os benchmarks próprios (Fase 2).
+
+## Agendamento (a rotina sozinha, todo dia às 15h)
+
+`scripts/collect-daily.sh` faz a rotina acima sem ninguém: colhe 7.41 até o saldo do dia chegar
+em 1.500 chamadas, colhe 7.42 com o resto, roda o aceite e o critério de corte, e grava tudo em
+`.gabarito/logs/AAAA-MM-DD.log`. Dois limites, os dois de propósito:
+
+- **`WINDOW_MINUTES`** (padrão 180): teto de duração por dia, metade para cada trilha. O
+  encerramento é um Ctrl+C: o coletor termina a partida atual e grava o índice.
+- **`GABARITO_UNTIL`** (obrigatório): último dia em que ainda colhe. Depois dele o script só
+  escreve no log que a janela acabou. Coleta sem data de fim gasta cota de terceiros e enche o
+  disco sem ninguém olhar — continuar tem de ser decisão, não inércia.
+
+Quem dispara é um temporizador de usuário do systemd, que mora **fora do repositório**, em
+`~/.config/systemd/user/glimpsegg-gabarito.{service,timer}` (instalado em 2026-11-19, com
+`GABARITO_UNTIL=2026-12-03`). O `.service` leva o caminho do repositório e o do `node`, então é
+arquivo da máquina, não do projeto.
+
+```bash
+systemctl --user list-timers glimpsegg-gabarito.timer     # próxima execução
+systemctl --user start glimpsegg-gabarito.service         # rodar agora
+journalctl --user -u glimpsegg-gabarito.service -n 20     # se o serviço nem chegou a escrever log
+tail -40 .gabarito/logs/$(date +%F).log                   # o que a rotina fez hoje
+systemctl --user edit --full glimpsegg-gabarito.service   # mudar GABARITO_UNTIL ou a janela
+systemctl --user disable --now glimpsegg-gabarito.timer   # desligar
+```
+
+Três coisas para saber: o temporizador só roda com a sessão do usuário aberta (não há *linger*);
+com a máquina desligada às 15h, ele roda uma vez ao ligar (`Persistent=true`); e se o `node`
+mudar de versão pelo fnm, o `PATH` do `.service` precisa ser atualizado. Se já houver um coletor
+rodando à mão, o agendado se recusa a abrir o segundo e segue para os relatórios.
+
+## O que cada pasta guarda
+
+| Onde | O quê | Quem escreve | Tamanho |
+| --- | --- | --- | --- |
+| `.gabarito/pairs/<id>.json.gz` | Par rotulado `{ od, st, gen }`: OpenDota crua, partida da STRATZ, insumos do IMP por minuto | `collect-pairs.cjs` | ~45 KB por partida |
+| `.gabarito/pairs/index.json` | Estrato, patch e cursor de cada trilha; lista do volume | `collect-pairs.cjs` | — |
+| `.gabarito/matches/<id>.json.gz` | Volume `{ od }`: só a OpenDota, sem rótulo | `collect-pairs.cjs` | ~40 KB por partida |
+| `.gabarito/hero-stats/<data>/` | Fotografia de `heroStats.stats` (uma semana de 7.41) | `snapshot-hero-stats.cjs` | 210 MB |
+| `.gabarito/benchmarks/<patch>.json` | As curvas próprias por minuto, com quantis. **Derivado**: regravado a cada execução, a fonte de verdade são as partidas | `build-benchmarks.cjs` | cresce com as células |
+| `.gabarito/coverage-log.jsonl` | Uma linha por execução do `benchmark-coverage.cjs` | `benchmark-coverage.cjs` | — |
+| `.gabarito/pairs-2026-11-19.json`, `control-sample-2026-11-19.json` | As amostras que produziram o §1 do plano. **Não apagar nem sobrescrever** | (coleta manual) | — |
+
+Conta de disco: 30 mil partidas de volume são cerca de 1,2 GB. Nada disso tem cópia — vale um
+backup da pasta de vez em quando.
+
+## O critério de corte, agora contínuo
+
+O plano original dizia "em 14 dias, se menos de 60% das linhas de jogador caírem em célula com
+amostra suficiente, o benchmark próprio não se sustenta". Em 2026-11-19 isso virou **medida
+contínua**: não há data de prova. `benchmark-coverage.cjs` mede a mesma coisa sobre o que
+estiver em disco e grava uma linha no histórico a cada execução.
+
+```bash
+node scripts/benchmark-coverage.cjs              # mede e grava no histórico
+node scripts/benchmark-coverage.cjs --history    # a série, para ver a tendência
+node scripts/benchmark-coverage.cjs --min-cell 50   # explora com piso menor (não entra no histórico)
+```
+
+O que ler:
+
+- **`CRITERIO DE CORTE`** — fatia das linhas em célula herói × posição com 200+ linhas (nível 1)
+  e a fatia que só se salva em herói × core/suporte (nível 2). A referência continua sendo 60%.
+- **A tendência, não o ponto.** A pergunta deixou de ser "passou em 14 dias?" e passou a ser
+  "no ritmo de volume que dá para manter, quando chega em 60%?". Se a série do `--history`
+  achatar bem abaixo disso com semanas de coleta, é a resposta da D6 (chave paga) ou o sinal de
+  parar na Fase 1.
+- **`CURVA PROPRIA x FOTOGRAFIA`** — prévia do aceite da Fase 2 (erro abaixo de 5% em patrimônio
+  e cs nos minutos 10, 20 e 30), só para 7.41. Sai nos dois alinhamentos de minuto; o de menor
+  erro é o que vale. Com piso de exploração baixo o número é ruído — serve para ver o lado, não
+  para decidir.
+
+Quando olhar: não há calendário. Um bom ritmo é rodar depois de cada dia de coleta (custa
+segundos) e **ler** a série uma vez por semana.
+
+## Sinais de que algo quebrou
+
+| O que aparece | O que significa | O que fazer |
+| --- | --- | --- |
+| `triagem pela STRATZ voltou vazia` ou `indisponivel` em toda página | A STRATZ parou de responder à triagem. O coletor segue, mas paga uma chamada por candidata (rende ~40% em vez de ~90%) | Conferir com `node scripts/check-patch-readiness.cjs`. Se a STRATZ caiu de vez, acabaram os pares: o que está em disco é o gabarito final |
+| `com IMP nos 10 jogadores` caindo em relação ao total | A STRATZ está deixando de calcular IMP | Priorizar ainda mais os pares; anotar a data no §7 do plano |
+| `STRATZ HTTP 429` ou `limite de chamadas atingido` | Limite do token (o script já segura 4,5 s por par) | Esperar uma hora e retomar |
+| `OpenDota HTTP 500` avulso | Partida que a OpenDota não consegue servir | Nada: conta como `erro` e segue. Cinco seguidos param o script |
+| `a trilha 7.42 chegou ao patch anterior` | A paginação desceu até a virada | Nada a colher ali: usar `--lane 7.41` |
+| Célula que não sai do zero por dias (partida curta, Herald/Guardian) | Raridade real em `/parsedMatches` | Ver "Células raras" abaixo |
+| `accept-phase1.cjs` com divergência nova fora de posição | Bug do mapper ou mudança de API | Investigar o par listado; **não** ajustar o mapper só para passar |
+
+## Células raras
+
+Partida com menos de 25 minutos e a faixa Herald/Guardian aparecem pouco em `/parsedMatches`
+(parse na OpenDota é em boa parte pedido, e quem pede joga mais alto). A triagem torna a busca
+barata — uma chamada da OpenDota varre 100 candidatas — então, com as células comuns cheias, a
+cota passa a servir às raras. Mesmo assim é possível que alguma nunca chegue a 50. Nesse caso
+o caminho honesto é o do §5 do plano: reportar o estrato com o **n ao lado** e não fechar
+aceite nele, em vez de baixar a régua em silêncio.
+
+## Quando esta rotina acaba
+
+- **Pares:** quando as 15 células dos dois patches chegarem a 50 (ou quando a STRATZ parar de
+  responder — o que vier primeiro).
+- **Volume:** não acaba enquanto houver benchmark próprio; a cada patch novo a base recomeça.
+  O que muda na Fase 2 é o destino: de `.gabarito/` local para um workflow agendado que publica
+  o agregado num branch de dados. Isso depende da D6 e do que a série de cobertura mostrar.

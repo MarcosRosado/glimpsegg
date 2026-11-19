@@ -6,6 +6,8 @@ import { formatPercent } from '../../utils/dotaFormatters';
 import { handleAvatarError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 import { computeRecentFormStats } from '../../utils/recentFormStats';
+import { formatGlint, getGlintColor } from '../../utils/glint';
+import { useGlintHint } from '../ui/GlintBadge';
 import { describeDaysSince } from '../../utils/heroGrid/tabFormat';
 import { DAYS_SINCE_LABEL } from '../heroGrid/labels';
 
@@ -37,6 +39,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const { t, language } = useLanguage();
   const rankInfo = getRankTierInfo(profile.seasonRank, profile.leaderboardRank);
   // Mesmos agregados da stat rail e do card de Forma Recente.
+  const glintHint = useGlintHint();
   const form = computeRecentFormStats(profile.recentMatches);
 
   /**
@@ -154,7 +157,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         </div>
 
         {/* Right: Aggregate Career Statistics */}
-        <div className="grid grid-cols-3 gap-4 md:border-l md:border-slate-800 md:pl-8">
+        <div className={`grid ${form.avgGlint !== null ? 'grid-cols-3' : 'grid-cols-2'} gap-4 md:border-l md:border-slate-800 md:pl-8`}>
           {/* Win Rate */}
           <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 text-center min-w-[100px]">
             <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mb-1">
@@ -179,19 +182,27 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             <div className="text-[10px] text-slate-500 mt-0.5">{t('matches')}</div>
           </div>
 
-          {/* Average IMP / Impact */}
-          <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 text-center min-w-[100px]">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mb-1">
-              <Target className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{t('avgImp')}</span>
+          {/* Glint médio (experimental) das partidas recentes COM nota. Sem nenhuma, o
+              bloco some: zero seria uma nota, e traço pareceria medição. A legenda diz de
+              quantas partidas é a média, que pode ser menos que a amostra. */}
+          {form.avgGlint !== null && (
+            <div
+              className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 text-center min-w-[100px] cursor-help"
+              title={glintHint}
+            >
+              <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 mb-1">
+                <Target className="w-3.5 h-3.5 text-cyan-400" />
+                <span>{t('avgGlint')}</span>
+                <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">{t('glintBeta')}</span>
+              </div>
+              <div className={`text-xl font-black ${getGlintColor(form.avgGlint)}`}>
+                {formatGlint(form.avgGlint)}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
+                {t('glintSampled', { count: form.glintCount })}
+              </div>
             </div>
-            <div className={`text-xl font-black ${form.avgImp >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
-              {form.avgImp >= 0 ? `+${form.avgImp}` : form.avgImp}
-            </div>
-            <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
-              {t('matchesSampled', { count: form.count })}
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

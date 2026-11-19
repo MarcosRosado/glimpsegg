@@ -1,12 +1,12 @@
 import { getCachedGamePatch } from './gameVersionService';
 
 /**
- * Cache local para agregados de heroi da STRATZ.
+ * Cache local para agregados de heroi (hoje, os winrates de meta da OpenDota).
  *
  * Segue o mesmo padrao de gameVersionService.ts (localStorage + timestamp + TTL),
- * generalizado. Justificativa: `itemFullPurchase` e `heroVsHeroMatchup` sao agregados
- * de mudanca lenta, com chave (heroi, posicao, bracket) — exatamente a forma que um
- * cache por patch atende. Custo por abertura da aba: 1 request a frio, 0 morno.
+ * generalizado. Justificativa: agregado por heroi é dado de mudanca lenta, com chave
+ * (heroi, posicao, bracket) — exatamente a forma que um cache por patch atende. Nasceu
+ * para `itemFullPurchase`/`heroVsHeroMatchup` da STRATZ, que sairam do app em 2026-11-19.
  */
 
 const PREFIX = 'glimpse_hs_v1:';

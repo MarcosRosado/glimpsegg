@@ -5,6 +5,8 @@ import { getHero } from '../../constants/heroes';
 import { handleHeroImageError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 import { computeRecentFormStats } from '../../utils/recentFormStats';
+import { formatGlint, getGlintColor } from '../../utils/glint';
+import { useGlintHint } from '../ui/GlintBadge';
 
 interface RecentFormCardProps {
   recentMatches: PlayerMatchSummary[];
@@ -15,7 +17,8 @@ export const RecentFormCard: React.FC<RecentFormCardProps> = ({ recentMatches, o
   const { t } = useLanguage();
   const matches10 = recentMatches.slice(0, 10);
   // Mesmos agregados que a stat rail do topbar consome.
-  const { wins, losses, winRate: winrate, avgImp } = computeRecentFormStats(recentMatches);
+  const glintHint = useGlintHint();
+  const { wins, losses, winRate: winrate, avgGlint, glintCount } = computeRecentFormStats(recentMatches);
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-slate-800/80 shadow-lg bg-[#0b101a]">
@@ -66,16 +69,22 @@ export const RecentFormCard: React.FC<RecentFormCardProps> = ({ recentMatches, o
       </div>
 
       {/* Summary KPI Footer */}
-      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800/80 text-xs">
-        <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60">
-          <div className="flex items-center gap-2 text-slate-400">
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>{t('avgImp')}</span>
+      <div className={`grid ${avgGlint !== null ? 'grid-cols-2' : 'grid-cols-1'} gap-3 pt-3 border-t border-slate-800/80 text-xs`}>
+        {/* Glint médio das partidas com nota. Sem nenhuma, o bloco some e a tendência
+            ocupa a linha inteira — "0" aqui seria uma nota que ninguém tirou. */}
+        {avgGlint !== null && (
+          <div
+            className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60 cursor-help"
+            title={`${t('glintSampled', { count: glintCount })}. ${glintHint}`}
+          >
+            <div className="flex items-center gap-2 text-slate-400">
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>{t('avgGlint')}</span>
+              <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">{t('glintBeta')}</span>
+            </div>
+            <span className={`font-mono font-black ${getGlintColor(avgGlint)}`}>{formatGlint(avgGlint)}</span>
           </div>
-          <span className={`font-mono font-black ${avgImp >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {avgImp >= 0 ? `+${avgImp}` : avgImp}
-          </span>
-        </div>
+        )}
 
         <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <div className="flex items-center gap-2 text-slate-400">

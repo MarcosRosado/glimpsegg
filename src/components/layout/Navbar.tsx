@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Search, ShieldAlert, RefreshCw, ArrowLeft, LayoutGrid } from 'lucide-react';
+import { Settings, Search, RefreshCw, ArrowLeft, LayoutGrid } from 'lucide-react';
 import { PlayerProfileSummary } from '../../types/dota';
 import { getRankTierInfo } from '../../constants/ranks';
 import { handleAvatarError } from '../../utils/imageFallback';
@@ -11,7 +11,6 @@ import { StatRail } from './StatRail';
 
 interface NavbarProps {
   profile: PlayerProfileSummary | null;
-  hasApiKey: boolean;
   isLoading: boolean;
   isViewingDifferentAccount?: boolean;
   configuredSteamId?: string;
@@ -37,7 +36,6 @@ interface NavbarProps {
  */
 export const Navbar: React.FC<NavbarProps> = ({
   profile,
-  hasApiKey,
   isLoading,
   isViewingDifferentAccount = false,
   configuredSteamId,
@@ -128,20 +126,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         <div className="ml-auto flex items-center gap-1.5 shrink-0">
-          {/* Status só fala quando pede ação: no happy path ficava um pill "Live"
-              que não pedia nada de ninguém. */}
-          {!hasApiKey && (
-            <button
-              onClick={onOpenSettings}
-              title={t('apiKeyMissing')}
-              aria-label={t('apiKeyMissing')}
-              className="flex items-center gap-1.5 shrink-0 px-2 py-1 rounded-lg text-[10px] font-semibold border border-amber-400/30 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20 transition"
-            >
-              <ShieldAlert className="w-2.5 h-2.5" />
-              <span className="hidden sm:inline">{t('stratzDemo')}</span>
-            </button>
-          )}
-
           {/* Layout espelho de heróis. Renderizado só com a feature ativa: um botão
               permanente para algo desligado por padrão só ensinaria a ignorá-lo. */}
           {heroGridEnabled && onToggleHeroGrid && (

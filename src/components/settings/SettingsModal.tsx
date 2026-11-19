@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
-  Key,
+  Settings,
   User,
-  ExternalLink,
   Save,
   CheckCircle,
   Database,
@@ -27,7 +26,6 @@ import {
 import { resolveSteamId } from '../../services/steamResolver';
 import { useLanguage } from '../../context/LanguageContext';
 import { ProfileHistoryItem } from '../../types/dota';
-import { extractSteamIdFromStratzToken } from '../../utils/stratzToken';
 import { useGamePatch } from '../../hooks/useGamePatch';
 import { TranslationKey } from '../../i18n/translations';
 import type { RankBracketBasic } from '../../utils/rankBracket';
@@ -89,10 +87,10 @@ export interface HeroGridSyncRequest {
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentApiKey: string;
   currentSteamId: string;
   profileHistory?: ProfileHistoryItem[];
-  onSave: (apiKey: string, steamId: string) => Promise<void>;
+  /** Recebe o account id (SteamID32) ja resolvido. */
+  onSave: (steamId: string) => Promise<void>;
   onOpenGuide?: () => void;
   /**
    * Opcional (T036): avisa o `App` que a feature de layout espelho ligou ou desligou, para
@@ -162,7 +160,6 @@ const BRACKET_AUTO = 'AUTO';
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  currentApiKey,
   currentSteamId,
   profileHistory = [],
   onSave,
@@ -172,7 +169,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onHeroGridRemoveMirror,
 }) => {
   const { language, setLanguage, t } = useLanguage();
-  const [apiKey, setApiKey] = useState(currentApiKey);
   const [steamInput, setSteamInput] = useState(currentSteamId);
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -181,11 +177,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [appVersion, setAppVersion] = useState<string>('1.0.0');
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateStatusText, setUpdateStatusText] = useState<string | null>(null);
-  const { patch: dotaPatch } = useGamePatch(apiKey);
+  const { patch: dotaPatch } = useGamePatch();
 
   useEffect(() => {
     if (isOpen) {
-      setApiKey(currentApiKey);
       setSteamInput(currentSteamId);
       setResolveError(null);
       setSavedSuccess(false);
@@ -198,7 +193,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }).catch(() => {});
       }
     }
-  }, [isOpen, currentApiKey, currentSteamId]);
+  }, [isOpen, currentSteamId]);
 
   /* ================================================================== *
    * Bloco da feature de layout espelho de herois (specs/001-meta-hero-grid)
@@ -404,15 +399,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setApiKey(val);
-    const autoSteamId = extractSteamIdFromStratzToken(val);
-    if (autoSteamId && !steamInput.trim()) {
-      setSteamInput(autoSteamId);
-    }
-  };
-
   const handleCheckUpdates = async () => {
     if (!window.api?.updater?.check) {
       setUpdateStatusText('Auto-update disponível apenas na versão empacotada.');
@@ -460,7 +446,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
       }
 
-      await onSave(apiKey.trim(), finalSteamId);
+      await onSave(finalSteamId);
       setSavedSuccess(true);
       setTimeout(() => {
         setSavedSuccess(false);
@@ -684,7 +670,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-[#101726] shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-              <Key className="w-4 h-4 text-cyan-400" />
+              <Settings className="w-4 h-4 text-cyan-400" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-100">{t('settingsTitle')}</h3>
@@ -748,10 +734,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4 items-start">
               {/* Steam Account ID / Vanity URL */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{t('steamAccount')}</span>
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>{t('steamAccount')}</span>
+                  </label>
+                  {onOpenGuide && (
+                    <button
+                      type="button"
+                      onClick={onOpenGuide}
+                      className="shrink-0 text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold"
+                    >
+                      <HelpCircle className="w-3 h-3" />
+                      <span>{t('accountGuideTitle')}</span>
+                    </button>
+                  )}
+                </div>
 
                 <input
                   type="text"
@@ -767,6 +765,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 )}
                 <p className="text-xs text-slate-400">{t('steamAccountDesc')}</p>
+
+                {/* Privacy Disclaimer Card */}
+                <div className="p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/30 text-xs text-slate-300 leading-relaxed mt-2">
+                  <strong className="text-cyan-300 font-bold block mb-0.5">{t('privacyDisclaimerTitle')}</strong>
+                  {t('privacyDisclaimerText')}
+                </div>
               </div>
 
               {/* Quick Profiles from History & Favorites */}
@@ -804,65 +808,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
               )}
-                </div>
-              )}
-
-              {/* O token é um campo largo com links e o card de privacidade embaixo:
-                  duas colunas aqui so afastariam o aviso do campo a que ele se refere. */}
-              {activeTab === 'STRATZ' && (
-                <div className="max-w-2xl space-y-5">
-              {/* STRATZ API Token */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                    <span>{t('stratzApiKey')}</span>
-                    {apiKey ? (
-                      <span className="text-xs text-emerald-400 font-normal">{t('activeShort')}</span>
-                    ) : (
-                      <span className="text-xs text-rose-400 font-normal">{t('apiKeyRequired')}</span>
-                    )}
-                  </label>
-
-                  <div className="flex items-center gap-2">
-                    {onOpenGuide && (
-                      <button
-                        type="button"
-                        onClick={onOpenGuide}
-                        className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold"
-                      >
-                        <HelpCircle className="w-3 h-3" />
-                        <span>{t('howToGetKey')}</span>
-                      </button>
-                    )}
-                    <a
-                      href="https://stratz.com/api"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-cyan-400 hover:underline flex items-center gap-1"
-                    >
-                      <span>stratz.com/api</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                </div>
-
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={handleApiKeyChange}
-                  placeholder={t('stratzTokenPlaceholder')}
-                  className="w-full bg-[#141d2d] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono transition"
-                />
-                <p className="text-xs text-slate-400">
-                  {t('stratzApiKeyDesc')}
-                </p>
-
-                {/* Privacy Disclaimer Card */}
-                <div className="p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/30 text-xs text-slate-300 leading-relaxed mt-2">
-                  <strong className="text-cyan-300 font-bold block mb-0.5">{t('privacyDisclaimerTitle')}</strong>
-                  {t('privacyDisclaimerText')}
-                </div>
-              </div>
                 </div>
               )}
 

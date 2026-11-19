@@ -39,8 +39,6 @@ import {
 import { serializeHeroGridFile } from '../utils/heroGrid/valveJson';
 import { fetchOpenDotaMetaWinrates } from '../services/heroGrid/openDotaWinrates';
 import { fetchPersonalWinrates } from '../services/heroGrid/personalWinrates';
-import { fetchStratzWinrates } from '../services/heroGrid/stratzWinrates';
-import { RateLimitedError } from '../services/stratzHeroStats';
 import {
   isHeroGridFileAccessAvailable,
   listAccounts,
@@ -76,7 +74,6 @@ export type HeroGridBlocker =
   | 'SOURCE_INDEX_GONE'
   | 'NAME_COLLISION'
   | 'DOTA_RUNNING'
-  | 'RATE_LIMITED'
   | 'SOURCE_MUTATED'
   | 'ALL_SOURCES_DOWN'
   | 'WRITE_FAILED';
@@ -194,7 +191,6 @@ function blockerForCode(code: HeroGridErrorCode | undefined): HeroGridBlocker {
 }
 
 export function useHeroGridSync(
-  apiKey?: string,
   steamAccountId?: string,
   profileTier?: number | null,
 ): UseHeroGridSyncResult {
@@ -318,44 +314,33 @@ export function useHeroGridSync(
         setBracketIsPlayerSpecific(bracket.isPlayerSpecific);
 
         /**
-         * As TRES buscas em paralelo, e isto importa de verdade.
+         * As DUAS buscas em paralelo, e isto importa de verdade.
          *
          * Medido: a `/heroStats` da OpenDota é 160 KB e responde em ~0,7s morna, mas ja foi
-         * vista em 20s com o cache dela frio. Encadear as tres somaria esse pior caso ao das
-         * outras duas e encostaria no teto de 30s de SC-009; em paralelo, a sincronizacao
-         * custa ~a mais lenta, nao a soma.
+         * vista em 20s com o cache dela frio. Encadear somaria esse pior caso ao da busca
+         * pessoal e encostaria no teto de 30s de SC-009; em paralelo, a sincronizacao custa
+         * ~a mais lenta, nao a soma.
          *
          * Nenhuma delas lanca por indisponibilidade — cada uma devolve estado, e é
-         * `resolveMetaWinrates` que decide o desfecho. A unica excecao é `RateLimitedError`
-         * (429), capturada aqui e virada em fonte com erro: retry em cima de rate limit de
-         * chave compartilhada só piora a situacao do proprio usuario.
+         * `resolveMetaWinrates` que decide o desfecho.
+         *
+         * A STRATZ era a terceira busca. Saiu da lista em vez de ficar falhando: com o slot
+         * presente e sempre fora, toda sincronizacao sairia rotulada `PARTIAL`.
          */
-        let rateLimited = false;
-        const stratzPromise = fetchStratzWinrates(bracket.bracket, apiKey).catch((err) => {
-          if (err instanceof RateLimitedError) rateLimited = true;
-          return {
-            status: 'ERROR' as const,
-            rows: [],
-            reason: err instanceof RateLimitedError ? 'RateLimitedError' : 'fetch',
-          };
-        });
-        const [stratzOutcome, openDotaRows, personal] = await Promise.all([
-          stratzPromise,
+        const [openDotaRows, personal] = await Promise.all([
           fetchOpenDotaMetaWinrates(bracket.bracket),
           fetchPersonalWinrates(prefs.steamId3 || steamAccountId || null),
         ]);
-        if (rateLimited) setBlocker('RATE_LIMITED');
 
         const resolution = resolveMetaWinrates({
           openDota: openDotaSourceInput(openDotaRows),
-          stratz: stratzOutcome,
           patch,
           preferredBracket: prefs.bracket,
           profileTier: profileTier ?? null,
         });
         setBracketIsPlayerSpecific(resolution.bracket.isPlayerSpecific);
 
-        // I-24 / FR-017: as duas fontes fora ⇒ FAILURE, e o arquivo NAO é tocado. A
+        // I-24 / FR-017: fonte de meta fora ⇒ FAILURE, e o arquivo NAO é tocado. A
         // checagem vem antes de qualquer leitura de grid — nao ha o que escrever.
         if (!resolution.shouldWrite) {
           await fail(
@@ -366,8 +351,8 @@ export function useHeroGridSync(
           return;
         }
 
-        // Modo browser: o ranking APARECE, e é o `quickstart.md` que exige isso — as duas
-        // fontes funcionam por fetch direto, entao ha dado real para ordenar. O que nao
+        // Modo browser: o ranking APARECE, e é o `quickstart.md` que exige isso — a
+        // OpenDota funciona por fetch direto, entao ha dado real para ordenar. O que nao
         // existe aqui é o arquivo, logo nao ha layout de origem: ranqueamos o catalogo
         // inteiro e a aba diz, sem rodeio, que neste modo nao grava layout.
         //
@@ -527,7 +512,6 @@ export function useHeroGridSync(
       }
     },
     [
-      apiKey,
       steamAccountId,
       profileTier,
       fileAccessAvailable,

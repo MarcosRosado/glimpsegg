@@ -163,8 +163,13 @@ export interface MirrorSnapshot {
  * ------------------------------------------------------------------ */
 
 /**
- * Vocabulario de fontes, na ordem de precedencia (FR-015): OpenDota primeiro, porque
- * nao exige token. Mesma disciplina de `BenchmarkSource` em `types/dota.ts`.
+ * Vocabulario de fontes. Mesma disciplina de `BenchmarkSource` em `types/dota.ts`.
+ *
+ * `OPENDOTA_BRACKET` é a UNICA fonte que o app consulta hoje. `STRATZ_BRACKET` é LEGADO
+ * de leitura: o app deixou de falar com a STRATZ em 2026-11-19 e nada mais produz esse
+ * valor, mas o snapshot do espelho e o historico de sincronizacao gravados por versoes
+ * anteriores o contem. Tira-lo do tipo faria o validador de `preferences.ts` descartar a
+ * procedencia de uma linha que de fato veio de la — a foto diria menos do que sabe.
  *
  * NAO existe fonte sem winrate: a proposta `RANK_ONLY` caiu com o corte do D2PT
  * (FR-013a), justamente porque ordem sem amostra nao satisfaz FR-014.
@@ -335,7 +340,7 @@ export type HeroGridErrorCode =
  * Resultado das operacoes de arquivo e das que podem recusar.
  *
  * Interface PLANA, e nao uma uniao discriminada `{success:true,data} | {success:false,error}`,
- * pela mesma razao que `StratzGqlResponse` em `electron.d.ts` é plana: com `strict: false` o
+ * pela mesma razao que as respostas de `ElectronApi` sao planas: com `strict: false` o
  * TypeScript nao estreita uniao por literal booleano, entao dentro de um `if (!res.success)`
  * o `res.code` viraria erro de compilacao em todo chamador. A uniao daria seguranca melhor —
  * mas so com `strictNullChecks` ligado, que é uma mudanca de projeto, nao desta feature.
