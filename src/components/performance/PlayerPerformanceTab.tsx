@@ -477,7 +477,9 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               {/* `|| player.numDenies` trocava denies aos 10min pelo total da partida. */}
               <div className="text-base font-black text-white mt-0.5">
                 {player.laningStats ? player.laningStats.denies10 : t('noData')}
-                <span className="text-[10px] text-slate-500 font-normal ml-1">/ {baseline.denies10Min}</span>
+                <span className="text-[10px] text-slate-500 font-normal ml-1 cursor-help" title={t('deniesBaselineEstimateHint')}>
+                  / {baseline.denies10Min}*
+                </span>
               </div>
             </div>
 

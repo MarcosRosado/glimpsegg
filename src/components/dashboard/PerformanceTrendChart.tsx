@@ -18,6 +18,9 @@ import { useGlintHint } from '../ui/GlintBadge';
 interface PerformanceTrendChartProps {
   matches: PlayerMatchSummary[];
   onSelectMatch?: (matchId: string) => void;
+  /** Dá para trazer mais partidas: as janelas maiores aparecem e o clique pede a carga. */
+  canLoadMore?: boolean;
+  onRequestMore?: () => void;
 }
 
 type TrendMetric = 'GLINT' | 'WINRATE' | 'GPM';
@@ -30,7 +33,7 @@ const RANGES: { size: 25 | 50 | 100; label: 'trend25' | 'trend50' | 'trend100' }
 
 const hasGlint = (g: number | null | undefined): g is number => typeof g === 'number' && Number.isFinite(g);
 
-export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ matches, onSelectMatch }) => {
+export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ matches, onSelectMatch, canLoadMore = false, onRequestMore }) => {
   const { t } = useLanguage();
   const [rangeChoice, setMatchCountRange] = useState<25 | 50 | 100>(25);
   // A lista pode encolher (troca de conta): a janela escolhida nunca passa do que existe.
@@ -160,10 +163,15 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ ma
           <div className="flex bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 text-xs font-mono">
             {/* Só as janelas que a lista carregada preenche. Com 40 partidas, "100 jogos"
                 desenhava as mesmas 40 com o rótulo de 100 — a 1.0 fazia isso. */}
-            {RANGES.filter((r) => r.size === 25 || matches.length >= r.size).map((r) => (
+            {RANGES.filter((r) => r.size === 25 || matches.length >= r.size || canLoadMore).map((r) => (
               <button
                 key={r.size}
-                onClick={() => setMatchCountRange(r.size)}
+                onClick={() => {
+                  setMatchCountRange(r.size);
+                  // Janela maior que a lista: pede a carga; até ela chegar, o gráfico fica
+                  // na janela que a lista preenche (nunca desenha 40 com o rótulo de 100).
+                  if (matches.length < r.size) onRequestMore?.();
+                }}
                 className={`px-2 py-1 rounded transition ${
                   matchCountRange === r.size ? 'bg-slate-700 text-amber-300 font-bold' : 'text-slate-400 hover:text-slate-200'
                 }`}

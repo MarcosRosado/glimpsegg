@@ -29,7 +29,7 @@ import { HeroGridTab } from './components/heroGrid/HeroGridTab';
 import { Notice } from './components/heroGrid/primitives';
 import { SearchPlayerModal } from './components/search/SearchPlayerModal';
 import { OnboardingModal } from './components/auth/OnboardingModal';
-import { MatchDetails, PlayerProfileSummary, ProfileHistoryItem } from './types/dota';
+import { MatchDetails, PlayerMatchFilters, PlayerProfileSummary, ProfileHistoryItem } from './types/dota';
 import { fetchPlayerProfile } from './services/openDotaProfile';
 import { fetchOpenDotaMatchDetails, requestOpenDotaParse } from './services/openDotaMatch';
 import { resolveSteamId } from './services/steamResolver';
@@ -100,6 +100,8 @@ function MainAppContent() {
   // Clicar num heroi em "Mais Jogados" filtra a lista de partidas. Antes o
   // handler era um no-op e o clique nao fazia nada.
   const [heroFilterId, setHeroFilterId] = useState<number | null>(null);
+  /** Período e patch que a seção Heróis passa a Partidas junto com o herói clicado. */
+  const [matchesPreset, setMatchesPreset] = useState<PlayerMatchFilters>({});
 
   /**
    * UMA instancia de `useHeroGridSync` para todo o app.
@@ -511,9 +513,12 @@ function MainAppContent() {
       if (parseRunRef.current !== run) return;
       if (fresh && fresh.availability.parsed) {
         setSelectedMatch(fresh);
-        // A partida virou "analisada": a aba inicial passa a valer como se tivesse aberto
-        // agora — "Meu jogo" se o jogador em foco é a conta configurada.
-        setActiveMatchTab(initialMatchView(fresh, configuredSteamId, currentSteamId).tab);
+        // A partida virou "analisada": jogador E aba iniciais passam a valer como se ela tivesse
+        // aberto agora. Os dois juntos de propósito — no modo placar o clique numa linha troca o
+        // jogador, e recalcular só a aba abriria "Meu jogo" com o jogo de outra pessoa.
+        const view = initialMatchView(fresh, configuredSteamId, currentSteamId);
+        setSelectedPlayerSlot(view.slot);
+        setActiveMatchTab(view.tab);
         showToast(t('parseReadyToast'));
         return;
       }
@@ -571,6 +576,8 @@ function MainAppContent() {
 
   const navigate = (next: AppSection) => {
     setSelectedMatch(null);
+    // Entrar em Partidas pela barra é começar do zero: sem o período e o patch que Heróis passou.
+    if (next === 'MATCHES') setMatchesPreset({});
     if (next === 'HERO_GRID' && section !== 'HERO_GRID') setHeroGridView('PANEL');
     setSection(next);
   };
@@ -671,6 +678,8 @@ function MainAppContent() {
         return (
           <MatchesSection
             steamAccountId={p.steamAccountId}
+            initialDays={(matchesPreset.days ?? null) as 30 | 90 | 365 | null}
+            initialPatch={matchesPreset.patch ?? null}
             initialMatches={p.recentMatches}
             heroFilterId={heroFilterId}
             onClearHeroFilter={() => setHeroFilterId(null)}
@@ -681,8 +690,9 @@ function MainAppContent() {
         return (
           <HeroesSection
             steamAccountId={p.steamAccountId}
-            onOpenHeroMatches={(heroId) => {
+            onOpenHeroMatches={(heroId, filters) => {
               setHeroFilterId(heroId);
+              setMatchesPreset(filters);
               setSection('MATCHES');
             }}
           />
@@ -721,6 +731,7 @@ function MainAppContent() {
             onOpenAndRequestParse={(id) => void handleSelectMatch(id, { requestParse: true })}
             onOpenHeroMatches={(heroId) => {
               setHeroFilterId(heroId);
+              setMatchesPreset({});
               setSection('MATCHES');
             }}
             onOpenPeer={(accountId) => void handleSelectProfileFromHistory(accountId)}
@@ -782,9 +793,13 @@ function MainAppContent() {
             </div>
           )}
 
-          {selectedMatch ? (
-            renderMatch(selectedMatch)
-          ) : section === 'HERO_GRID' && heroGridEnabled ? (
+          {selectedMatch && renderMatch(selectedMatch)}
+
+          {/* A seção fica MONTADA (só escondida) enquanto a partida está aberta: voltar da
+              partida devolve os filtros e as páginas já carregadas de Partidas e Heróis, em vez
+              de refazer as chamadas do zero. */}
+          <div className={selectedMatch ? 'hidden' : undefined}>
+          {section === 'HERO_GRID' && heroGridEnabled ? (
             /* HERO GRID — painel (sincronização, diagnóstico, ranking) ou réplica do layout */
             <div className="animate-in fade-in duration-200 space-y-4">
               {heroGridOtherAccountNotice}
@@ -821,6 +836,7 @@ function MainAppContent() {
           ) : (
             <div className="animate-in fade-in duration-200">{renderSection(profile)}</div>
           )}
+          </div>
         </main>
       </div>
 

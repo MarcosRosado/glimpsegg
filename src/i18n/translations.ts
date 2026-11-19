@@ -212,7 +212,7 @@ export const translations = {
     recentMatchesTitle: 'Partidas Recentes & Performance Detalhada',
 
     // Match Header & Tabs
-    backToDashboard: 'Voltar ao Painel',
+    backToDashboard: 'Voltar',
     radiantVictory: 'Vitória dos Radiant',
     direVictory: 'Vitória dos Dire',
     matchId: 'Partida',
@@ -947,6 +947,7 @@ export const translations = {
     itemBenchmarkEstimateHint: 'O alvo de cada item vem de uma tabela fixa do app (tempos de referência por item), não da média de jogadores do mesmo herói.',
     radarEstimateHint: 'Os cinco eixos comparam com uma base fixa por função (constante do app), não com jogadores do mesmo herói ou ranque.',
     csBaselineEstimateHint: 'Estimativa: a referência de last hits aos 10 min é uma constante fixa por função, não uma média medida.',
+    deniesBaselineEstimateHint: 'Estimativa: a referência de denies aos 10 min é uma constante fixa por função, não uma média medida.',
     finalInventoryTitle: 'Inventário final (6 slots + mochila + neutro)',
     backpackItem: 'Mochila: {name}',
     neutralItem: 'Neutro: {name}',
@@ -995,6 +996,7 @@ export const translations = {
     acctByLane: 'Por rota registrada',
     acctByLaneHint: 'A rota que a OpenDota registrou na partida analisada. Não é o veredito de rota do app.',
     acctByPatch: 'Por patch',
+    acctByMode: 'Por modo',
     acctPatchId: 'Patch #{id}',
     acctLaneSafe: 'Safelane',
     acctLaneMid: 'Meio',
@@ -1241,7 +1243,7 @@ export const translations = {
     recentMatchesTitle: 'Recent Matches & Detailed Performance',
 
     // Match Header & Tabs
-    backToDashboard: 'Back to Dashboard',
+    backToDashboard: 'Back',
     radiantVictory: 'Radiant Victory',
     direVictory: 'Dire Victory',
     matchId: 'Match',
@@ -1976,6 +1978,7 @@ export const translations = {
     itemBenchmarkEstimateHint: 'Each item target comes from a fixed table in the app (reference times per item), not from the average of players on the same hero.',
     radarEstimateHint: 'The five axes compare against a fixed baseline per role (an app constant), not against players on the same hero or rank.',
     csBaselineEstimateHint: 'Estimate: the last-hit reference at 10 min is a fixed constant per role, not a measured average.',
+    deniesBaselineEstimateHint: 'Estimate: the deny reference at 10 min is a fixed constant per role, not a measured average.',
     finalInventoryTitle: 'Final inventory (6 slots + backpack + neutral)',
     backpackItem: 'Backpack: {name}',
     neutralItem: 'Neutral: {name}',
@@ -2024,6 +2027,7 @@ export const translations = {
     acctByLane: 'By recorded lane',
     acctByLaneHint: "The lane OpenDota recorded in the analyzed match. It is not the app's lane verdict.",
     acctByPatch: 'By patch',
+    acctByMode: 'By mode',
     acctPatchId: 'Patch #{id}',
     acctLaneSafe: 'Safe lane',
     acctLaneMid: 'Mid',

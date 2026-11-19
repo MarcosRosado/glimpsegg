@@ -94,6 +94,42 @@ function useIsNarrow(): boolean {
   return narrow;
 }
 
+/**
+ * Um item da barra. Componente de topo de módulo de propósito: declarado dentro da `Sidebar`
+ * ele seria um tipo novo a cada render, o React remontaria o botão e o foco de teclado se
+ * perderia ao trocar de seção.
+ */
+const NavButton: React.FC<{
+  id: AppSection;
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+  collapsed: boolean;
+  onNavigate: (section: AppSection) => void;
+  disabled?: boolean;
+  hint?: string;
+}> = ({ id, icon: Icon, label, active, collapsed, onNavigate, disabled, hint }) => (
+  <button
+    type="button"
+    onClick={() => onNavigate(id)}
+    disabled={disabled}
+    title={hint ?? (collapsed ? label : undefined)}
+    aria-label={label}
+    aria-current={active ? 'page' : undefined}
+    className={cn(
+      'flex items-center gap-3 rounded-lg border text-sm font-semibold transition',
+      'disabled:opacity-40 disabled:cursor-not-allowed',
+      collapsed ? 'w-10 h-10 justify-center mx-auto' : 'w-full px-3 py-2',
+      active
+        ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200'
+        : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-800/60',
+    )}
+  >
+    <Icon className="w-4 h-4 shrink-0" aria-hidden />
+    {!collapsed && <span className="truncate">{label}</span>}
+  </button>
+);
+
 interface SidebarProps {
   section: AppSection;
   onNavigate: (section: AppSection) => void;
@@ -120,37 +156,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Janela estreita recolhe sem gravar preferência: alargar de novo devolve o que a pessoa escolheu.
   const collapsed = userCollapsed || narrow;
 
-  const NavButton: React.FC<{
-    id: AppSection;
-    icon: LucideIcon;
-    label: string;
-    disabled?: boolean;
-    hint?: string;
-  }> = ({ id, icon: Icon, label, disabled, hint }) => {
-    const active = section === id;
-    return (
-      <button
-        type="button"
-        onClick={() => onNavigate(id)}
-        disabled={disabled}
-        title={hint ?? (collapsed ? label : undefined)}
-        aria-label={label}
-        aria-current={active ? 'page' : undefined}
-        className={cn(
-          'flex items-center gap-3 rounded-lg border text-sm font-semibold transition',
-          'disabled:opacity-40 disabled:cursor-not-allowed',
-          collapsed ? 'w-10 h-10 justify-center mx-auto' : 'w-full px-3 py-2',
-          active
-            ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200'
-            : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-800/60',
-        )}
-      >
-        <Icon className="w-4 h-4 shrink-0" aria-hidden />
-        {!collapsed && <span className="truncate">{label}</span>}
-      </button>
-    );
-  };
-
   return (
     <nav
       aria-label={t('navLabel')}
@@ -175,13 +180,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </button>
 
       {ITEMS.filter((it) => !hiddenSections.includes(it.id)).map((it) => (
-        <NavButton key={it.id} id={it.id} icon={it.icon} label={t(it.label)} />
+        <NavButton
+          key={it.id}
+          id={it.id}
+          icon={it.icon}
+          label={t(it.label)}
+          active={section === it.id}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
       ))}
 
       {heroGridEnabled && (
         <>
           <div className={cn('border-t border-slate-800 my-2', collapsed ? 'mx-3' : 'mx-1')} />
           <NavButton
+            active={section === 'HERO_GRID'}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
             id="HERO_GRID"
             icon={LayoutGrid}
             label={t('heroGridTabTitle')}

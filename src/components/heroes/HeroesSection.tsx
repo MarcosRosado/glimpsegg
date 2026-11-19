@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, AlertTriangle, Search, Swords } from 'lucide-react';
-import type { HeroPerformance, PatchWindow } from '../../types/dota';
+import type { HeroPerformance, PatchWindow, PlayerMatchFilters } from '../../types/dota';
 import { fetchHeroPerformance } from '../../services/openDotaProfile';
 import { getHero } from '../../constants/heroes';
 import { handleHeroImageError } from '../../utils/imageFallback';
@@ -37,7 +37,8 @@ const SORTS: { key: SortKey; label: 'heroesColMatches' | 'heroesColWinRate' | 'h
  */
 export const HeroesSection: React.FC<{
   steamAccountId: string;
-  onOpenHeroMatches: (heroId: number) => void;
+  /** Abre Partidas filtrada pelo herói, levando o período e o patch desta tela. */
+  onOpenHeroMatches: (heroId: number, filters: PlayerMatchFilters) => void;
 }> = ({ steamAccountId, onOpenHeroMatches }) => {
   const { t, language } = useLanguage();
   const windows = usePatchWindows();
@@ -153,7 +154,7 @@ export const HeroesSection: React.FC<{
                         <td className="py-2 pr-3">
                           <button
                             type="button"
-                            onClick={() => onOpenHeroMatches(r.heroId)}
+                            onClick={() => onOpenHeroMatches(r.heroId, toMatchFilters(days, patch))}
                             title={t('heroesOpenMatches', { hero: hero.displayName })}
                             className="flex items-center gap-2.5 text-left hover:text-cyan-200"
                           >

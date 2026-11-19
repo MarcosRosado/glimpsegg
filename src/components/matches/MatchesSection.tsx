@@ -7,9 +7,9 @@ import { MatchList } from '../dashboard/MatchList';
 import { PeriodPatchFilter, toMatchFilters, usePatchWindows, type PeriodDays } from '../filters/PeriodPatchFilter';
 
 /**
- * Seção Partidas (docs/PROPOSTA-V2.md §3.3): a lista paginada além das 40, com período e
- * patch filtrados no servidor. O resto dos filtros (resultado, fila, herói, modo) continua no
- * `MatchList`, sobre o que já foi carregado.
+ * Seção Partidas (docs/PROPOSTA-V2.md §3.3): a lista paginada além das 40, com período, patch
+ * e herói filtrados no servidor. O resto dos filtros (resultado, fila, modo, busca por nome)
+ * continua no `MatchList`, sobre o que já foi carregado.
  *
  * Sem filtro, a primeira página é a do perfil (já baixada): não se paga a mesma chamada duas
  * vezes. Falha de rede (`null`) mostra o erro com "tentar de novo" — nunca vira "fim da lista".
@@ -20,11 +20,14 @@ export const MatchesSection: React.FC<{
   onSelectMatch: (matchId: string) => void;
   heroFilterId: number | null;
   onClearHeroFilter: () => void;
-}> = ({ steamAccountId, initialMatches, onSelectMatch, heroFilterId, onClearHeroFilter }) => {
+  /** Período e patch de partida — o clique num herói da seção Heróis traz os filtros de lá. */
+  initialDays?: PeriodDays;
+  initialPatch?: PatchWindow | null;
+}> = ({ steamAccountId, initialMatches, onSelectMatch, heroFilterId, onClearHeroFilter, initialDays = null, initialPatch = null }) => {
   const { t } = useLanguage();
   const windows = usePatchWindows();
-  const [days, setDays] = useState<PeriodDays>(null);
-  const [patch, setPatch] = useState<PatchWindow | null>(null);
+  const [days, setDays] = useState<PeriodDays>(initialDays);
+  const [patch, setPatch] = useState<PatchWindow | null>(initialPatch);
   const [matches, setMatches] = useState<PlayerMatchSummary[]>(initialMatches);
   const [hasMore, setHasMore] = useState(initialMatches.length >= RECENT_MATCHES_LIMIT);
   const [loading, setLoading] = useState(false);
@@ -32,7 +35,9 @@ export const MatchesSection: React.FC<{
   // Resposta de um filtro antigo que chega depois da troca não pode sobrescrever a lista nova.
   const runRef = useRef(0);
 
-  const unfiltered = !days && !patch;
+  // Herói também vai ao servidor (`hero_id`): filtrar só as 40 carregadas deixava a lista vazia
+  // para herói jogado há mais tempo, e o "carregar mais" não paginava dentro dele.
+  const unfiltered = !days && !patch && heroFilterId === null;
   // Páginas já trazidas do servidor. O offset é o da lista CRUA: com patch, o corte local pode
   // encurtar uma página, então contar itens exibidos daria o offset errado.
   const pagesLoaded = useRef(1);
@@ -44,7 +49,11 @@ export const MatchesSection: React.FC<{
     const run = ++runRef.current;
     setLoading(true);
     setFailed(false);
-    const result = await fetchPlayerMatchesPage(steamAccountId, { ...toMatchFilters(days, patch), offset });
+    const result = await fetchPlayerMatchesPage(steamAccountId, {
+      ...toMatchFilters(days, patch),
+      ...(heroFilterId !== null ? { heroId: heroFilterId } : {}),
+      offset,
+    });
     if (runRef.current !== run) return;
     setLoading(false);
     if (!result) {
@@ -68,7 +77,7 @@ export const MatchesSection: React.FC<{
     }
     void loadPage(0, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [steamAccountId, days, patch, initialMatches]);
+  }, [steamAccountId, days, patch, heroFilterId, initialMatches]);
 
   const loadMore = () => void loadPage(pagesLoaded.current, false);
   const retry = () => void loadPage(lastRequest.current.page, lastRequest.current.replace);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Clock, Copy, Check, Trophy } from 'lucide-react';
 import { MatchAnalysisOutcome, MatchDetails } from '../../types/dota';
 import { TranslationKey } from '../../i18n/translations';
-import { formatDuration, timeAgoText } from '../../utils/dotaFormatters';
+import { formatDuration, matchModeKey, timeAgoText } from '../../utils/dotaFormatters';
 import { useLanguage } from '../../context/LanguageContext';
 
 /**
@@ -32,6 +32,7 @@ interface MatchHeaderProps {
 export const MatchHeader: React.FC<MatchHeaderProps> = ({ match, onBack }) => {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
+  const modeLabel = matchModeKey(match.gameModeId, match.lobbyTypeId);
 
   const copyMatchId = () => {
     navigator.clipboard.writeText(match.id);
@@ -85,8 +86,14 @@ export const MatchHeader: React.FC<MatchHeaderProps> = ({ match, onBack }) => {
             </div>
 
             <div className="flex items-center gap-3 text-xs text-slate-400 mt-2">
-              <span className="text-slate-300 font-semibold">{match.gameMode}</span>
-              <span>•</span>
+              {/* Modo e fila pelo `t()`: o rótulo antigo (`match.gameMode`) vinha cravado em
+                  pt-BR e chutava "All Pick Ranqueado" sem dado. Sem modo, o item some. */}
+              {modeLabel && (
+                <>
+                  <span className="text-slate-300 font-semibold">{t(modeLabel.key, modeLabel.params)}</span>
+                  <span>•</span>
+                </>
+              )}
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-slate-500" />
                 <span>{formatDuration(match.durationSeconds)}</span>

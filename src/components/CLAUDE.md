@@ -7,7 +7,7 @@ o que precisa ser verificado vira função pura em `utils/`.
 
 | Pasta | O que é | CLAUDE.md |
 | --- | --- | --- |
-| `account/` | `AccountStats.tsx` — seção Conta: totais da carreira (média, soma e a **amostra de cada linha**), recordes que abrem a partida e contagens por lado, rota registrada e patch (`services/openDotaAccount.ts`). Contagem por modo ficou fora: sem o lobby, `formatGameMode` rotularia ranqueada como casual | — |
+| `account/` | `AccountStats.tsx` — seção Conta: totais da carreira (média, soma e a **amostra de cada linha**), recordes que abrem a partida e contagens por lado, rota registrada, modo (por `matchModeKey` sem a fila: nunca "casual" no chute) e patch (`services/openDotaAccount.ts`) | — |
 | `auth/` | `OnboardingModal.tsx` — primeira execução: escolhe idioma e informa a conta Steam (ID ou link do perfil, via `resolveSteamId`), com confirmação da conta resolvida antes de salvar. Sem token. No modo `guide`, é a ajuda "como encontrar sua conta" | — |
 | `brand/` | Marca in-app: monograma e wordmark | [ver](brand/CLAUDE.md) |
 | `coaching/` | `CoachingInsightsTab.tsx` — aba `COACHING`. Renderiza `CoachingInsight[]` com chip de procedência. A recomendação de build está **escondida** desde 2026-11-19 (vinha da STRATZ; ver o comentário no componente e a Fase 5 de `docs/PLANO-OPENDOTA.md`), e desde a 2.0 a aba diz isso numa nota ("Fora desta versão") em vez de silêncio | — |
@@ -15,9 +15,9 @@ o que precisa ser verificado vira função pura em `utils/`.
 | `filters/` | `PeriodPatchFilter.tsx` — período (30 dias, 3 meses, 1 ano, tudo) e patch, compartilhado por Partidas e Heróis, mais `usePatchWindows` e `toMatchFilters`. Só monta o filtro: quem contorna o `?patch=` que não conhece o patch novo é o serviço | — |
 | `heroes/` | `HeroesSection.tsx` — seção Heróis: partidas, winrate ("amostra pequena" abaixo de 5), KDA agregado e última vez, por período e patch. **Sem Glint médio** — a lista completa não traz os insumos da nota. O clique abre Partidas filtrada | — |
 | `heroGrid/` | Painel e réplica do layout espelho de heróis | [ver](heroGrid/CLAUDE.md) |
-| `home/` | O Início: `HomeSection.tsx` (última partida, forma, tendência e os cards menores), `LastMatchCard.tsx` (estado do replay e o "Pedir análise", que abre a partida e dispara o pedido) e `useTrendMatches.ts` (as 100 partidas mais recentes para as janelas de 50 e 100 da tendência serem reais; sem elas, os gráficos só oferecem as janelas que a lista preenche) | — |
+| `home/` | O Início: `HomeSection.tsx` (última partida, forma, tendência e os cards menores), `LastMatchCard.tsx` (estado do replay e o "Pedir análise", que abre a partida e dispara o pedido) e `useTrendMatches.ts` (as 100 partidas mais recentes para as janelas de 50 e 100 da tendência serem reais; sem elas, os gráficos só oferecem as janelas que a lista preenche) | [ver](home/CLAUDE.md) |
 | `layout/` | A moldura: `Sidebar` (seções) e `Navbar` (topo) | [ver](layout/CLAUDE.md) |
-| `matches/` | `MatchesSection.tsx` — seção Partidas: o `MatchList` com período/patch no servidor e "carregar mais" além das 40. O offset conta páginas da lista crua (o corte local por patch encurta páginas); falha de rede mostra erro com "tentar de novo", nunca "fim da lista" | — |
+| `matches/` | `MatchesSection.tsx` — seção Partidas: o `MatchList` com período, patch e herói no servidor (o clique em Heróis traz período e patch junto) e "carregar mais" além das 40. O offset conta páginas da lista crua (o corte local por patch encurta páginas); falha de rede mostra erro com "tentar de novo", nunca "fim da lista" | — |
 | `match/` | Cabeçalho, abas, seletor de jogador, modo placar e a aba Resumo da partida | [ver](match/CLAUDE.md) |
 | `performance/` | A aba "Meu jogo": desempenho de um jogador, uso de item ativo e tempo morto | [ver](performance/CLAUDE.md) |
 | `search/` | `SearchPlayerModal.tsx` — busca (Ctrl+K) de conta **ou partida** (`classifySearchInput`; o número ambíguo ganha a opção "abrir como partida"), histórico e favoritos | — |

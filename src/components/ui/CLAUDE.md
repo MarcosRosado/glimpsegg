@@ -8,7 +8,7 @@ Primitivos compartilhados entre telas. Nada de domínio de Dota mora aqui — s�
 | --- | --- | --- |
 | `IconButton.tsx` | Botão de ícone padronizado do chrome | `Navbar` |
 | `GlintBadge.tsx` | Chip do **Glint experimental** (0 a 100) e o hook `useGlintHint`. A procedência faz parte do chip: `title` com as métricas do teste e selo "beta" no tamanho `md`. Não renderiza nada com nota nula | `MatchList`, `ScoreboardTable`; o hook também em `TeamOverviewCard`, `PlayerPerformanceTab` e na dashboard |
-| `EstimateChip.tsx` | Selo "estimativa" para número comparado contra constante fixa (`ROLE_BASELINE`): o `hint` diz de onde vem a estimativa e vira o `title` | `Navbar`, `ProfileHeader`, `PlayerPerformanceTab` |
+| `EstimateChip.tsx` | Selo "estimativa" para número comparado contra constante fixa (`ROLE_BASELINE`): o `hint` diz de onde vem a estimativa e vira o `title` | `Navbar`, `ProfileHeader`, `PlayerPerformanceTab`, `AccountStats` |
 | `Tooltip.tsx` | Tooltip posicionado por portal | `HeroGridMirrorScreen` |
 | `PatchTransitionNotice.tsx` | Aviso temporário (chip ou banner) de que os agregados de meta ainda misturam o patch anterior. Não renderiza nada fora da janela | `Navbar`, `CoachingInsightsTab`, `HeroGridTab` |
 

@@ -13,7 +13,7 @@ import {
 import { fetchPatchCatalog } from '../../services/openDotaProfile';
 import { getHero } from '../../constants/heroes';
 import { handleHeroImageError } from '../../utils/imageFallback';
-import { formatDuration, timeAgoText } from '../../utils/dotaFormatters';
+import { formatDuration, matchModeKey, timeAgoText } from '../../utils/dotaFormatters';
 import { useLanguage } from '../../context/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { cn } from '../../utils/cn';
@@ -97,9 +97,9 @@ const Card: React.FC<{ icon: React.ReactNode; title: string; hint?: string; chil
  *   replay analisado (eficiência de rota, stuns, pings) tem `n` muito menor que abates. Campo
  *   de taxa (GPM, XPM, nível) mostra só a média: somar GPM não diz nada.
  * - Recordes: uma chamada por campo, com cache de um dia no serviço; cada um abre a partida.
- * - Contagens: lado, rota registrada pela OpenDota (não é veredito de rota) e patch. Modo de
- *   jogo ficou fora: `formatGameMode` sem o lobby chama o modo 1 de "casual", e a contagem
- *   por modo não traz o lobby — o rótulo sairia errado para toda partida ranqueada.
+ * - Contagens: lado, rota registrada pela OpenDota (não é veredito de rota), modo e patch. O
+ *   modo sai por `matchModeKey` SEM a fila (a contagem por modo não traz o lobby): "All Pick",
+ *   nunca "casual" ou "ranqueado" no chute. Modo sem rótulo conhecido fica de fora.
  *
  * Cada bloco some sozinho se a chamada dele falhar — os outros seguem.
  */
@@ -114,9 +114,11 @@ export const AccountStats: React.FC<{ steamAccountId: string; onOpenMatch: (matc
   const patches = useAsync(() => fetchPatchCatalog(), []);
 
   const fmt = (n: number, digits = 0) => n.toLocaleString(language, { maximumFractionDigits: digits });
-  const fmtValue = (field: AccountTotalField, v: number, isAverage: boolean) => {
-    // Duração somada vira horas: "250895:34" não se lê.
-    if (field === 'duration') return isAverage ? formatDuration(Math.round(v)) : t('acctHours', { h: fmt(v / 3600) });
+  /** `sum` = soma da carreira; `avg` = média por partida; `record` = valor de uma partida. */
+  const fmtValue = (field: AccountTotalField, v: number, kind: 'avg' | 'sum' | 'record') => {
+    const isAverage = kind === 'avg';
+    // Só a duração SOMADA vira horas ("250895:34" não se lê); média e recorde são de uma partida.
+    if (field === 'duration') return kind === 'sum' ? t('acctHours', { h: fmt(v / 3600) }) : formatDuration(Math.round(v));
     if (field === 'lane_efficiency_pct') return `${fmt(v, 0)}%`;
     if (field === 'stuns') return `${fmt(v, 1)} s`;
     return fmt(v, isAverage ? 1 : 0);
@@ -172,10 +174,10 @@ export const AccountStats: React.FC<{ steamAccountId: string; onOpenMatch: (matc
                     </span>
                   </td>
                   <td className="py-1.5 pr-3 text-right font-mono text-slate-100">
-                    {row.average !== null ? fmtValue(row.field, row.average, true) : '—'}
+                    {row.average !== null ? fmtValue(row.field, row.average, 'avg') : '—'}
                   </td>
                   <td className="py-1.5 pr-3 text-right font-mono text-slate-400">
-                    {RATE_FIELDS.has(row.field) ? '' : fmtValue(row.field, row.sum, false)}
+                    {RATE_FIELDS.has(row.field) ? '' : fmtValue(row.field, row.sum, 'sum')}
                   </td>
                   <td className="py-1.5 text-right font-mono text-slate-500" title={t('acctSampleHint', { n: fmt(row.matches) })}>
                     {fmt(row.matches)}
@@ -202,7 +204,7 @@ export const AccountStats: React.FC<{ steamAccountId: string; onOpenMatch: (matc
                     <img src={hero.avatarUrl} alt="" className="w-10 h-6 rounded object-cover border border-slate-700 shrink-0" onError={handleHeroImageError} />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[10px] uppercase tracking-wider text-slate-500">{t(FIELD_LABEL[r.field])}</span>
-                      <span className="block text-sm font-black text-slate-100 font-mono">{fmtValue(r.field, r.value, false)}</span>
+                      <span className="block text-sm font-black text-slate-100 font-mono">{fmtValue(r.field, r.value, 'record')}</span>
                       <span className="block text-[10px] text-slate-400 truncate">
                         {hero.displayName}
                         {r.startTime ? ` · ${timeAgoText(r.startTime, t)}` : ''}
@@ -238,6 +240,18 @@ export const AccountStats: React.FC<{ steamAccountId: string; onOpenMatch: (matc
                   {counts.data.lane_role
                     .filter((e) => LANE_ROLE_LABEL[e.key])
                     .map((e) => countRow(t(LANE_ROLE_LABEL[e.key]), e))}
+                </ul>
+              </div>
+            )}
+            {counts.data.game_mode.length > 0 && (
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">{t('acctByMode')}</div>
+                <ul className="space-y-1">
+                  {counts.data.game_mode
+                    .map((e) => ({ e, label: matchModeKey(e.key) }))
+                    .filter((x) => x.label)
+                    .slice(0, 5)
+                    .map(({ e, label }) => countRow(t(label!.key, label!.params), e))}
                 </ul>
               </div>
             )}

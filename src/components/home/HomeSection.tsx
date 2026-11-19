@@ -13,8 +13,8 @@ import { useTrendMatches } from './useTrendMatches';
  * Início, opção A dos wireframes (docs/PROPOSTA-V2.md §3.2, decisão do dono): a última partida
  * no topo, com o estado do replay; depois forma e tendência; por último os cards menores.
  *
- * A tendência usa as 100 partidas mais recentes (`useTrendMatches`), para as janelas de 50 e
- * 100 serem reais; o resto usa a lista do perfil.
+ * A tendência pode trazer as 100 partidas mais recentes (`useTrendMatches`), sob demanda, para
+ * as janelas de 50 e 100 serem reais; o resto usa a lista do perfil.
  */
 export const HomeSection: React.FC<{
   profile: PlayerProfileSummary;
@@ -23,7 +23,8 @@ export const HomeSection: React.FC<{
   onOpenHeroMatches: (heroId: number) => void;
   onOpenPeer: (accountId: string) => void;
 }> = ({ profile: p, onOpenMatch, onOpenAndRequestParse, onOpenHeroMatches, onOpenPeer }) => {
-  const trendMatches = useTrendMatches(p.steamAccountId, p.recentMatches);
+  const trend = useTrendMatches(p.steamAccountId, p.recentMatches);
+  const trendMatches = trend.matches;
   const lastMatch = p.recentMatches[0] ?? null;
 
   return (
@@ -40,13 +41,22 @@ export const HomeSection: React.FC<{
       </div>
 
       {/* Tendência na largura inteira: é a leitura de "estou melhorando?", e espremida perde o eixo. */}
-      {trendMatches.length > 1 && <PerformanceTrendChart matches={trendMatches} onSelectMatch={onOpenMatch} />}
+      {trendMatches.length > 1 && (
+        <PerformanceTrendChart
+          matches={trendMatches}
+          onSelectMatch={onOpenMatch}
+          canLoadMore={trend.canLoadMore}
+          onRequestMore={trend.requestMore}
+        />
+      )}
 
       {/* Os cards menores, em colunas que acomodam alturas diferentes sem buraco. */}
       <div className="columns-1 lg:columns-2 2xl:columns-3 gap-6 [&>*]:mb-6 [&>*]:break-inside-avoid">
         <TrendsCard
           part="trend"
           matches={trendMatches}
+          canLoadMore={trend.canLoadMore}
+          onRequestMore={trend.requestMore}
           seasonRank={p.seasonRank}
           leaderboardRank={p.leaderboardRank}
           onSelectMatch={onOpenMatch}

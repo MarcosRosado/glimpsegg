@@ -1,7 +1,7 @@
 # src/components/dashboard/
 
 Os cards de perfil que as seções da 2.0 reaproveitam: Início, Partidas e Conta (ver a navegação em
-[../../CLAUDE.md](../../CLAUDE.md)). Todos são montados pelo `App.tsx`, exceto onde indicado.
+[../../CLAUDE.md](../../CLAUDE.md)). Quem monta cada um está na última coluna.
 
 ## Arquivos
 
@@ -10,12 +10,12 @@ Os cards de perfil que as seções da 2.0 reaproveitam: Início, Partidas e Cont
 | `ProfileHeader.tsx` | Avatar, medalha, MMR (com chip de estimativa), KPIs de carreira e o botão do espelho de heróis. Usa `getRankTierInfo`. Na seção Conta | `App.tsx` |
 | `MatchList.tsx` | Lista de partidas com filtros e badges de destaque (`getAccumulatedMatchTags`). **Concentra os limiares calibrados da dashboard** | `matches/MatchesSection.tsx` |
 | `MatchContextCell.tsx` | Célula compacta com bracket médio, tamanho do grupo e tipo de fila | `MatchList.tsx` |
-| `RecentFormCard.tsx` | O cartão "Forma" do Início: sequência dos últimos jogos, Glint médio das partidas com nota, KDA e GPM (estes vieram da antiga `StatRail`), cada um com a amostra no tooltip | `App.tsx` |
-| `MostPlayedHeroes.tsx` | Top heróis com winrate e KDA (este some na linha com `avgKda` nulo). **Sem nota média por herói** — a lista não traz os insumos do Glint para todas as partidas | `App.tsx` |
-| `PerformanceTrendChart.tsx` | Tendência de Glint/winrate/GPM com média móvel (`recharts`). A métrica de Glint (botão e gráfico) some quando nenhuma partida da janela tem nota | `App.tsx` |
-| `ActivityHeatmap.tsx` | Heatmap de 30 dias, partidas/dia com winrate | `App.tsx` |
-| `TrendsCard.tsx` | Sunburst de heróis por posição, equalizer de Glint e histórico de rota (`echarts`), mais KPIs de fila/ranque e distribuição de medalhas. `part="trend"` (Início) e `part="account"` (Conta) dividem o card como o §5 da proposta da 2.0 pede. O sunburst e o histórico de rota **hoje não aparecem** (ver *Glint e o que a lista não traz*). Era `StratzTrendsCard` até a 2.0 | `App.tsx` |
-| `TeammatesCard.tsx` | Top companheiros com winrate junto; o clique abre a conta do companheiro (`onOpenPeer`) — na 1.0 a linha parecia clicável e não fazia nada. Era `StratzTeammatesCard` até a 2.0 | `App.tsx` |
+| `RecentFormCard.tsx` | O cartão "Forma" do Início: sequência dos últimos jogos, Glint médio das partidas com nota, KDA e GPM (estes vieram da antiga `StatRail`), cada um com a amostra no tooltip | `home/HomeSection.tsx` |
+| `MostPlayedHeroes.tsx` | Top heróis com winrate e KDA (este some na linha com `avgKda` nulo). **Sem nota média por herói** — a lista não traz os insumos do Glint para todas as partidas | `home/HomeSection.tsx` |
+| `PerformanceTrendChart.tsx` | Tendência de Glint/winrate/GPM com média móvel (`recharts`). A métrica de Glint (botão e gráfico) some quando nenhuma partida da janela tem nota | `home/HomeSection.tsx` |
+| `ActivityHeatmap.tsx` | Heatmap de 30 dias, partidas/dia com winrate | `home/HomeSection.tsx` |
+| `TrendsCard.tsx` | Sunburst de heróis por posição, equalizer de Glint e histórico de rota (`echarts`), mais KPIs de fila/ranque e distribuição de medalhas. `part="trend"` (Início) e `part="account"` (Conta) dividem o card como o §5 da proposta da 2.0 pede. O sunburst e o histórico de rota **hoje não aparecem** (ver *Glint e o que a lista não traz*). Era `StratzTrendsCard` até a 2.0 | `home/HomeSection.tsx` e `App.tsx` (Conta) |
+| `TeammatesCard.tsx` | Top companheiros com winrate junto; o clique abre a conta do companheiro (`onOpenPeer`) — na 1.0 a linha parecia clicável e não fazia nada. Era `StratzTeammatesCard` até a 2.0 | `home/HomeSection.tsx` |
 
 ## Glint e o que a lista não traz (desde 2026-11-19)
 

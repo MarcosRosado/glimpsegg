@@ -24,6 +24,9 @@ interface TrendsCardProps {
    * de medalhas) vai para a seção Conta. Sem a prop, o card inteiro, como na 1.0.
    */
   part?: 'trend' | 'account';
+  /** Dá para trazer mais partidas: o "100" aparece e o clique pede a carga. */
+  canLoadMore?: boolean;
+  onRequestMore?: () => void;
 }
 
 const VALVE_RANK_IMG_BASE = 'https://www.opendota.com/assets/images/dota2/rank_icons';
@@ -98,6 +101,8 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
   seasonRank,
   leaderboardRank,
   part,
+  canLoadMore = false,
+  onRequestMore,
 }) => {
   const { t } = useLanguage();
   const showTrend = part !== 'account';
@@ -443,10 +448,13 @@ export const TrendsCard: React.FC<TrendsCardProps> = ({
 
         <div className="flex bg-slate-900/90 p-0.5 rounded-lg border border-slate-800 text-xs font-mono">
           {/* "100" só quando há 100 partidas carregadas: senão o botão desenharia as mesmas. */}
-          {([25, 100] as const).filter((r) => r === 25 || matches.length >= r).map((r) => (
+          {([25, 100] as const).filter((r) => r === 25 || matches.length >= r || canLoadMore).map((r) => (
             <button
               key={r}
-              onClick={() => setRange(r)}
+              onClick={() => {
+                setRange(r);
+                if (matches.length < r) onRequestMore?.();
+              }}
               className={`px-3 py-1 rounded transition ${
                 effRange === r
                   ? 'bg-cyan-500/15 text-cyan-300 font-bold border border-cyan-500/40'

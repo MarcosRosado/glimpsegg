@@ -7,7 +7,7 @@ montados pelo `App.tsx` quando há `selectedMatch`.
 
 | Arquivo | Papel |
 | --- | --- |
-| `MatchHeader.tsx` | Cabeçalho: placar, duração e o veredito de forma da partida (`analysisOutcome`, que a OpenDota não tem — some quando nulo) |
+| `MatchHeader.tsx` | Cabeçalho: placar, duração, modo e fila por `matchModeKey` (some sem modo; nunca o chute "All Pick Ranqueado") e o veredito de forma da partida (`analysisOutcome`, que a OpenDota não tem — some quando nulo) |
 | `ParseRequestCard.tsx` | O cartão do **modo placar**: o que a análise libera (só o que de fato aparece depois), o botão "Pedir análise do replay" e o estado da espera ao lado. Guarda `ParseState` e `PARSE_POLL_DELAYS_MS` (recuo e teto). Substituiu o `ParsePendingBanner`, que ficava por cima da tela analisada |
 | `MatchTabs.tsx` | A fileira de abas da partida analisada. Recebe só as abas que existem: aba sem dado não aparece desabilitada |
 | `MatchPlayerPicker.tsx` | O seletor de jogador único, fixo ao lado das abas (`<select>` nativo, agrupado por lado, "(você)" na conta configurada) |
