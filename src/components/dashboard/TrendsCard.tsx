@@ -12,7 +12,7 @@ import { hasLaneVerdict, isLaneWin, isLaneLoss } from '../../utils/laneResult';
 import { GLINT_THRESHOLDS, formatGlint } from '../../utils/glint';
 import { useGlintHint } from '../ui/GlintBadge';
 
-interface StratzTrendsCardProps {
+interface TrendsCardProps {
   matches: PlayerMatchSummary[];
   onSelectMatch?: (matchId: string) => void;
   /** Rank do proprio jogador, para destacar o tier dele na distribuicao. */
@@ -86,7 +86,7 @@ type Focus =
   | { kind: 'role'; role: string; count: number; wins: number; avgGlint: number | null }
   | null;
 
-export const StratzTrendsCard: React.FC<StratzTrendsCardProps> = ({
+export const TrendsCard: React.FC<TrendsCardProps> = ({
   matches,
   onSelectMatch,
   seasonRank,

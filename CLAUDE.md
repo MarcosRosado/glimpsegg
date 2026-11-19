@@ -88,10 +88,14 @@ relativo. `tsconfig.app.json` inclui `["src", "tests"]`, então o `tsc -b` conti
 
 - **Electron** — `electron/preload.cjs` expõe `window.api`; as chamadas vão por IPC para
   `electron/main.cjs`, que faz o fetch no processo main. Config persistida em
-  `stratz_app_config.json` dentro do `userData` (o nome do arquivo ficou; o app só lê e grava o
-  Steam ID, o idioma e as preferências).
+  `glimpsegg_config.json` dentro do `userData` (o app só lê e grava o Steam ID, o idioma e as
+  preferências). Até a 2.0 o arquivo era `stratz_app_config.json`: no primeiro início a migração
+  (`electron/configMigration.cjs`) **copia** tudo menos `stratzApiKey` e deixa o antigo intocado,
+  porque os scripts de medição ainda procuram o token lá.
 - **Browser** (`npm run dev`) — `window.api` é `undefined`, então o renderer faz `fetch` direto e a
-  config vive no `localStorage` (`stratz_steam_id`, `app_language`).
+  config vive no `localStorage` (`glimpsegg_steam_id`, `glimpsegg_profile_history`,
+  `app_language`; as duas primeiras eram `stratz_*` e são copiadas uma vez por
+  `utils/legacyStorage.ts`).
 
 Todo serviço cobre os dois ramos. O padrão é `openDotaGet(endpoint)` em `src/services/opendota.ts`:
 uma função, os dois caminhos, `null` em qualquer falha. Código novo de rede passa por ela. Host
@@ -496,5 +500,6 @@ token pessoal da STRATZ que os scripts de medição de `scripts/` usam, e ele **
 se vazar, fica válido até expirar. Não colar em issue, log, teste, fixture ou captura de tela. Ele
 vem de `STRATZ_API_KEY`, de `.gabarito/.stratz-token` (fora do git) ou da chave `stratzApiKey`
 que uma versão anterior do app tenha deixado no `stratz_app_config.json` — o app não lê, não
-grava e não apaga essa chave, de propósito. Nenhum script imprime o token, e nada o embute no
+grava e não apaga essa chave nem esse arquivo, de propósito, e a migração para
+`glimpsegg_config.json` não a copia. Nenhum script imprime o token, e nada o embute no
 bundle.

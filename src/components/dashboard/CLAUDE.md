@@ -14,10 +14,8 @@ A home do jogador: o que aparece quando não há partida selecionada. Todos são
 | `MostPlayedHeroes.tsx` | Top heróis com winrate e KDA (este some na linha com `avgKda` nulo). **Sem nota média por herói** — a lista não traz os insumos do Glint para todas as partidas | `App.tsx` |
 | `PerformanceTrendChart.tsx` | Tendência de Glint/winrate/GPM com média móvel (`recharts`). A métrica de Glint (botão e gráfico) some quando nenhuma partida da janela tem nota | `App.tsx` |
 | `ActivityHeatmap.tsx` | Heatmap de 30 dias, partidas/dia com winrate | `App.tsx` |
-| `StratzTrendsCard.tsx` | Sunburst de heróis por posição, equalizer de Glint e histórico de rota (`echarts`). O sunburst e o histórico de rota **hoje não aparecem** (ver *Glint e o que a lista não traz*). O nome do arquivo é herança | `App.tsx` |
-| `StratzTeammatesCard.tsx` | Top companheiros com winrate junto | `App.tsx` |
-| `MatchDynamicsOverview.tsx` | Cards de stomp/comeback/even. **Órfão — ninguém importa** | — |
-| `TeammatesMatrix.tsx` | Matriz de companheiros com busca. **Órfão — ninguém importa** | — |
+| `TrendsCard.tsx` | Sunburst de heróis por posição, equalizer de Glint e histórico de rota (`echarts`). O sunburst e o histórico de rota **hoje não aparecem** (ver *Glint e o que a lista não traz*). Era `StratzTrendsCard` até a 2.0 | `App.tsx` |
+| `TeammatesCard.tsx` | Top companheiros com winrate junto. Era `StratzTeammatesCard` até a 2.0 | `App.tsx` |
 
 ## Glint e o que a lista não traz (desde 2026-11-19)
 

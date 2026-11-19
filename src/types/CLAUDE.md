@@ -29,7 +29,7 @@ daqui são praticamente a única rede de tipos que existe — ver *Gates* em
 - **`'UNKNOWN'` é membro legítimo de `Role`, `Lane`, `MapTeam` e `PlayerLaneResult`** — é assim que
   o app diz "não sei" em vez de chutar. Remover esse membro para "simplificar" reintroduz o palpite.
 - `AppConfig` tem **todas** as chaves da feature de hero grid opcionais: quem atualiza de uma versão
-  anterior não as tem no `stratz_app_config.json`, e ausente lê como o default de
+  anterior não as tem no arquivo de config (`glimpsegg_config.json`, antes `stratz_app_config.json`), e ausente lê como o default de
   `utils/heroGrid/preferences.ts`, que mantém a feature desligada. O default mora num lugar só.
 - `window.api.heroGrid` é opcional de propósito: ausente no caminho browser e num preload antigo.
   Os dois casos significam a mesma coisa para a UI — não há como gravar layout.

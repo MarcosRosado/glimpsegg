@@ -177,7 +177,11 @@ Ficam **escondidos** na 2.0, e as notas de versão dizem isso: recomendação de
 coaching por minuto contra a média do herói (Fase 2), ameaça por tipo de dano e controle sofrido
 (a OpenDota não mede), confrontos por faixa (sem pipeline). **Experimental:** Glint.
 
-## 6. Renomes e migração (6d) — o plano, para depois da aprovação
+## 6. Renomes e migração (6d) — feito em 2026-11-19
+
+Tudo abaixo entrou como descrito: `electron/configMigration.cjs` (arquivo de config) e
+`src/utils/legacyStorage.ts` (`localStorage`), cada um com teste; os dois órfãos saíram com as
+dez chaves de tradução que só eles usavam.
 
 - `StratzTrendsCard` → `TrendsCard`; `StratzTeammatesCard` → `TeammatesCard`.
 - `stratz_app_config.json` → `glimpsegg_config.json`. Migração no primeiro início: se o novo não

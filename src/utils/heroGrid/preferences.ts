@@ -30,7 +30,7 @@ import type { RankBracketBasic } from '../rankBracket';
  * ## C-1 — chave ausente lê como o default
  *
  * É o mecanismo de FR-001, e nao uma conveniencia: quem atualiza de uma versao anterior
- * do app nao tem NENHUMA das chaves `heroGrid*` no `stratz_app_config.json`, logo lê
+ * do app nao tem NENHUMA das chaves `heroGrid*` no arquivo de config (`glimpsegg_config.json`, antes `stratz_app_config.json`), logo lê
  * `enabled: false` e a feature nasce desligada. Por isso `loadConfig()` do `main.cjs` nao
  * lista as chaves novas (C-2) — o default mora só aqui, e nao pode divergir em dois
  * lugares. Pela mesma razao, valor de tipo inesperado (string onde se espera boolean,
@@ -79,7 +79,7 @@ export type HeroGridConfigKey = (typeof heroGridConfigKeys)[number];
  * Caminho browser (`npm run dev`, `window.api === undefined`).
  *
  * Prefixo escolhido: `hero_grid_`, snake_case, seguindo as chaves que o projeto já tem no
- * `localStorage` (`stratz_api_key`, `stratz_steam_id`, `app_language`) — prefixo por
+ * `localStorage` (`glimpsegg_steam_id`, `app_language`) — prefixo por
  * dominio + nome em snake_case. Nao se usa a chave de `AppConfig` direto para o
  * `localStorage` nao ficar com camelCase misturado ao que já existe.
  *

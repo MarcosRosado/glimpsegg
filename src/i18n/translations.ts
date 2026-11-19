@@ -88,19 +88,10 @@ export const translations = {
     noActivity: 'Sem partidas registradas nesta data',
 
     // Match Dynamics & Lane Outcomes
-    matchDynamicsTitle: 'Dinâmica das Partidas e Rotas',
-    stompRate: 'Vitórias por Massacre (Stomp)',
-    comebackRate: 'Viradas Épicas (Comeback)',
-    laneWinRate: 'Taxa de Vitória nas Rotas',
-    evenMatches: 'Partidas Equilibradas',
     badgeStomp: 'STOMP',
     badgeComeback: 'COMEBACK',
 
     // Teammates & Friends Matrix
-    teammatesTitle: 'Companheiros e Amigos Frequentes',
-    teammatesSubtitle: 'Estatísticas de sinergia e vitórias jogando juntos',
-    searchFriend: 'Buscar amigo...',
-    noFriendsFound: 'Nenhum companheiro encontrado.',
 
     // Match List Filters
     allMatches: 'Todas',
@@ -141,7 +132,6 @@ export const translations = {
     analysisCloseGame: 'Jogo equilibrado',
     analysisOutcomeSource: 'Veredito da STRATZ sobre a partida',
     laneSampleOf: '{measured} de {total} partidas com dado de rota',
-    laneNoParsedMatches: 'Nenhuma partida parseada na janela',
     glintPerMatch: 'Glint por partida',
     oldestToNewest: 'mais antiga → mais recente',
     hoverBarHint: 'Passe o mouse numa barra para ver a partida',
@@ -959,19 +949,10 @@ export const translations = {
     noActivity: 'No recorded matches on this day',
 
     // Match Dynamics & Lane Outcomes
-    matchDynamicsTitle: 'Match Dynamics & Lane Outcomes',
-    stompRate: 'Stomp Victories',
-    comebackRate: 'Epic Comebacks',
-    laneWinRate: 'Lane Win Rate',
-    evenMatches: 'Close Games',
     badgeStomp: 'STOMP',
     badgeComeback: 'COMEBACK',
 
     // Teammates & Friends Matrix
-    teammatesTitle: 'Teammates & Friends Synergy',
-    teammatesSubtitle: 'Duo statistics and win rate when playing together',
-    searchFriend: 'Search friend...',
-    noFriendsFound: 'No teammates found.',
 
     // Match List Filters
     allMatches: 'All',
@@ -1012,7 +993,6 @@ export const translations = {
     analysisCloseGame: 'Close game',
     analysisOutcomeSource: "STRATZ's verdict on the match",
     laneSampleOf: '{measured} of {total} matches with lane data',
-    laneNoParsedMatches: 'No parsed matches in this window',
     glintPerMatch: 'Glint per match',
     oldestToNewest: 'oldest → newest',
     hoverBarHint: 'Hover a bar to inspect the match',

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { BrandMark } from './components/brand/BrandMark';
 import { BrandLockup } from './components/brand/BrandLockup';
-import { StratzTrendsCard } from './components/dashboard/StratzTrendsCard';
-import { StratzTeammatesCard } from './components/dashboard/StratzTeammatesCard';
+import { TrendsCard } from './components/dashboard/TrendsCard';
+import { TeammatesCard } from './components/dashboard/TeammatesCard';
+import { LOCAL_STORAGE_KEYS, migrateLegacyLocalStorage } from './utils/legacyStorage';
 import { RecentFormCard } from './components/dashboard/RecentFormCard';
 import { MostPlayedHeroes } from './components/dashboard/MostPlayedHeroes';
 import { MatchList } from './components/dashboard/MatchList';
@@ -167,7 +168,7 @@ function MainAppContent() {
         console.warn('Could not save profileHistory to store:', e);
       }
     } else {
-      localStorage.setItem('stratz_profile_history', JSON.stringify(newHistory));
+      localStorage.setItem(LOCAL_STORAGE_KEYS.profileHistory, JSON.stringify(newHistory));
     }
   }, []);
 
@@ -199,7 +200,7 @@ function MainAppContent() {
             console.warn('Failed saving profileHistory:', err);
           });
         } else {
-          localStorage.setItem('stratz_profile_history', JSON.stringify(newHistory));
+          localStorage.setItem(LOCAL_STORAGE_KEYS.profileHistory, JSON.stringify(newHistory));
         }
 
         return newHistory;
@@ -225,9 +226,14 @@ function MainAppContent() {
           console.warn('Could not load Electron store config:', e);
         }
       } else {
-        // LocalStorage fallback
-        const savedSteam = localStorage.getItem('stratz_steam_id');
-        const savedHistoryStr = localStorage.getItem('stratz_profile_history');
+        // LocalStorage fallback. As chaves eram `stratz_*` ate a 2.0: copiadas uma vez.
+        try {
+          migrateLegacyLocalStorage(localStorage);
+        } catch {
+          // `localStorage` inacessivel: o app abre sem conta salva
+        }
+        const savedSteam = localStorage.getItem(LOCAL_STORAGE_KEYS.steamId);
+        const savedHistoryStr = localStorage.getItem(LOCAL_STORAGE_KEYS.profileHistory);
         if (savedSteam) loadedSteamId = savedSteam;
         if (savedHistoryStr) {
           try {
@@ -415,7 +421,7 @@ function MainAppContent() {
     if (window.api && typeof window.api.store?.set === 'function') {
       await window.api.store.set('steamAccountId', newSteamId);
     } else {
-      localStorage.setItem('stratz_steam_id', newSteamId);
+      localStorage.setItem(LOCAL_STORAGE_KEYS.steamId, newSteamId);
     }
 
     showToast(t('settingsSavedAlert'));
@@ -655,7 +661,7 @@ function MainAppContent() {
 
                   {/* 2. Tendências Card (Sunburst + Bipolar Up/Down Equalizer + Lane History) */}
                   {profile && (
-                    <StratzTrendsCard
+                    <TrendsCard
                       matches={profile.recentMatches}
                       seasonRank={profile.seasonRank}
                       leaderboardRank={profile.leaderboardRank}
@@ -691,7 +697,7 @@ function MainAppContent() {
 
                   {/* 6. Companheiros de Equipe (Na lateral direita, abaixo dos outros campos) */}
                   {profile && profile.peers && profile.peers.length > 0 && (
-                    <StratzTeammatesCard peers={profile.peers} />
+                    <TeammatesCard peers={profile.peers} />
                   )}
                 </div>
               </div>

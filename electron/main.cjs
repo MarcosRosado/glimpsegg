@@ -6,7 +6,19 @@ const { autoUpdater } = require('electron-updater');
 let mainWindow = null;
 
 // Local Config Store setup
-const configPath = path.join(app.getPath('userData'), 'stratz_app_config.json');
+//
+// O arquivo era `stratz_app_config.json` ate a 2.0. No primeiro inicio, a migracao copia o
+// antigo para o novo sem a chave `stratzApiKey` e deixa o antigo intocado (os scripts de
+// medicao ainda procuram o token la). Regra e motivo em `configMigration.cjs`.
+const { CONFIG_FILE, migrateLegacyConfig } = require('./configMigration.cjs');
+const configPath = path.join(app.getPath('userData'), CONFIG_FILE);
+try {
+  migrateLegacyConfig(app.getPath('userData'));
+} catch (err) {
+  // Migracao que falha nao derruba o app: ele nasce com o config padrao e o antigo fica onde
+  // esta. A mensagem nao leva o conteudo do arquivo — ele pode ter o token.
+  console.error('Config migration failed:', err && err.code ? err.code : 'unknown');
+}
 
 function loadConfig() {
   try {
@@ -17,8 +29,9 @@ function loadConfig() {
   } catch (err) {
     console.error('Error loading config:', err);
   }
-  // Config NOVA nao nasce com token: o app nao usa a STRATZ desde 2026-11-19. Um config
-  // antigo que ja tenha `stratzApiKey` é devolvido inteiro acima e a chave fica onde esta.
+  // Config NOVA nao nasce com token: o app nao usa a STRATZ desde 2026-11-19. O token que
+  // uma versao anterior tenha salvo fica no `stratz_app_config.json` antigo, que o app nao
+  // le mais — a migracao nao o copia.
   return {
     steamAccountId: process.env.DEFAULT_STEAM_ACCOUNT_ID || '',
     theme: 'dark',

@@ -22,6 +22,7 @@ em `tests/utils/`, espelhando esta pasta — ver [../../tests/CLAUDE.md](../../t
 | `recentFormStats.ts` | `computeRecentFormStats` — agregados compartilhados por `StatRail`, `ProfileHeader` e `RecentFormCard`. `avgGlint` é a média **só das partidas com nota** (`null` se nenhuma tem) e `glintCount` diz quantas entraram; não há mais `avgImp` |
 | `settingsTabs.ts` | `SETTINGS_TABS`, `tabsWithErrors`, `firstTabWithError` — impede erro escondido em aba fechada |
 | `imageFallback.ts` | Placeholders SVG inline e os `handle*ImageError` |
+| `legacyStorage.ts` | `LOCAL_STORAGE_KEYS` (`glimpsegg_steam_id`, `glimpsegg_profile_history`) e `migrateLegacyLocalStorage`: copia as chaves `stratz_*` uma vez, nunca toca em `stratz_api_key`, nunca lança. Caminho browser; o par no Electron é `electron/configMigration.cjs` |
 | `cn.ts` | `cn()` = `twMerge(clsx(...))` |
 | `insightsEngine.ts` | **Shim de compatibilidade** para imports antigos de `insights/`. Deve desaparecer |
 | `insights/` | Motor de coaching ([CLAUDE.md](insights/CLAUDE.md)) |

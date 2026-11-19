@@ -174,13 +174,16 @@ any other destination is blocked by Chromium itself.
 Settings — interface language, Steam account, hero grid preferences — are kept in plain text,
 **locally**, unencrypted:
 
-- **Desktop:** `stratz_app_config.json` inside Electron's `userData` directory
+- **Desktop:** `glimpsegg_config.json` inside Electron's `userData` directory
   (`~/.config/GlimpseGG` on Linux, `%APPDATA%\GlimpseGG` on Windows,
-  `~/Library/Application Support/GlimpseGG` on macOS). The file keeps its historical name.
+  `~/Library/Application Support/GlimpseGG` on macOS). Before 2.0 it was called
+  `stratz_app_config.json`; on first launch the app copies your settings over and leaves the
+  old file untouched.
 - **Browser (dev):** `localStorage`.
 
-A STRATZ token saved by an earlier version may still be there (`stratzApiKey` in the file,
-`stratz_api_key` in `localStorage`). The app does not use it. Treat the machine as the trust
+A STRATZ token saved by an earlier version may still be there (`stratzApiKey` in the old
+`stratz_app_config.json`, `stratz_api_key` in `localStorage`). The app does not use it, and it is
+not copied to the new file. Treat the machine as the trust
 boundary: any process with access to your user profile can read that file.
 
 ## Development

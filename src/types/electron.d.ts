@@ -23,7 +23,7 @@ export interface AppConfig {
    * Feature de layout espelho de herois (specs/001-meta-hero-grid).
    *
    * TODAS opcionais de proposito. C-1/C-2: quem atualiza de uma versao anterior nao tem
-   * nenhuma destas chaves no `stratz_app_config.json`, e chave ausente lê como o default
+   * nenhuma destas chaves no arquivo de config (`glimpsegg_config.json`, antes `stratz_app_config.json`), e chave ausente lê como o default
    * de `utils/heroGrid/preferences.ts` — que mantem a feature DESLIGADA (FR-001). O
    * `loadConfig()` do main nao lista nenhuma delas justamente para o default nao existir
    * em dois lugares e divergir.

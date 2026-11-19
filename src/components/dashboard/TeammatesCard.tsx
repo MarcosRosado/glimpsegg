@@ -4,11 +4,11 @@ import { PeerTeammate } from '../../types/dota';
 import { handleAvatarError } from '../../utils/imageFallback';
 import { useLanguage } from '../../context/LanguageContext';
 
-interface StratzTeammatesCardProps {
+interface TeammatesCardProps {
   peers?: PeerTeammate[];
 }
 
-export const StratzTeammatesCard: React.FC<StratzTeammatesCardProps> = ({ peers = [] }) => {
+export const TeammatesCard: React.FC<TeammatesCardProps> = ({ peers = [] }) => {
   const { t } = useLanguage();
 
   if (peers.length === 0) {

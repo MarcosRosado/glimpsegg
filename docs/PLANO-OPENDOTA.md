@@ -321,7 +321,7 @@ devolvem o que ficou escondido — uma 2.0 com seções faltando seria anunciar 
   (a lista completa de partidas já é baixada) e confrontos herói contra herói por faixa de
   ranque (`/explorer` sobre `public_matches`, a única métrica de meta em que a OpenDota supera
   o que a STRATZ entregava).
-- **Renomear o que ainda leva o nome antigo:** `StratzTrendsCard`, `StratzTeammatesCard`,
+- **Renomear o que ainda leva o nome antigo** (**feito em 2026-11-19**, §6 da proposta): `StratzTrendsCard`, `StratzTeammatesCard`,
   `stratz_app_config.json`, as chaves `stratz_*` do `localStorage` — as duas últimas com
   migração, porque há config de usuário em disco.
 - **Como a versão vira 2.0.0.** O workflow de release só incrementa o **patch** da última tag

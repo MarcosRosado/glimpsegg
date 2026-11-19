@@ -9,6 +9,7 @@ não sabe o que é IMP, winrate ou espelho.
 | Item | Papel |
 | --- | --- |
 | `main.cjs` | Janela, auto-updater, guardas de navegação, store de config e **todos** os handlers IPC |
+| `configMigration.cjs` | `stratz_app_config.json` → `glimpsegg_config.json` no primeiro início: copia tudo menos `stratzApiKey`, deixa o antigo intocado, escrita atômica, roda uma vez. Testado em `tests/electron/configMigration.test.cjs` |
 | `preload.cjs` | `contextBridge.exposeInMainWorld('api', …)`: `store.{get,set,getAll}`, `openDotaFetch`, `openDotaRequestParse`, `resolveSteamId`, `windowControl.*`, `updater.*`, `heroGrid.*`, `getPlatform()`, `getVersion()`. Só encaminha `ipcRenderer.invoke` — nenhuma lógica |
 | `heroGrid/` | I/O do `hero_grid_config.json` do jogador ([CLAUDE.md](heroGrid/CLAUDE.md)) |
 
@@ -44,10 +45,12 @@ Handlers em `main.cjs`: `store:get` · `store:set` · `store:getAll` ·
   exceção no próprio buraco. Detalhe em [heroGrid/CLAUDE.md](heroGrid/CLAUDE.md).
 - **`grid:is-dota-running` degrada, não falha.** Erro de consulta responde
   `{ running: false, method: 'unsupported' }`: falso positivo permanente mataria a feature.
-- A config vive em `stratz_app_config.json` dentro do `userData`, em **texto claro**. A chave
-  `stratzApiKey` continua nela de propósito, mesmo sem uso pelo app: token salvo por versão anterior
-  não é revogável, e scripts de medição fora do app ainda leem esse arquivo. Não mexer em
-  `loadConfig`/`saveConfig` para "limpar" a chave, e nada de logar `appConfig`.
+- A config vive em `glimpsegg_config.json` dentro do `userData`, em **texto claro**. Até a 2.0 era
+  `stratz_app_config.json`; a migração (`configMigration.cjs`) **copia** e não renomeia, e não leva
+  a chave `stratzApiKey`: o arquivo antigo fica intocado de propósito, porque token salvo por
+  versão anterior não é revogável e os scripts de medição fora do app ainda o procuram lá. Não
+  "limpar" o arquivo antigo, não copiar o token para o novo, e nada de logar `appConfig` — nem o
+  erro da migração leva o conteúdo do arquivo.
 - Os testes do processo main moram em `tests/electron/`, e entram no vitest pelo glob
   `tests/**/*.test.cjs` (`globals: true`). Com eles fora de `electron/`, o `files` do
   `electron-builder` empacota `electron/**/*` inteiro sem precisar de exclusão.

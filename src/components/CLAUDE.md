@@ -31,8 +31,9 @@ As pastas sem CLAUDE.md próprio têm um arquivo só; a linha acima é a documen
   `match/TeamOverviewCard.tsx`. O mesmo vale para as regras de coaching (`RULE_TEXT` → i18n).
 - **Dado ausente esconde a seção.** Nenhum componente estima para preencher lacuna; quem manda é
   `MatchDataAvailability` e o `BenchmarkSource` do valor.
-- Componentes que hoje **ninguém importa**: `dashboard/MatchDynamicsOverview.tsx` e
-  `dashboard/TeammatesMatrix.tsx`. Não são ponto de partida para nada.
+- Os dois componentes que ninguém importava (`dashboard/MatchDynamicsOverview.tsx` e
+  `dashboard/TeammatesMatrix.tsx`) foram apagados nos renomes da 2.0, com as dez chaves de
+  tradução que só eles usavam.
 
 ## Ao sair um patch
 

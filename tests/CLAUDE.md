@@ -14,7 +14,7 @@ que precisa saber disso. O `tsconfig.app.json` inclui `["src", "tests"]`, então
 
 | Pasta | Espelha | O que cobre |
 | --- | --- | --- |
-| `utils/` | `src/utils/` | Motores puros: `awardEngine`, `buildAdvisor`, `dotaFormatters`, `glint`, `laneResult`, `laneVerdict`, `minimapCoords`, `patchTransition`, `rankBracket`, `recentFormStats`, `settingsTabs` |
+| `utils/` | `src/utils/` | Motores puros: `awardEngine`, `buildAdvisor`, `dotaFormatters`, `glint`, `laneResult`, `laneVerdict`, `legacyStorage`, `minimapCoords`, `patchTransition`, `rankBracket`, `recentFormStats`, `settingsTabs` |
 | `utils/insights/` | `src/utils/insights/` | Motor de coaching: `context`, `index`, `threatProfile`, `timeSeries`, `wilson` — mais `placeholders`, também sem fonte homônima |
 | `utils/heroGrid/` | `src/utils/heroGrid/` | Decisões puras do layout espelho: `mirrorBuilder`, `mirrorLayout`, `ranking`, `preferences`, `sourcePrecedence`, `syncScheduler`, `valveJson`, `heroTooltip`, `settingsOptions`, `tabFormat` |
 | `services/` | `src/services/` | `openDotaMatch` (o mapper de ponta a ponta contra a fixture real, inclusive o veredito de rota), `openDotaProfile` e `visionMapper` (os helpers de visão sobre as duas partidas reais, com oráculo cru segundo a segundo) |
@@ -23,6 +23,7 @@ que precisa saber disso. O `tsconfig.app.json` inclui `["src", "tests"]`, então
 | `i18n/` | `src/i18n/` | `translations`: paridade de chaves, nenhuma entrada vazia, mesmos placeholders nas duas locales e o guard de chave órfã |
 | `scripts/` | `scripts/` | `next-version` (o passo de versão do `release.yml`: sem tag, igual, patch maior, minor/major maior, menor que a tag). `.test.cjs` com globais, como os do main |
 | `electron/heroGrid/` | `electron/heroGrid/` | Os `.test.cjs` do processo main: `gridFile` (a guarda de imutabilidade, sobre os bytes que vão ao disco), `pathGuard`, `steamPaths`, `dotaProcess` |
+| `electron/` | `electron/` | `configMigration` (o arquivo de config renomeado: copia sem o token, antigo intocado, roda uma vez), sobre um diretório temporário real |
 
 ## Regras locais
 
