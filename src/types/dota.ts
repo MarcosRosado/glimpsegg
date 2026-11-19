@@ -33,8 +33,13 @@ export type MapTeam = 'RADIANT' | 'DIRE' | 'UNKNOWN';
 
 /**
  * De onde vieram os dados de visao desta partida.
- * PLAYBACK      - match.playbackData.wardEvents: tempo de vida, autor e deward reais.
- * PLAYER_STATS  - players[].stats.wards: so colocacoes; tempo de vida é estimado.
+ * PLAYBACK      - tempo de vida, autor e deward reais. Hoje: `obs_log`/`sen_log` da OpenDota
+ *                 pareados com `*_left_log` (`openDotaMatch.ts`); o nome vem do
+ *                 `playbackData` da STRATZ, que tinha o mesmo nivel de dado.
+ * PLAYER_STATS  - so colocacoes; tempo de vida estimado. SEM PRODUTOR desde 2026-11-19: era
+ *                 o fallback `players[].stats.wards` da STRATZ, que saiu com o
+ *                 `buildVisionData`. Fica porque a UI ainda rotula esse caso
+ *                 (`WardMinimapTab`); sai junto com esse ramo.
  * NONE          - sem dado de visao. A UI mostra estado vazio, nunca ward inventada.
  */
 export type VisionSource = 'PLAYBACK' | 'PLAYER_STATS' | 'NONE';

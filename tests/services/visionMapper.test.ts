@@ -1,418 +1,194 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildVisionData,
   computePlayerVisionStats,
+  emptyVisionData,
   observerUptimePct,
   wardsBySlot,
 } from '../../src/services/visionMapper';
-import { MatchPlayer } from '../../src/types/dota';
-import { OBSERVER_DURATION_SEC, SENTRY_DURATION_SEC } from '../../src/constants/mapGeometry';
+import { MapTeam, MatchDetails, VisionData, WardPlacement } from '../../src/types/dota';
+import { OBSERVER_DURATION_SEC } from '../../src/constants/mapGeometry';
+import { referenceMatch, referenceRaw, unevenLaneMatch, unevenLaneRaw } from '../support/fixtureMatches';
 
-/** Dez jogadores com os slots reais do Dota: 0-4 Radiant, 128-132 Dire. */
-function makePlayers(): MatchPlayer[] {
-  const mk = (slot: number, heroId: number): MatchPlayer =>
-    ({ playerSlot: slot, heroId, isRadiant: slot < 128 } as MatchPlayer);
-  return [
-    mk(0, 1), mk(1, 2), mk(2, 3), mk(3, 4), mk(4, 5),
-    mk(128, 11), mk(129, 12), mk(130, 13), mk(131, 14), mk(132, 15),
-  ];
+/**
+ * Os helpers de visao rodam sobre a visao que o `mapOpenDotaMatch` REAL monta das duas
+ * fixtures reais. O parsing (pareamento por `ehandle`, autor do deward, fim estimado) é
+ * testado em `openDotaMatch.test.ts`; aqui o que se confere é a agregacao.
+ *
+ * Os esperados saem de um ORACULO INDEPENDENTE — os `obs_log`/`obs_left_log` crus da
+ * resposta e uma contagem segundo a segundo —, nunca do proprio helper.
+ *
+ * O que o mapper da OpenDota nunca produz (ward sem dono, time sem observer) entra por
+ * `syntheticVision`, literal minimo de `VisionData` com o nome dizendo o que é.
+ */
+
+const FIXTURES: Array<[string, () => MatchDetails, () => any]> = [
+  ['referencia', referenceMatch, referenceRaw],
+  ['rota desigual', unevenLaneMatch, unevenLaneRaw],
+];
+
+/**
+ * Intervalos de observer do time direto da resposta crua: saida pelo `obs_left_log` de
+ * mesmo `ehandle`; sem saida, a duracao natural cortada no fim da partida.
+ */
+function rawObserverIntervals(raw: any, team: MapTeam): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (const p of raw.players) {
+    if ((p.player_slot < 128 ? 'RADIANT' : 'DIRE') !== team) continue;
+    const left = new Map<number, number>((p.obs_left_log ?? []).map((l: any) => [l.ehandle, l.time]));
+    for (const w of p.obs_log ?? []) {
+      const end = left.get(w.ehandle) ?? Math.min(w.time + OBSERVER_DURATION_SEC, raw.duration);
+      out.push([w.time, end]);
+    }
+  }
+  return out;
 }
 
-const ev = (o: Partial<Record<string, any>>) => ({
-  indexId: 1, time: 100, positionX: 120, positionY: 130,
-  fromPlayer: 0, wardType: 'OBSERVER', action: 'SPAWN', playerDestroyed: null,
-  ...o,
-});
+/** Segundos de [0, duracao) cobertos por ao menos um intervalo — forca bruta. */
+function bruteForceCoveredSeconds(intervals: Array<[number, number]>, duration: number): number {
+  let covered = 0;
+  for (let s = 0; s < duration; s++) {
+    if (intervals.some(([a, b]) => a <= s && s < b)) covered += 1;
+  }
+  return covered;
+}
 
-describe('buildVisionData — caminho PLAYBACK', () => {
-  it('pareia SPAWN com DESPAWN pelo indexId e calcula tempo de vida real', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 123,
-        playbackData: { wardEvents: [ev({ time: 100 }), ev({ time: 340, action: 'DESPAWN' })] },
-        players: [],
-      },
-      makePlayers(),
-      2400,
-    );
-    expect(v.source).toBe('PLAYBACK');
-    expect(v.wards).toHaveLength(1);
-    const w = v.wards[0];
-    expect(w.spawnTime).toBe(100);
-    expect(w.expireTime).toBe(340);
-    expect(w.lifetimeSeconds).toBe(240);
-    expect(w.expiryInferred).toBe(false);
+describe.each(FIXTURES)('helpers de visao sobre a partida real (%s)', (_name, build, buildRaw) => {
+  const match = build();
+  const raw = buildRaw();
+  const vision = match.vision;
+  const duration = match.durationSeconds;
+
+  it('uptime de observer é a UNIAO dos intervalos, conferida segundo a segundo contra o cru', () => {
+    for (const team of ['RADIANT', 'DIRE'] as const) {
+      const intervals = rawObserverIntervals(raw, team);
+      const expected = Math.round((bruteForceCoveredSeconds(intervals, duration) / duration) * 100);
+      expect(observerUptimePct(vision, team, duration), team).toBe(expected);
+    }
   });
 
-  it('atribui a ward ao jogador via fromPlayer, inclusive nos slots Dire (128-132)', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        playbackData: {
-          wardEvents: [
-            ev({ indexId: 1, fromPlayer: 3 }),
-            ev({ indexId: 2, fromPlayer: 130 }),
-          ],
-        },
-        players: [],
-      },
-      makePlayers(),
-      2400,
-    );
-    const byId = new Map(v.wards.map((w) => [w.indexId, w]));
-    expect(byId.get(1)!.team).toBe('RADIANT');
-    expect(byId.get(1)!.placedByHeroId).toBe(4);
-    expect(byId.get(2)!.team).toBe('DIRE');
-    expect(byId.get(2)!.placedByHeroId).toBe(13);
+  it('o teste de uniao discrimina: a soma ingenua dos intervalos passaria de 100%', () => {
+    for (const team of ['RADIANT', 'DIRE'] as const) {
+      const naive = rawObserverIntervals(raw, team).reduce(
+        (s, [a, b]) => s + Math.max(0, Math.min(duration, b) - Math.max(0, a)),
+        0,
+      );
+      expect(naive / duration, team).toBeGreaterThan(1);
+      expect(observerUptimePct(vision, team, duration)!, team).toBeLessThanOrEqual(100);
+    }
   });
 
-  it('slot irresolvivel vira team UNKNOWN e é contado, nunca inferido pela posicao', () => {
-    const v = buildVisionData(
-      { parsedDateTime: 1, playbackData: { wardEvents: [ev({ fromPlayer: 77 })] }, players: [] },
-      makePlayers(),
-      2400,
-    );
-    expect(v.wards[0].team).toBe('UNKNOWN');
-    expect(v.unattributedWards).toBe(1);
+  it('observers e sentries por jogador batem com obs_log/sen_log crus', () => {
+    for (const p of raw.players) {
+      const s = computePlayerVisionStats(vision, p.player_slot);
+      expect(s.observersPlaced, `slot ${p.player_slot}`).toBe(p.obs_log.length);
+      expect(s.sentriesPlaced, `slot ${p.player_slot}`).toBe(p.sen_log.length);
+      expect(s.wardsPlaced).toBe(p.obs_log.length + p.sen_log.length);
+    }
   });
 
-  it('fromPlayer null tambem vira UNKNOWN', () => {
-    const v = buildVisionData(
-      { parsedDateTime: 1, playbackData: { wardEvents: [ev({ fromPlayer: null })] }, players: [] },
-      makePlayers(),
-      2400,
-    );
-    expect(v.wards[0].team).toBe('UNKNOWN');
-    expect(v.wards[0].placedBySlot).toBeNull();
+  it('jogador sem ward em partida parseada devolve zeros com dado, nao "sem dado"', () => {
+    const semWard = raw.players.filter((p: any) => p.obs_log.length + p.sen_log.length === 0);
+    expect(semWard.length).toBeGreaterThan(0);
+    for (const p of semWard) {
+      const s = computePlayerVisionStats(vision, p.player_slot);
+      expect(s.hasData).toBe(true);
+      expect(s.wardsPlaced).toBe(0);
+      expect(s.avgObserverLifetimeSec).toBe(0);
+    }
   });
 
-  it('playerDestroyed produz deward com a coordenada da ward morta', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        playbackData: {
-          wardEvents: [
-            ev({ time: 60, positionX: 100, positionY: 150 }),
-            ev({ time: 200, action: 'DESPAWN', playerDestroyed: 129, positionX: 100, positionY: 150 }),
-          ],
-        },
-        players: [],
-      },
-      makePlayers(),
-      2400,
+  it('deward é creditado a quem destruiu: a soma por jogador fecha com o total da partida', () => {
+    const total = match.players.reduce(
+      (s, p) => s + computePlayerVisionStats(vision, p.playerSlot).dewards,
+      0,
     );
-    expect(v.wards[0].wasDestroyed).toBe(true);
-    expect(v.wards[0].destroyedBySlot).toBe(129);
-    expect(v.wards[0].destroyedByHeroId).toBe(12);
-    expect(v.dewards).toHaveLength(1);
-    expect(v.dewards[0]).toMatchObject({ time: 200, bySlot: 129, team: 'DIRE', x: 100, y: 150 });
+    expect(vision.dewards.length).toBeGreaterThan(0);
+    expect(total).toBe(vision.dewards.length);
   });
 
-  it('DESPAWN sem playerDestroyed = expirou naturalmente, nao foi destruida', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        playbackData: { wardEvents: [ev({ time: 60 }), ev({ time: 420, action: 'DESPAWN' })] },
-        players: [],
-      },
-      makePlayers(),
-      2400,
-    );
-    expect(v.wards[0].wasDestroyed).toBe(false);
-    expect(v.dewards).toHaveLength(0);
+  it('alguem perdeu ward cedo, e so conta ward destruida antes da metade da vida', () => {
+    const perdas = match.players.map((p) => computePlayerVisionStats(vision, p.playerSlot).wardsLostEarly);
+    expect(perdas.some((n) => n > 0)).toBe(true);
+    for (const p of match.players) {
+      const s = computePlayerVisionStats(vision, p.playerSlot);
+      const destruidas = vision.wards.filter((w) => w.placedBySlot === p.playerSlot && w.wasDestroyed).length;
+      expect(s.wardsLostEarly).toBeLessThanOrEqual(destruidas);
+    }
   });
 
-  it('indexId reciclado fecha a ward anterior no instante do novo spawn', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        playbackData: {
-          wardEvents: [
-            ev({ indexId: 5, time: 100 }),
-            ev({ indexId: 5, time: 500, positionX: 150, positionY: 90 }),
-          ],
-        },
-        players: [],
-      },
-      makePlayers(),
-      2400,
-    );
-    expect(v.wards).toHaveLength(2);
-    const first = v.wards.find((w) => w.spawnTime === 100)!;
-    expect(first.expireTime).toBe(500);
-    expect(first.expiryInferred).toBe(true);
-    expect(first.wasDestroyed).toBe(false);
-    // Chaves distintas mesmo com o mesmo indexId.
-    expect(new Set(v.wards.map((w) => w.key)).size).toBe(2);
-  });
-
-  it('DESPAWN orfao é descartado e contado, sem inventar spawn', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        playbackData: { wardEvents: [ev({ indexId: 9, time: 300, action: 'DESPAWN' })] },
-        players: [],
-      },
-      makePlayers(),
-      2400,
-    );
-    expect(v.wards).toHaveLength(0);
-    expect(v.droppedEvents).toBe(1);
-    expect(v.source).toBe('NONE');
-  });
-
-  it('SPAWN sem DESPAWN no fim do jogo estima a expiracao e marca como inferida', () => {
-    const v = buildVisionData(
-      { parsedDateTime: 1, playbackData: { wardEvents: [ev({ time: 100 })] }, players: [] },
-      makePlayers(),
-      2400,
-    );
-    const w = v.wards[0];
-    expect(w.expireTime).toBe(100 + OBSERVER_DURATION_SEC);
-    expect(w.expiryInferred).toBe(true);
-  });
-
-  it('ward viva ao apitar tem a expiracao clampada na duracao da partida', () => {
-    const v = buildVisionData(
-      { parsedDateTime: 1, playbackData: { wardEvents: [ev({ time: 1000 })] }, players: [] },
-      makePlayers(),
-      1100,
-    );
-    expect(v.wards[0].expireTime).toBe(1100);
-    expect(v.wards[0].lifetimeSeconds).toBe(100);
-  });
-
-  it('preserva tempos negativos (wards pre-horn) sem clampar', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        playbackData: {
-          wardEvents: [
-            ev({ indexId: 1, time: -54, wardType: 'OBSERVER' }),
-            ev({ indexId: 2, time: -9, wardType: 'SENTRY' }),
-          ],
-        },
-        players: [],
-      },
-      makePlayers(),
-      2400,
-    );
-    const times = v.wards.map((w) => w.spawnTime).sort((a, b) => a - b);
-    expect(times).toEqual([-54, -9]);
-  });
-
-  it('nao confia na ordem do payload', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        playbackData: {
-          wardEvents: [ev({ time: 400, action: 'DESPAWN' }), ev({ time: 100 })],
-        },
-        players: [],
-      },
-      makePlayers(),
-      2400,
-    );
-    expect(v.wards).toHaveLength(1);
-    expect(v.wards[0].lifetimeSeconds).toBe(300);
-    expect(v.droppedEvents).toBe(0);
-  });
-
-  it('descarta SPAWN com coordenada fora da tolerancia', () => {
-    const v = buildVisionData(
-      { parsedDateTime: 1, playbackData: { wardEvents: [ev({ positionX: 0, positionY: 0 })] }, players: [] },
-      makePlayers(),
-      2400,
-    );
-    expect(v.wards).toHaveLength(0);
-    expect(v.droppedEvents).toBe(1);
-  });
-
-  it('sentry usa a duracao de sentry, nao de observer', () => {
-    const v = buildVisionData(
-      { parsedDateTime: 1, playbackData: { wardEvents: [ev({ time: 0, wardType: 'SENTRY' })] }, players: [] },
-      makePlayers(),
-      2400,
-    );
-    expect(v.wards[0].expireTime).toBe(SENTRY_DURATION_SEC);
+  it('wardsBySlot reparte todas as wards entre os dez jogadores', () => {
+    const map = wardsBySlot(vision);
+    const soma = [...map.values()].reduce((s, l) => s + l.length, 0);
+    expect(soma).toBe(vision.wards.length);
+    for (const slot of map.keys()) expect(match.players.some((p) => p.playerSlot === slot)).toBe(true);
   });
 });
 
-describe('buildVisionData — fallback PLAYER_STATS', () => {
-  const rawPlayers = () => [
-    { stats: { wards: [{ time: 66, type: 1, positionX: 88, positionY: 154 }], wardDestruction: [{ time: 300, gold: 100, experience: 50, isWard: true }] } },
-    ...Array.from({ length: 9 }, () => ({ stats: { wards: [], wardDestruction: [] } })),
-  ];
+/** Literal minimo de `VisionData` para o que o mapper real nunca produz. SINTETICO. */
+function syntheticVision(wards: Array<Partial<WardPlacement>>, dewardsBy: number[] = []): VisionData {
+  return {
+    source: 'PLAYBACK',
+    isReplayParsed: true,
+    wards: wards.map((w, i) => ({
+      key: `syn-${i}`,
+      type: 'OBSERVER',
+      x: 120,
+      y: 120,
+      team: 'RADIANT',
+      placedBySlot: 0,
+      spawnTime: 0,
+      expireTime: OBSERVER_DURATION_SEC,
+      lifetimeSeconds: OBSERVER_DURATION_SEC,
+      expiryInferred: false,
+      wasDestroyed: false,
+      destroyedBySlot: null,
+      source: 'PLAYBACK',
+      ...w,
+    })),
+    dewards: dewardsBy.map((slot) => ({ time: 100, bySlot: slot, team: 'DIRE' })),
+    deaths: [],
+    unattributedWards: 0,
+    droppedEvents: 0,
+  };
+}
 
-  it('usa stats.wards quando playbackData esta ausente', () => {
-    const v = buildVisionData({ parsedDateTime: null, players: rawPlayers() }, makePlayers(), 2400);
-    expect(v.source).toBe('PLAYER_STATS');
-    expect(v.isReplayParsed).toBe(false);
-    expect(v.wards).toHaveLength(1);
-  });
-
-  it('decodifica type Int: 0 = OBSERVER, 1 = SENTRY', () => {
-    const v = buildVisionData({ players: rawPlayers() }, makePlayers(), 2400);
-    expect(v.wards[0].type).toBe('SENTRY');
-
-    const v2 = buildVisionData(
-      { players: [{ stats: { wards: [{ time: 10, type: 0, positionX: 120, positionY: 120 }] } }] },
-      makePlayers(),
-      2400,
-    );
-    expect(v2.wards[0].type).toBe('OBSERVER');
-  });
-
-  it('marca tempo de vida como estimado e o destruidor como DESCONHECIDO (nao falso)', () => {
-    const v = buildVisionData({ players: rawPlayers() }, makePlayers(), 2400);
-    expect(v.wards[0].expiryInferred).toBe(true);
-    expect(v.wards[0].destroyedBySlot).toBeUndefined();
-    expect(v.wards[0].wasDestroyed).toBe(false);
-  });
-
-  it('dewards desta fonte nao tem coordenada (nao podem virar pino no mapa)', () => {
-    const v = buildVisionData({ players: rawPlayers() }, makePlayers(), 2400);
-    expect(v.dewards).toHaveLength(1);
-    expect(v.dewards[0].x).toBeUndefined();
-    expect(v.dewards[0].gold).toBe(100);
-  });
-
-  it('atribui a ward ao jogador do mesmo indice do array cru', () => {
-    const v = buildVisionData({ players: rawPlayers() }, makePlayers(), 2400);
-    expect(v.wards[0].placedBySlot).toBe(0);
-    expect(v.wards[0].team).toBe('RADIANT');
-  });
-});
-
-describe('buildVisionData — caminho NONE', () => {
-  it('sem nenhuma fonte, devolve NONE com arrays vazios — nunca ward inventada', () => {
-    const v = buildVisionData({ parsedDateTime: null, players: [] }, makePlayers(), 2400);
-    expect(v.source).toBe('NONE');
-    expect(v.wards).toEqual([]);
-    expect(v.dewards).toEqual([]);
-  });
-
-  it('trata rawMatch nulo sem explodir', () => {
-    const v = buildVisionData(null, makePlayers(), 2400);
-    expect(v.source).toBe('NONE');
-  });
-
-  it('playbackData com array vazio cai para o fallback, nao para PLAYBACK', () => {
-    const v = buildVisionData({ playbackData: { wardEvents: [] }, players: [] }, makePlayers(), 2400);
-    expect(v.source).toBe('NONE');
-  });
-});
-
-describe('deathEvents', () => {
-  it('extrai mortes com coordenada e flags', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        players: [
-          {
-            stats: {
-              deathEvents: [
-                { time: 611, positionX: 108, positionY: 118, timeDead: 24, isBurst: false, isEngagedOnDeath: true },
-                { time: 734, positionX: 132, positionY: 120, isWardWalkThrough: true, goldLost: 61 },
-                { time: 800, positionX: 0, positionY: 0 },
-              ],
-            },
-          },
-        ],
-      },
-      makePlayers(),
-      2400,
-    );
-    expect(v.deaths).toHaveLength(2); // a terceira tem coordenada invalida
-    expect(v.deaths[0]).toMatchObject({ time: 611, x: 108, y: 118, team: 'RADIANT', slot: 0 });
-    expect(v.deaths[1].isWardWalkThrough).toBe(true);
-  });
-});
-
-describe('agregados de visao', () => {
-  const vision = buildVisionData(
-    {
-      parsedDateTime: 1,
-      playbackData: {
-        wardEvents: [
-          // observer do slot 0, viva de 0 a 360
-          ev({ indexId: 1, time: 0, fromPlayer: 0 }),
-          // observer do slot 0, destruida cedo (60s de 360)
-          ev({ indexId: 2, time: 600, fromPlayer: 0 }),
-          ev({ indexId: 2, time: 660, action: 'DESPAWN', fromPlayer: 0, playerDestroyed: 128 }),
-          // sentry do slot 0
-          ev({ indexId: 3, time: 100, fromPlayer: 0, wardType: 'SENTRY' }),
-        ],
-      },
-      players: [],
-    },
-    makePlayers(),
-    1200,
-  );
-
-  it('conta observers, sentries e wards perdidas cedo', () => {
-    const s = computePlayerVisionStats(vision, 0);
-    expect(s.hasData).toBe(true);
-    expect(s.observersPlaced).toBe(2);
-    expect(s.sentriesPlaced).toBe(1);
-    expect(s.wardsPlaced).toBe(3);
-    expect(s.wardsLostEarly).toBe(1);
-  });
-
-  it('creditа o deward a quem destruiu, nao a quem colocou', () => {
-    expect(computePlayerVisionStats(vision, 128).dewards).toBe(1);
-    expect(computePlayerVisionStats(vision, 0).dewards).toBe(0);
-  });
-
-  it('jogador sem ward mas com dado da partida devolve zeros, nao "sem dado"', () => {
-    const s = computePlayerVisionStats(vision, 4);
-    expect(s.hasData).toBe(true);
-    expect(s.wardsPlaced).toBe(0);
-  });
-
-  it('uptime de observer é a UNIAO dos intervalos, nao a soma', () => {
-    // Radiant: obs 0-360 e obs 600-660 => 420s cobertos de 1200 => 35%
-    expect(observerUptimePct(vision, 'RADIANT', 1200)).toBe(35);
-  });
-
+describe('helpers de visao — bordas que a partida real nao alcanca (sintetico)', () => {
   it('uptime nao dupla-conta intervalos sobrepostos', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        playbackData: {
-          wardEvents: [
-            ev({ indexId: 1, time: 0, fromPlayer: 0 }),
-            ev({ indexId: 1, time: 300, action: 'DESPAWN', fromPlayer: 0 }),
-            ev({ indexId: 2, time: 100, fromPlayer: 1 }),
-            ev({ indexId: 2, time: 400, action: 'DESPAWN', fromPlayer: 1 }),
-          ],
-        },
-        players: [],
-      },
-      makePlayers(),
-      800,
-    );
+    const v = syntheticVision([
+      { spawnTime: 0, expireTime: 300 },
+      { spawnTime: 100, expireTime: 400, placedBySlot: 1 },
+    ]);
     // Uniao = 0..400 = 400s de 800 = 50% (a soma ingenua daria 600 => 75%)
     expect(observerUptimePct(v, 'RADIANT', 800)).toBe(50);
   });
 
-  it('uptime é null quando nao ha dado de visao', () => {
-    const none = buildVisionData(null, makePlayers(), 1200);
-    expect(observerUptimePct(none, 'RADIANT', 1200)).toBeNull();
+  it('time com dado de visao e nenhuma observer tem uptime 0, nao null', () => {
+    const v = syntheticVision([{ type: 'SENTRY' }]);
+    expect(observerUptimePct(v, 'DIRE', 1200)).toBe(0);
   });
 
-  it('wardsBySlot agrupa e ignora wards nao atribuidas', () => {
-    const v = buildVisionData(
-      {
-        parsedDateTime: 1,
-        playbackData: {
-          wardEvents: [ev({ indexId: 1, fromPlayer: 0 }), ev({ indexId: 2, fromPlayer: 999 })],
-        },
-        players: [],
-      },
-      makePlayers(),
-      2400,
-    );
+  it('uptime é null quando nao ha dado de visao', () => {
+    expect(observerUptimePct(emptyVisionData(true), 'RADIANT', 1200)).toBeNull();
+    expect(computePlayerVisionStats(emptyVisionData(false), 0).hasData).toBe(false);
+  });
+
+  it('ward perdida cedo: destruida com menos da metade da vida', () => {
+    const v = syntheticVision([
+      { wasDestroyed: true, lifetimeSeconds: OBSERVER_DURATION_SEC / 2 - 1 },
+      { wasDestroyed: true, lifetimeSeconds: OBSERVER_DURATION_SEC / 2 },
+      { wasDestroyed: false, lifetimeSeconds: 10 },
+    ]);
+    expect(computePlayerVisionStats(v, 0).wardsLostEarly).toBe(1);
+  });
+
+  it('deward conta para quem destruiu, nunca para quem colocou', () => {
+    const v = syntheticVision([{ wasDestroyed: true, destroyedBySlot: 128 }], [128]);
+    expect(computePlayerVisionStats(v, 128).dewards).toBe(1);
+    expect(computePlayerVisionStats(v, 0).dewards).toBe(0);
+  });
+
+  it('wardsBySlot ignora ward sem dono atribuivel', () => {
+    const v = syntheticVision([{ placedBySlot: 0 }, { placedBySlot: null, team: 'UNKNOWN' }]);
     const map = wardsBySlot(v);
     expect(map.get(0)).toHaveLength(1);
     expect(map.size).toBe(1);

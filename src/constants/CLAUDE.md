@@ -10,7 +10,7 @@ e onde o dado envelhecido não quebra nada visivelmente, só empobrece a tela em
 | `items.ts` | `ITEMS_MAP` (id → nome, custo, ícone), `getItem`, `isNeutralItem` | **Gerado**: `node scripts/sync-items-full.cjs`, a partir do datafeed da Valve (primário) e das constantes da OpenDota |
 | `heroes.ts` | `HEROES_MAP`, `getHero`, `registerDynamicHeroes` | **Manual**, herói a herói |
 | `abilities.ts` | `HERO_ABILITIES_MAP`, `getHeroAbilities` | **Manual** — só **13** heróis mapeados; o resto cai num fallback genérico Q/W/E/R montado pelo `shortName` |
-| `mapGeometry.ts` | Espaço de células da STRATZ, `MAP_IMAGE_INSET`, raios e duração de ward, `STRATZ_WARD_TYPE_INT` | Calibrado por medição documentada no topo do arquivo |
+| `mapGeometry.ts` | Espaço de células da STRATZ, `MAP_IMAGE_INSET`, raios e duração de ward | Calibrado por medição documentada no topo do arquivo |
 | `baselines.ts` | `ROLE_BASELINES` por posição + `getRoleBaseline` | Números à mão, por posição |
 | `counterItems.ts` | `COUNTER_ITEMS`: itens de resposta por arquétipo de ameaça (7 arquétipos) | Curadoria pequena e deliberada |
 | `gameVersion.ts` | Só `CURRENT_GAME_PATCH` | Piso de fallback; em runtime o patch vem de `services/gameVersionService.ts` |

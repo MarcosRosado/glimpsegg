@@ -143,14 +143,3 @@ export const WARD_VISION_CELLS: Record<'OBSERVER' | 'SENTRY', number> = {
   OBSERVER: OBSERVER_VISION_CELLS,
   SENTRY: SENTRY_VISION_CELLS,
 };
-
-/**
- * `stats.wards[].type` e um Int, nao o enum `WardType` do playbackData.
- * Confirmado por cruzamento numa partida real: playbackData trouxe
- * `{indexId: 1278, time: -9, positionX: 122, positionY: 124, fromPlayer: 3, wardType: SENTRY}`
- * e o `stats.wards` do slot 3 trouxe `{time: -9, type: 1, positionX: 122, positionY: 124}`.
- */
-export const STRATZ_WARD_TYPE_INT: Record<number, 'OBSERVER' | 'SENTRY'> = {
-  0: 'OBSERVER',
-  1: 'SENTRY',
-};

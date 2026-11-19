@@ -14,7 +14,7 @@ Toda a rede do app. Nada aqui renderiza: os módulos buscam, mapeiam e cacheiam.
 | `openDotaMatch.ts` | **O detalhe da partida.** Mapper puro `mapOpenDotaMatch` (o único mapper de partida desde a etapa 2), `isOpenDotaMatchParsed`, `fetchOpenDotaMatchDetails` e `requestOpenDotaParse` (`POST /request/{id}`), os dois últimos nos dois caminhos de rede. O cabeçalho do arquivo lista o que a OpenDota **não** tem e fica desligado | `App.tsx` |
 | `opendota.ts` | REST público, sem token. `openDotaGet(endpoint)` é **o** ponto dos dois caminhos de rede (IPC / `fetch`), `null` em falha; mais `fetchOpenDotaHeroStats` e `fetchOpenDotaPlayer` | `heroGrid/openDotaWinrates.ts` |
 | `steamResolver.ts` | `resolveSteamId`: SteamID64/32 ou vanity URL → conta | `App.tsx`, `settings/SettingsModal.tsx` |
-| `visionMapper.ts` | Puro e testado. `buildVisionData` (formato da STRATZ; sem consumidor no app desde a etapa 2, fica pelos testes de `observerUptimePct`), `emptyVisionData`, `wardsBySlot`, `computePlayerVisionStats`, `observerUptimePct`, `VISION_SOURCE_IS_ESTIMATED` | `openDotaMatch.ts`, `vision/WardMinimapTab.tsx`, `utils/insights/rules/vision.ts` |
+| `visionMapper.ts` | Puro e testado. Só helpers sobre `VisionData` (quem monta é o `buildVision` de `openDotaMatch.ts`): `emptyVisionData`, `wardsBySlot`, `computePlayerVisionStats`, `observerUptimePct`, `VISION_SOURCE_IS_ESTIMATED` | `openDotaMatch.ts`, `vision/WardMinimapTab.tsx`, `utils/insights/rules/vision.ts` |
 | `heroGrid/` | Fontes de meta e ponte de arquivo do layout espelho ([CLAUDE.md](heroGrid/CLAUDE.md)) | `hooks/useHeroGridSync.ts` |
 | `__fixtures__/` | Respostas reais anonimizadas ([CLAUDE.md](__fixtures__/CLAUDE.md)) | os testes |
 
@@ -27,8 +27,9 @@ Toda a rede do app. Nada aqui renderiza: os módulos buscam, mapeiam e cacheiam.
 - O veredito de rota é **chamado** daqui, não calculado: `mapOpenDotaMatch` passa ao
   `utils/laneVerdict.ts` só o campo `lane`, o lado e `networth_t[10]` de cada jogador.
   `resolvePlayerLaneResult` recebe **só** rota, lado e outcomes. Não passar sinal de partida.
-- `visionMapper.ts` tem precedência explícita de fonte: `PLAYBACK` → `PLAYER_STATS` → `NONE`.
-  Nunca inventar ward; `VISION_SOURCE_IS_ESTIMATED` diz à UI quando avisar.
+- A visão sai de `obs_log`/`sen_log` com saída real (`PLAYBACK`) ou não sai (`NONE`). Ward sem
+  linha de saída tem fim estimado e marcado em `expiryInferred`. Nunca inventar ward.
+  `PLAYER_STATS` (fallback da STRATZ) ficou sem produtor desde que o `buildVisionData` saiu.
 - **`mapOpenDotaMatch` não estima o que falta.** O que a OpenDota não tem vira flag desligada; os
   substitutos são fases do plano, cada uma com aceite medido — o veredito de rota (Fase 3) já
   passou e entrou; a nota de impacto entrou como Glint **experimental**, com nome próprio.
@@ -43,7 +44,8 @@ Toda a rede do app. Nada aqui renderiza: os módulos buscam, mapeiam e cacheiam.
   `api:stratz-graphql`, a ponte `window.api.stratzQuery` e `api.stratz.com` na CSP foram removidos;
   `stratzHeroStats.ts` e `heroGrid/stratzWinrates.ts` foram apagados. Na etapa 2 (mesmo dia)
   saíram `stratzGql.ts` (consultas, `mapStratzMatch`, `derivePartySize`, `deriveTeamShares`,
-  `ALL_TOWERS_STANDING`) e a fixture `match-parsed.json`.
+  `ALL_TOWERS_STANDING`) e a fixture `match-parsed.json`; depois, o `buildVisionData` de
+  `visionMapper.ts`.
 
 ## Ao sair um patch
 

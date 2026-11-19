@@ -307,15 +307,16 @@ desaparecer quando não houver mais nenhum.
 
 ## Visão e wards
 
-- `src/services/visionMapper.ts` é puro e tem **precedência explícita de fonte**:
-  (A) `playbackData.wardEvents` → tempo de vida, autor e deward reais;
-  (B) `players[].stats.wards` → só colocação, tempo de vida *estimado*;
-  (C) nada → `source: 'NONE'`. Nunca inventar ward. `VISION_SOURCE_IS_ESTIMATED` diz à UI quando
-  avisar. Ele existia separado do mapper da STRATZ justamente para ser testável — o bug que
-  substituiu (quatro wards hardcoded por jogador) sobreviveu porque nada verificava esse caminho.
-  Desde a etapa 2 o `buildVisionData` (formato da STRATZ) não tem consumidor no app: o caminho
-  OpenDota monta a visão em `openDotaMatch.ts` e usa só os helpers; ele fica pelos testes de
-  `observerUptimePct`, até migrarem.
+- **Quem monta a visão é o `buildVision` de `openDotaMatch.ts`**: `obs_log`/`sen_log` pareados
+  com `*_left_log` por `ehandle` → tempo de vida, autor e deward reais (`source: 'PLAYBACK'`);
+  ward sem linha de saída tem fim **estimado** e rotulado (`expiryInferred`); sem log nenhum,
+  `source: 'NONE'`. Nunca inventar ward. `src/services/visionMapper.ts` guarda só os helpers
+  puros (`wardsBySlot`, `computePlayerVisionStats`, `observerUptimePct`, `emptyVisionData`),
+  testados sobre a visão que o mapper real monta das duas fixtures reais, com o uptime
+  conferido segundo a segundo contra os `obs_log` crus. O parser da STRATZ que morava ali
+  (`buildVisionData`, com fallback para `stats.wards`) saiu em 2026-11-19; o valor
+  `PLAYER_STATS` de `VisionSource` ficou sem produtor, e o ramo do `WardMinimapTab` que o
+  rotula sai junto com ele.
 - Coordenadas: `utils/minimapCoords.ts` + `constants/mapGeometry.ts`. **Quem chama declara o espaço
   de origem; a função nunca infere** — a versão que inferia pela faixa de valores plotava todo o lado
   Radiant errado. Células da STRATZ vão de 64 a 192 (128 unidades de mundo por célula) e o Y cresce

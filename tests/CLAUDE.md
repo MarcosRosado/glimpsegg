@@ -17,7 +17,7 @@ que precisa saber disso. O `tsconfig.app.json` inclui `["src", "tests"]`, então
 | `utils/` | `src/utils/` | Motores puros: `awardEngine`, `buildAdvisor`, `dotaFormatters`, `glint`, `laneResult`, `laneVerdict`, `minimapCoords`, `patchTransition`, `rankBracket`, `recentFormStats`, `settingsTabs` |
 | `utils/insights/` | `src/utils/insights/` | Motor de coaching: `context`, `index`, `threatProfile`, `timeSeries`, `wilson` — mais `placeholders`, também sem fonte homônima |
 | `utils/heroGrid/` | `src/utils/heroGrid/` | Decisões puras do layout espelho: `mirrorBuilder`, `mirrorLayout`, `ranking`, `preferences`, `sourcePrecedence`, `syncScheduler`, `valveJson`, `heroTooltip`, `settingsOptions`, `tabFormat` |
-| `services/` | `src/services/` | `openDotaMatch` (o mapper de ponta a ponta contra a fixture real, inclusive o veredito de rota), `openDotaProfile` e `visionMapper` |
+| `services/` | `src/services/` | `openDotaMatch` (o mapper de ponta a ponta contra a fixture real, inclusive o veredito de rota), `openDotaProfile` e `visionMapper` (os helpers de visão sobre as duas partidas reais, com oráculo cru segundo a segundo) |
 | `support/` | — (não espelha nada) | `fixtureMatches.ts`: as duas partidas reais da OpenDota pelo mapper real, e as sobreposições `withSynthetic*` (média do herói, divisão de dano) para as regras dormentes. Não é teste; ver abaixo |
 | `services/heroGrid/` | `src/services/heroGrid/` | `heroGridBridge` (o caminho browser devolve indisponível **explícito**, nunca sucesso simulado), `openDotaWinrates` — sem rede e sem token |
 | `i18n/` | `src/i18n/` | `translations`: paridade de chaves, nenhuma entrada vazia, mesmos placeholders nas duas locales e o guard de chave órfã |
