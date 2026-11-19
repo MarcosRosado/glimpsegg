@@ -73,16 +73,19 @@ export const matchupRules: InsightRule[] = [
   {
     id: 'matchupThreatLockdown',
     category: 'MATCHUP',
-    requires: ['damageReport', 'heroAverage'],
+    requires: ['damageReport'],
     evaluate: (ctx) => {
       const t = ctx.threat;
       if (!t || t.controlRatio === null || !t.archetypes.includes('HARD_LOCKDOWN')) return null;
       return {
         type: 'IMPROVEMENT',
-        magnitude: Math.min(1, (t.controlRatio - 1.2) / 1.3),
-        // RAZAO, nunca segundos: as unidades de disableDuration da API sao ambiguas.
+        // O arquetipo so entra acima de 1,75x; 3x (alem do p95 medido, 2,38) satura.
+        magnitude: Math.min(1, (t.controlRatio - 1.5) / 1.5),
+        // RAZAO contra a media dos dez jogadores DESTA partida, nunca segundos: as
+        // unidades de disableDuration da API sao ambiguas, e `heroAverage` mede o
+        // controle que o heroi causa, nao o que sofre — ver `threatProfile.ts`.
         params: { ratio: Math.round(t.controlRatio * 10) / 10 },
-        source: 'HERO_AVERAGE',
+        source: 'MATCH_ONLY',
       };
     },
   },

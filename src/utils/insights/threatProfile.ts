@@ -1,5 +1,4 @@
-import { HeroAverageEntry, MatchDetails, MatchPlayer } from '../../types/dota';
-import { heroAverageAt, heroAverageMaxMinute } from './timeSeries';
+import { MatchDetails, MatchPlayer } from '../../types/dota';
 import { wilsonLowerBound } from './wilson';
 
 /**
@@ -7,8 +6,8 @@ import { wilsonLowerBound } from './wilson';
  *
  * A alternativa seria uma tabela de counters por heroi (126x126), que apodrece a cada
  * patch. Aqui cada arquetipo sai de um campo real da resposta da STRATZ: a divisao
- * fisico/magico do dano recebido, a razao de controle contra a media do proprio heroi,
- * tempo invisivel do inimigo, cura do time inimigo. Isso é o que permite a frase
+ * fisico/magico do dano recebido, a razao de controle contra a media dos dez jogadores
+ * da propria partida, tempo invisivel do inimigo, cura do time inimigo. Isso é o que permite a frase
  * causal — "porque 62% do dano foi magico" — que win rate puro nao consegue produzir.
  */
 
@@ -49,8 +48,12 @@ export interface ThreatProfile {
   magicalPct: number;
   purePct: number;
   totalReceived: number;
-  /** Controle sofrido / media do heroi. null quando nao ha benchmark. */
+  /**
+   * Controle sofrido / media dos DEZ jogadores desta partida (`MATCH_ONLY`).
+   * null quando ninguem na partida sofreu controle. Vai de 0 a 10.
+   */
   controlRatio: number | null;
+  /** Slow sofrido / media dos dez jogadores desta partida. Mesma regra. */
   slowRatio: number | null;
   topAttacker: ThreatSource | null;
   topAbility: ThreatAbility | null;
@@ -71,8 +74,23 @@ export interface MatchupRow {
 const MAGIC_BURST_PCT = 0.55;
 const PHYSICAL_PCT = 0.6;
 const PURE_PCT = 0.15;
-const CONTROL_RATIO = 1.4;
-const SLOW_RATIO = 1.5;
+/**
+ * Limiares de controle e slow — medidos, nao escolhidos no olho.
+ *
+ * Amostra de 2026-11-19: 40 partidas publicas (400 jogadores) de Guardian a Immortal,
+ * do primeiro dia do 7.42. A razao contra a media da partida tem p50 0,87, p75 1,39,
+ * p90 2,05. Taxa de disparo por jogador com os pisos abaixo: controle 11,5% (12,2% nas
+ * 9 partidas de 25 min ou mais), slow 10,3%. Alvo: 5% a 15%.
+ *
+ * A AMOSTRA É PEQUENA E CURTA (duracao mediana de 15 min): refazer a medicao com mais
+ * partidas antes de mexer em qualquer um destes numeros.
+ */
+const CONTROL_RATIO = 1.75;
+const SLOW_RATIO = 1.75;
+/** Pisos de CONTAGEM — a unica unidade inequivoca da API (as duracoes nao fecham como s nem ms). */
+const CONTROL_MIN_PER_MIN = 0.75;
+const SLOW_MIN_PER_MIN = 1;
+const CC_MIN_COUNT = 8;
 const INVIS_SECONDS = 120;
 
 /** Amostra minima para tratar um confronto como conclusao, nao como ruido. */
@@ -82,43 +100,47 @@ function safeDiv(a: number, b: number): number {
   return b > 0 ? a / b : 0;
 }
 
+type ReceivedTotal = NonNullable<NonNullable<MatchPlayer['damageReport']>['receivedTotal']>;
+
 /**
- * Razao de controle contra a media do heroi.
+ * Razao do valor deste jogador contra a MEDIA dos jogadores da partida.
  *
- * As unidades de `stunDuration`/`disableDuration` da STRATZ sao ambiguas (1979 para 20
- * stuns num jogo de 2387s nao fecha como segundos nem como ms). Mas numerador e
- * denominador vem da MESMA API na MESMA unidade, entao a RAZAO é solida — e é so ela
- * que usamos. Nunca afirmamos segundos absolutos.
+ * POR QUE A PARTIDA E NAO `heroAverage`: `heroAverage.stunDuration`/`disableDuration`
+ * é o controle que o heroi CAUSA em media, nao o que ele sofre (Earthshaker: 95 stuns
+ * aos 39 min; Lion: 8 disables aos 15; Phantom Lancer: zero). A versao anterior dividia
+ * controle SOFRIDO por esse numero: um Phantom Lancer que levou UM stun saia com
+ * "511,8x a media", e um Earthshaker nunca disparava por mais que fosse controlado. Na
+ * fixture real, Terrorblade dava 141x e Undying 68,6x. Nao existe benchmark de controle
+ * sofrido na API, entao a comparacao honesta é com quem jogou a mesma partida.
+ *
+ * MEDIA e nao mediana: em partida curta a maioria leva zero controle, a mediana é 0 e
+ * a razao estoura do mesmo jeito. As duracoes continuam so em RAZAO (numerador e
+ * denominador na mesma unidade ambigua); nunca afirmamos segundos absolutos.
+ *
+ * Exige o relatorio dos dez: com jogador faltando a media seria de outra populacao.
  */
-function controlRatioVsHeroAverage(
+function ratioVsMatchMean(
   player: MatchPlayer,
-  curve: HeroAverageEntry[] | null,
-  durationMin: number,
+  match: MatchDetails,
+  pick: (rt: ReceivedTotal) => number,
 ): number | null {
-  const rt = player.damageReport?.receivedTotal;
-  if (!rt) return null;
-  const maxMin = heroAverageMaxMinute(curve);
-  if (maxMin === null) return null;
-  const bench = heroAverageAt(curve, Math.min(Math.floor(durationMin), maxMin), player.position);
-  if (!bench) return null;
-  const benchControl = bench.stunDuration + bench.disableDuration;
-  if (benchControl <= 0) return null;
-  return (rt.stunDuration + rt.disableDuration) / benchControl;
+  const own = player.damageReport?.receivedTotal;
+  if (!own) return null;
+  const values: number[] = [];
+  for (const p of match.players) {
+    const rt = p.damageReport?.receivedTotal;
+    if (!rt) return null;
+    values.push(pick(rt));
+  }
+  if (values.length === 0) return null;
+  const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+  if (mean <= 0) return null;
+  return pick(own) / mean;
 }
 
-function slowRatioVsHeroAverage(
-  player: MatchPlayer,
-  curve: HeroAverageEntry[] | null,
-  durationMin: number,
-): number | null {
-  const rt = player.damageReport?.receivedTotal;
-  if (!rt || rt.slowDuration <= 0) return null;
-  const maxMin = heroAverageMaxMinute(curve);
-  if (maxMin === null) return null;
-  const bench = heroAverageAt(curve, Math.min(Math.floor(durationMin), maxMin), player.position);
-  // heroAverage nao expoe slowDuration; usamos disableDuration como proxy de escala.
-  if (!bench || bench.disableDuration <= 0) return null;
-  return rt.slowDuration / (bench.disableDuration * 3);
+/** Piso de contagem: sem ele, 2 stuns numa partida em que ninguem mais levou stun dao 4,5x. */
+function meetsCountFloor(count: number, durationMin: number, perMin: number): boolean {
+  return count >= CC_MIN_COUNT && durationMin > 0 && count / durationMin >= perMin;
 }
 
 export function buildThreatProfile(
@@ -168,15 +190,28 @@ export function buildThreatProfile(
 
   const topItemRaw = report.receivedSourceItem.slice().sort((a, b) => b.amount - a.amount)[0];
 
-  const controlRatio = controlRatioVsHeroAverage(player, player.heroAverageCurve ?? null, durationMin);
-  const slowRatio = slowRatioVsHeroAverage(player, player.heroAverageCurve ?? null, durationMin);
+  const controlRatio = ratioVsMatchMean(player, match, (r) => r.stunDuration + r.disableDuration);
+  const slowRatio = ratioVsMatchMean(player, match, (r) => r.slowDuration);
+  const controlCount = rt.stunCount + rt.disableCount;
 
   const archetypes: ThreatArchetype[] = [];
   if (magicalPct > MAGIC_BURST_PCT) archetypes.push('MAGIC_BURST');
   if (physicalPct > PHYSICAL_PCT) archetypes.push('PHYSICAL_RIGHT_CLICK');
   if (purePct > PURE_PCT) archetypes.push('PURE_DAMAGE');
-  if (controlRatio !== null && controlRatio > CONTROL_RATIO) archetypes.push('HARD_LOCKDOWN');
-  if (slowRatio !== null && slowRatio > SLOW_RATIO) archetypes.push('SLOW_KITE');
+  if (
+    controlRatio !== null &&
+    controlRatio > CONTROL_RATIO &&
+    meetsCountFloor(controlCount, durationMin, CONTROL_MIN_PER_MIN)
+  ) {
+    archetypes.push('HARD_LOCKDOWN');
+  }
+  if (
+    slowRatio !== null &&
+    slowRatio > SLOW_RATIO &&
+    meetsCountFloor(rt.slowCount, durationMin, SLOW_MIN_PER_MIN)
+  ) {
+    archetypes.push('SLOW_KITE');
+  }
   if (enemies.some((e) => (e.invisibleSeconds ?? 0) > INVIS_SECONDS)) archetypes.push('INVISIBILITY');
 
   // Cura do time inimigo. `heroAverage` NAO expoe healing, entao nao existe benchmark

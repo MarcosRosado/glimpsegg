@@ -11,7 +11,7 @@ daqui produz texto — só `RuleId` e params crus. Todos são reunidos por `ALL_
 | --- | --- | --- | --- |
 | `build.ts` | `buildItemLate`, `buildItemMissing`, `buildItemOffMeta`, `buildItemGood`, `matchupCounterItem` | — | Traduz os veredictos do `buildAdvisor` (`heroStats.itemFullPurchase`) |
 | `build.ts` (`compositeRules`) | `compositeBurstNoDispel` | `deathEvents`, `damageReport` | A manchete; suprime `SUPPRESSED_BY_COMPOSITE` |
-| `matchup.ts` | `matchupHardCounter`, `matchupThreatMagical`, `matchupThreatPhysical`, `matchupThreatLockdown` | — / `damageReport` / `damageReport`+`heroAverage` | Olha os **cinco inimigos**, via `threatProfile` |
+| `matchup.ts` | `matchupHardCounter`, `matchupThreatMagical`, `matchupThreatPhysical`, `matchupThreatLockdown` | — / `damageReport` | Olha os **cinco inimigos**, via `threatProfile`. `matchupThreatLockdown` compara com a média dos **dez jogadores da partida** (`MATCH_ONLY`): `heroAverage` mede o controle que o herói causa, não o que sofre |
 | `deaths.ts` | `deathsBurst`, `deathsWardWalk`, `deathsDieBack`, `deathsTpInterrupted`, `deathsHealUnused`, `deathsTimeDead`, `deathsNemesis` | `deathEvents` | Forense de morte, tudo de `stats.deathEvents` |
 | `laning.ts` | `laningCsHigh`, `laningCsLow`, `laningDeniesHigh`, `laningLaneStomped`, `laningLaneLost` | `perMinuteStats` / `laneOutcomes` | Os `Low` são só pos 1/2/3. `cs10` sai da soma dos 10 primeiros minutos |
 | `farming.ts` | `farmingNetworthHigh`, `farmingNetworthLow`, `farmingStacksHigh`, `farmingCurveBehind` | `networthSeries`, `perMinuteStats`, `heroAverage` | Patrimônio/min contra patrimônio/min. `farmingStacksHigh` é só pos 4/5 |

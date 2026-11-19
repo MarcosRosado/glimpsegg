@@ -119,3 +119,100 @@ describe('confrontos mais difíceis', () => {
     expect(t.hardestMatchups[0].ourWinRateLower).toBeGreaterThan(0.35);
   });
 });
+
+describe('controle e slow sofridos — contra a media da partida', () => {
+  /** Clona a partida trocando so o controle/slow recebido de cada jogador. */
+  function withControl(
+    perPlayer: (index: number) => Partial<{
+      stunCount: number;
+      stunDuration: number;
+      disableCount: number;
+      disableDuration: number;
+      slowCount: number;
+      slowDuration: number;
+    }>,
+    durationSeconds = match.durationSeconds,
+  ) {
+    const zero = {
+      stunCount: 0,
+      stunDuration: 0,
+      disableCount: 0,
+      disableDuration: 0,
+      slowCount: 0,
+      slowDuration: 0,
+    };
+    return {
+      ...match,
+      durationSeconds,
+      players: match.players.map((p, i) => ({
+        ...p,
+        damageReport: {
+          ...p.damageReport!,
+          receivedTotal: { ...p.damageReport!.receivedTotal!, ...zero, ...perPlayer(i) },
+        },
+      })),
+    } as typeof match;
+  }
+
+  it('na partida real, heroi sem stun proprio nao vira "141x a media"', () => {
+    // Regressao: o denominador era `heroAverage.stunDuration`, que mede o controle que o
+    // heroi CAUSA. Terrorblade (109) dava 141x e Undying (85) 68,6x nesta mesma fixture.
+    for (const p of match.players) {
+      const t = buildThreatProfile(p, match, null)!;
+      expect(t.controlRatio).not.toBeNull();
+      expect(t.controlRatio!).toBeLessThan(1.75);
+      expect(t.archetypes).not.toContain('HARD_LOCKDOWN');
+    }
+    const terrorblade = match.players.find((p) => p.heroId === 109)!;
+    expect(buildThreatProfile(terrorblade, match, null)!.controlRatio!).toBeCloseTo(0.8, 1);
+  });
+
+  it('as razoes da partida tem media 1 — a referencia sao os dez jogadores', () => {
+    const ratios = match.players.map((p) => buildThreatProfile(p, match, null)!.controlRatio!);
+    expect(ratios.reduce((s, r) => s + r, 0) / ratios.length).toBeCloseTo(1, 5);
+  });
+
+  it('na partida real, o slow acima da media com contagem alta vira SLOW_KITE', () => {
+    const undying = match.players.find((p) => p.heroId === 85)!;
+    const t = buildThreatProfile(undying, match, null)!;
+    expect(t.slowRatio!).toBeGreaterThan(1.75);
+    expect(t.archetypes).toContain('SLOW_KITE');
+  });
+
+  it('dois stuns numa partida curta nao sao lockdown, por maior que seja a razao', () => {
+    // Caso real (9096529218, 15 min): sete jogadores sem controle nenhum e dois com 2
+    // stuns cada. A razao da 4,5x, mas dois stuns nao sustentam a afirmacao.
+    const m = withControl((i) => (i < 2 ? { stunCount: 2, stunDuration: 400 } : {}), 15 * 60);
+    const t = buildThreatProfile(m.players[0], m, null)!;
+    expect(t.controlRatio!).toBeCloseTo(5, 5);
+    expect(t.archetypes).not.toContain('HARD_LOCKDOWN');
+  });
+
+  it('acusa lockdown quando a razao e a contagem sustentam', () => {
+    const m = withControl(
+      (i) => (i === 0 ? { stunCount: 40, stunDuration: 6000 } : { stunCount: 15, stunDuration: 2000 }),
+      30 * 60,
+    );
+    const alvo = buildThreatProfile(m.players[0], m, null)!;
+    expect(alvo.controlRatio!).toBeCloseTo(2.5, 5);
+    expect(alvo.archetypes).toContain('HARD_LOCKDOWN');
+    expect(buildThreatProfile(m.players[1], m, null)!.archetypes).not.toContain('HARD_LOCKDOWN');
+  });
+
+  it('sem controle na partida inteira nao ha razao — null, nunca zero nem infinito', () => {
+    const m = withControl(() => ({}));
+    const t = buildThreatProfile(m.players[0], m, null)!;
+    expect(t.controlRatio).toBeNull();
+    expect(t.slowRatio).toBeNull();
+    expect(t.archetypes).not.toContain('HARD_LOCKDOWN');
+    expect(t.archetypes).not.toContain('SLOW_KITE');
+  });
+
+  it('jogador sem relatorio de dano na partida: a media seria de outra populacao, entao null', () => {
+    const m = {
+      ...match,
+      players: match.players.map((p, i) => (i === 9 ? { ...p, damageReport: null } : p)),
+    } as typeof match;
+    expect(buildThreatProfile(m.players[0], m, null)!.controlRatio).toBeNull();
+  });
+});
