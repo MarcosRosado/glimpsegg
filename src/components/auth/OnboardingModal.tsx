@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { BrandMark } from '../brand/BrandMark';
 import { useLanguage } from '../../context/LanguageContext';
-import { resolveSteamId, withOpenDotaProfile } from '../../services/steamResolver';
+import { resolveSteamId, withAccountProfile } from '../../services/steamResolver';
 import type { SteamResolveResult } from '../../types/electron';
 
 interface OnboardingModalProps {
@@ -35,8 +35,8 @@ interface OnboardingModalProps {
  * personalizado é resolvido por busca de nome, e a busca devolve o primeiro resultado:
  * salvar direto abriria o app na conta de outra pessoa sem aviso. A conta resolvida
  * aparece antes do botao de salvar, com o ID sempre visivel e nome/avatar do perfil publico
- * da OpenDota (`withOpenDotaProfile`). Sem perfil ou com a consulta falhando, o cartao diz
- * isso e mostra só o ID — a tela nao inventa nome.
+ * (Steam, com a OpenDota de reserva: `withAccountProfile`). Sem perfil ou com a consulta
+ * falhando, o cartao diz isso e mostra só o ID — a tela nao inventa nome.
  */
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isOpen,
@@ -90,7 +90,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
     try {
       // Nome e foto do perfil público: sem eles, ID numérico confirmava só um número.
-      const res = await withOpenDotaProfile(await resolveSteamId(input));
+      const res = await withAccountProfile(await resolveSteamId(input));
       if (seq !== requestSeq.current) return;
       if (res.success && res.steamAccountId) {
         setResolved(res);

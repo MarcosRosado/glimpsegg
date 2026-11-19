@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('api', {
   resolveSteamId: (input) =>
     ipcRenderer.invoke('api:resolve-steam-id', { input }),
 
+  // Perfil público da Steam (nome e foto), só por SteamID64
+  steamProfile: (steamId64) =>
+    ipcRenderer.invoke('api:steam-profile', { steamId64 }),
+
   // Window Controls
   windowControl: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

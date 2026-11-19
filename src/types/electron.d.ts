@@ -79,6 +79,15 @@ export interface HeroGridApi {
   isDotaRunning: () => Promise<HeroGridResult<{ running: boolean; method: 'ps' | 'tasklist' | 'unsupported' }>>;
 }
 
+/** Resposta do `api:steam-profile`: `found: false` é a Steam dizendo que o perfil não existe. */
+export interface SteamProfileResult {
+  success: boolean;
+  found?: boolean;
+  personaname?: string;
+  avatar?: string | null;
+  error?: string;
+}
+
 export interface SteamResolveResult {
   success: boolean;
   steamAccountId?: string;
@@ -87,9 +96,9 @@ export interface SteamResolveResult {
   avatar?: string;
   error?: string;
   /**
-   * Resultado da consulta do perfil público (`withOpenDotaProfile`), só no fluxo de confirmação:
-   * `FOUND` trouxe nome/foto; `NOT_FOUND` a OpenDota respondeu sem perfil (ID errado ou conta
-   * sem partidas registradas); `UNAVAILABLE` a consulta falhou (rede, limite de uso).
+   * Resultado da consulta do perfil público (`withAccountProfile`), só no fluxo de confirmação:
+   * `FOUND` trouxe nome/foto; `NOT_FOUND` a fonte respondeu que não há perfil (ID errado);
+   * `UNAVAILABLE` nenhuma fonte respondeu (rede, limite de uso).
    */
   profileStatus?: 'FOUND' | 'NOT_FOUND' | 'UNAVAILABLE';
 }
@@ -107,6 +116,8 @@ export interface ElectronApi {
    */
   openDotaRequestParse?: (matchId: number) => Promise<{ success: boolean; jobId?: number; error?: string }>;
   resolveSteamId: (input: string) => Promise<SteamResolveResult>;
+  /** Perfil público da Steam por SteamID64 (`api:steam-profile`). Ausente no caminho browser. */
+  steamProfile?: (steamId64: string) => Promise<SteamProfileResult>;
   windowControl: {
     minimize: () => Promise<void>;
     maximize: () => Promise<void>;

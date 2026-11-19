@@ -18,13 +18,13 @@ que precisa saber disso. O `tsconfig.app.json` inclui `["src", "tests"]`, então
 | `utils/matchMetrics/` | `src/utils/matchMetrics/` | As métricas novas da 2.0 (`fights`, `deathCost`, `itemUsage`, `turningPoint`, `laneEfficiency`) sobre as duas fixtures reais, com oráculo tirado do cru |
 | `utils/insights/` | `src/utils/insights/` | Motor de coaching: `context`, `index`, `threatProfile`, `timeSeries`, `wilson` — mais `placeholders`, também sem fonte homônima |
 | `utils/heroGrid/` | `src/utils/heroGrid/` | Decisões puras do layout espelho: `mirrorBuilder`, `mirrorLayout`, `ranking`, `preferences`, `sourcePrecedence`, `syncScheduler`, `valveJson`, `heroTooltip`, `settingsOptions`, `tabFormat` |
-| `services/` | `src/services/` | `openDotaMatch` (o mapper de ponta a ponta contra a fixture real, inclusive o veredito de rota), `openDotaProfile` (inclusive paginação e o filtro de patch que contorna o `?patch=` atrasado), `openDotaAccount`, `steamResolver` (`withOpenDotaProfile` sobre o perfil real anonimizado: nome e foto, foto vazia, falha e conta sem perfil) e `visionMapper` (os helpers de visão sobre as duas partidas reais, com oráculo cru segundo a segundo) |
+| `services/` | `src/services/` | `openDotaMatch` (o mapper de ponta a ponta contra a fixture real, inclusive o veredito de rota), `openDotaProfile` (inclusive paginação e o filtro de patch que contorna o `?patch=` atrasado), `openDotaAccount`, `steamResolver` (`withAccountProfile`: Steam primeiro, o "não existe" dela é final, OpenDota de reserva sobre o perfil real anonimizado, as duas falhando) e `visionMapper` (os helpers de visão sobre as duas partidas reais, com oráculo cru segundo a segundo) |
 | `support/` | — (não espelha nada) | `fixtureMatches.ts`: as duas partidas reais da OpenDota pelo mapper real, e as sobreposições `withSynthetic*` (média do herói, divisão de dano) para as regras dormentes. Não é teste; ver abaixo |
 | `services/heroGrid/` | `src/services/heroGrid/` | `heroGridBridge` (o caminho browser devolve indisponível **explícito**, nunca sucesso simulado), `openDotaWinrates` — sem rede e sem token |
 | `i18n/` | `src/i18n/` | `translations`: paridade de chaves, nenhuma entrada vazia, mesmos placeholders nas duas locales e o guard de chave órfã |
 | `scripts/` | `scripts/` | `next-version` (o passo de versão do `release.yml`: sem tag, igual, patch maior, minor/major maior, menor que a tag). `.test.cjs` com globais, como os do main |
 | `electron/heroGrid/` | `electron/heroGrid/` | Os `.test.cjs` do processo main: `gridFile` (a guarda de imutabilidade, sobre os bytes que vão ao disco), `pathGuard`, `steamPaths`, `dotaProcess` |
-| `electron/` | `electron/` | `configMigration` (o arquivo de config renomeado: copia sem o token, antigo intocado, roda uma vez), sobre um diretório temporário real |
+| `electron/` | `electron/` | `steamProfile` (só SteamID64 vira URL; nome e foto do XML; foto fora da Valve descartada; perfil inexistente e resposta desconhecida) e `configMigration` (o arquivo de config renomeado: copia sem o token, antigo intocado, roda uma vez), sobre um diretório temporário real |
 
 ## Regras locais
 

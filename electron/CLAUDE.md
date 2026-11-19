@@ -10,11 +10,12 @@ não sabe o que é IMP, winrate ou espelho.
 | --- | --- |
 | `main.cjs` | Janela, auto-updater, guardas de navegação, store de config e **todos** os handlers IPC |
 | `configMigration.cjs` | `stratz_app_config.json` → `glimpsegg_config.json` no primeiro início: copia tudo menos `stratzApiKey`, deixa o antigo intocado, escrita atômica, roda uma vez. Testado em `tests/electron/configMigration.test.cjs` |
-| `preload.cjs` | `contextBridge.exposeInMainWorld('api', …)`: `store.{get,set,getAll}`, `openDotaFetch`, `openDotaRequestParse`, `resolveSteamId`, `windowControl.*`, `updater.*`, `heroGrid.*`, `getPlatform()`, `getVersion()`. Só encaminha `ipcRenderer.invoke` — nenhuma lógica |
+| `steamProfile.cjs` | `steamProfileXmlUrl` (só SteamID64 vira URL) e `parseSteamProfileXml` (nome e foto do XML público da Steam; foto só de `*.steamstatic.com` por https; `{ found: false }` para perfil inexistente, `null` para resposta desconhecida). Puro, testado em `tests/electron/steamProfile.test.cjs` |
+| `preload.cjs` | `contextBridge.exposeInMainWorld('api', …)`: `store.{get,set,getAll}`, `openDotaFetch`, `openDotaRequestParse`, `resolveSteamId`, `steamProfile`, `windowControl.*`, `updater.*`, `heroGrid.*`, `getPlatform()`, `getVersion()`. Só encaminha `ipcRenderer.invoke` — nenhuma lógica |
 | `heroGrid/` | I/O do `hero_grid_config.json` do jogador ([CLAUDE.md](heroGrid/CLAUDE.md)) |
 
 Handlers em `main.cjs`: `store:get` · `store:set` · `store:getAll` ·
-`api:opendota-fetch` · `api:opendota-request-parse` · `api:resolve-steam-id` · `updater:check` · `updater:quitAndInstall` ·
+`api:opendota-fetch` · `api:opendota-request-parse` · `api:steam-profile` · `api:resolve-steam-id` · `updater:check` · `updater:quitAndInstall` ·
 `app:getVersion` · `grid:list-accounts` · `grid:read` · `grid:write` · `grid:restore` ·
 `grid:list-backups` · `grid:is-dota-running` · `window:minimize` · `window:maximize` ·
 `window:close` · `window:isMaximized`.
@@ -29,6 +30,13 @@ Handlers em `main.cjs`: `store:get` · `store:set` · `store:getAll` ·
   `api:opendota-fetch` aceita endpoint livre do renderer; deixar o renderer escolher o verbo
   abriria qualquer POST da API. Este recebe só `{ matchId }`, valida que é inteiro positivo e
   monta a URL de `POST /request/{id}` no main.
+- **`api:steam-profile` é a única leitura fora da OpenDota.** Nome e foto da conta para a
+  confirmação do onboarding, de `steamcommunity.com/profiles/{id}?xml=1` (sem chave; a Steam não
+  manda CORS, por isso o main). Recebe só `{ steamId64 }`, validado antes de virar URL, e devolve
+  campos já filtrados, nunca o XML. Existe porque a OpenDota sem chave tem cota diária por IP e,
+  esgotada, a confirmação ficava só com o número. No caminho browser não há esse handler e o
+  renderer usa só a OpenDota. A foto vem de `avatars.fastly`/`akamai.steamstatic.com`, liberados
+  na CSP.
 - **`success` tem de significar a mesma coisa nos dois transportes** (IPC e `fetch` direto do
   caminho browser). Handler novo que devolva `success: true` para qualquer HTTP 200 recria a
   divergência que o handler da STRATZ já teve: erro parcial passava no Electron e falhava em

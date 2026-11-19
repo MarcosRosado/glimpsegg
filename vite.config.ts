@@ -27,7 +27,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   // www.opendota.com serve os icones de rank (src/constants/ranks.ts)
-  "img-src 'self' data: https://cdn.cloudflare.steamstatic.com https://avatars.steamstatic.com https://www.opendota.com",
+  "img-src 'self' data: https://cdn.cloudflare.steamstatic.com https://avatars.steamstatic.com https://avatars.fastly.steamstatic.com https://avatars.akamai.steamstatic.com https://www.opendota.com",
   "connect-src 'self' https://api.opendota.com",
   "object-src 'none'",
   "base-uri 'self'",

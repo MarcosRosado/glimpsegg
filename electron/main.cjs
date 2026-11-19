@@ -11,6 +11,7 @@ let mainWindow = null;
 // antigo para o novo sem a chave `stratzApiKey` e deixa o antigo intocado (os scripts de
 // medicao ainda procuram o token la). Regra e motivo em `configMigration.cjs`.
 const { CONFIG_FILE, migrateLegacyConfig } = require('./configMigration.cjs');
+const { steamProfileXmlUrl, parseSteamProfileXml } = require('./steamProfile.cjs');
 const configPath = path.join(app.getPath('userData'), CONFIG_FILE);
 try {
   migrateLegacyConfig(app.getPath('userData'));
@@ -291,6 +292,26 @@ ipcMain.handle('api:opendota-request-parse', async (event, { matchId }) => {
 });
 
 // IPC Handler: Steam ID Resolver
+// IPC Handler: perfil público da Steam (nome e foto) para a confirmação do onboarding.
+// Só aceita SteamID64 (a URL sai de `steamProfileXmlUrl`, que valida); devolve campos já
+// filtrados por `parseSteamProfileXml`, nunca o XML cru.
+ipcMain.handle('api:steam-profile', async (event, { steamId64 } = {}) => {
+  const url = steamProfileXmlUrl(steamId64);
+  if (!url) return { success: false, error: 'invalid steam id' };
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'GlimpseGG_Dota2_Desktop/1.0' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) return { success: false, error: `HTTP ${response.status}` };
+    const parsed = parseSteamProfileXml(await response.text());
+    if (!parsed) return { success: false, error: 'unexpected response' };
+    return { success: true, ...parsed };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+});
+
 ipcMain.handle('api:resolve-steam-id', async (event, { input }) => {
   if (!input || typeof input !== 'string') {
     return { success: false, error: 'Empty input' };
