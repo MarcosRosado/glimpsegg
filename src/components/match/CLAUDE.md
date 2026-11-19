@@ -17,6 +17,7 @@ montados pelo `App.tsx` quando há `selectedMatch`.
 | `FightsTab.tsx` | Aba "Lutas" (`summarizeFights`): por luta, mortes, buybacks, ouro e xp de cada lado, o que o jogador fez e os objetivos até a luta seguinte. Só existe com `availability.teamfights` |
 | `objectiveLabels.ts` | `OBJECTIVE_LABEL`: rótulo i18n de cada tipo de objetivo, usado por Lutas e pelo cartão de tempo morto |
 | `ScoreboardTable.tsx` | Tabela dos 10 jogadores com itens e tempo de compra |
+| `MatchSkeleton.tsx` | A partida enquanto o detalhe chega, no formato do modo placar. Antes, abrir partida só girava o ícone de atualizar e a tela anterior ficava parada |
 
 ## Regras locais
 

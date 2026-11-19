@@ -20,6 +20,7 @@ em `tests/utils/`, espelhando esta pasta — ver [../../tests/CLAUDE.md](../../t
 | `navigation.ts` | `initialMatchView` (slot e aba inicial: "Meu jogo" só quando o slot achado é da conta configurada e a partida foi analisada) e `classifySearchInput` (Ctrl+K: link de partida ou id acima de 32 bits é partida; número que cabe em 32 bits é conta com a partida oferecida, nunca adivinhada). Testado em `tests/utils/navigation.test.ts` |
 | `rankBracket.ts` | `tierToBracket`, `resolveBracket` (com `isPlayerSpecific`) e `effectivePosition` |
 | `minimapCoords.ts` | `isStratzCell`, `stratzCellToMap`/`ToPercent`/`ToWorld`, `worldToStratzCell`, `cellsToPercent` |
+| `heroShare.ts` | `summarizeHeroShare` (heróis de uma lista de partidas, do mais jogado ao menos, com "outros" acima do teto de fatias; Glint só das partidas com nota) e `winRateTilt` (posição na escala divergente do anel do Início; `null` abaixo de `HERO_SHARE_MIN_SAMPLE`, porque com 1 ou 2 partidas o winrate só pode ser 0, 50 ou 100%) |
 | `recentFormStats.ts` | `computeRecentFormStats` — agregados compartilhados por `ProfileHeader` e `RecentFormCard`. `avgGlint` é a média **só das partidas com nota** (`null` se nenhuma tem) e `glintCount` diz quantas entraram; não há mais `avgImp` |
 | `settingsTabs.ts` | `SETTINGS_TABS`, `tabsWithErrors`, `firstTabWithError` — impede erro escondido em aba fechada |
 | `imageFallback.ts` | Placeholders SVG inline e os `handle*ImageError` |

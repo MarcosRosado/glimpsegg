@@ -21,6 +21,8 @@ interface PerformanceTrendChartProps {
   /** Dá para trazer mais partidas: as janelas maiores aparecem e o clique pede a carga. */
   canLoadMore?: boolean;
   onRequestMore?: () => void;
+  /** Altura menor: na Conta o gráfico divide a tela com os totais (no Início ele ocupava meia tela). */
+  compact?: boolean;
 }
 
 type TrendMetric = 'GLINT' | 'WINRATE' | 'GPM';
@@ -33,7 +35,7 @@ const RANGES: { size: 25 | 50 | 100; label: 'trend25' | 'trend50' | 'trend100' }
 
 const hasGlint = (g: number | null | undefined): g is number => typeof g === 'number' && Number.isFinite(g);
 
-export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ matches, onSelectMatch, canLoadMore = false, onRequestMore }) => {
+export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ matches, onSelectMatch, canLoadMore = false, onRequestMore, compact = false }) => {
   const { t } = useLanguage();
   const [rangeChoice, setMatchCountRange] = useState<25 | 50 | 100>(25);
   // A lista pode encolher (troca de conta): a janela escolhida nunca passa do que existe.
@@ -184,7 +186,7 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ ma
       </div>
 
       {/* Chart Canvas */}
-      <div className="h-56 w-full pt-2">
+      <div className={`${compact ? 'h-40' : 'h-56'} w-full pt-2`}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>

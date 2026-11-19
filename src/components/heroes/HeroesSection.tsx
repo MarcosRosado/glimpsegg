@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, AlertTriangle, Search, Swords } from 'lucide-react';
+import { AlertTriangle, Search, Swords } from 'lucide-react';
 import type { HeroPerformance, PatchWindow, PlayerMatchFilters } from '../../types/dota';
 import { fetchHeroPerformance } from '../../services/openDotaProfile';
-import { getHero } from '../../constants/heroes';
+import { getHero, NEW_HERO_IDS } from '../../constants/heroes';
 import { handleHeroImageError } from '../../utils/imageFallback';
 import { timeAgoText } from '../../utils/dotaFormatters';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
+import { Skeleton, SkeletonCard, SkeletonRows } from '../ui/Skeleton';
+import { HeroDetailPanel } from './HeroDetailPanel';
 import { PeriodPatchFilter, toMatchFilters, usePatchWindows, type PeriodDays } from '../filters/PeriodPatchFilter';
 
 /**
@@ -33,16 +35,21 @@ const SORTS: { key: SortKey; label: 'heroesColMatches' | 'heroesColWinRate' | 'h
  * uma parte das partidas sob o rótulo do herói inteiro seria número sem procedência. Também
  * sem posição: a lista não traz posição.
  *
- * O clique no herói abre Partidas filtrada por ele.
+ * Lista à esquerda e o herói escolhido à direita (`HeroDetailPanel`: as últimas partidas com ele
+ * e o atalho para Partidas filtrada). Na primeira versão a seção era só a tabela, e com o
+ * período padrão de 3 meses quem joga pouco via uma linha e nada mais (dono, 2026-11-19).
  */
 export const HeroesSection: React.FC<{
   steamAccountId: string;
   /** Abre Partidas filtrada pelo herói, levando o período e o patch desta tela. */
   onOpenHeroMatches: (heroId: number, filters: PlayerMatchFilters) => void;
-}> = ({ steamAccountId, onOpenHeroMatches }) => {
+  onOpenMatch: (matchId: string) => void;
+}> = ({ steamAccountId, onOpenHeroMatches, onOpenMatch }) => {
   const { t, language } = useLanguage();
   const windows = usePatchWindows();
-  const [days, setDays] = useState<PeriodDays>(90);
+  // "Tudo" por padrão: em 3 meses, quem joga pouco abria a seção com uma linha só.
+  const [days, setDays] = useState<PeriodDays>(null);
+  const [selectedHero, setSelectedHero] = useState<number | null>(null);
   const [patch, setPatch] = useState<PatchWindow | null>(null);
   const [rows, setRows] = useState<HeroPerformance[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -77,6 +84,8 @@ export const HeroesSection: React.FC<{
   }, [rows, query, sort]);
 
   const totalMatches = (rows ?? []).reduce((s, r) => s + r.matchCount, 0);
+  // Herói escolhido; se ele saiu da lista (outro período, busca), o primeiro da ordem atual.
+  const selectedRow = visible.find((r) => r.heroId === selectedHero) ?? visible[0] ?? null;
 
   return (
     <section className="space-y-4" aria-labelledby="heroes-title">
@@ -114,12 +123,13 @@ export const HeroesSection: React.FC<{
       )}
 
       {loading && !rows ? (
-        <div className="flex items-center gap-2 text-xs text-slate-400 py-8 justify-center">
-          <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-          {t('matchesLoading')}
-        </div>
+        <SkeletonCard className="p-4">
+          <Skeleton className="h-3 w-40 mb-5" />
+          <SkeletonRows rows={8} />
+        </SkeletonCard>
       ) : rows && (
-        <div className={cn('glass-card rounded-2xl border border-slate-800 bg-[#0f1624] p-4', loading && 'opacity-60')}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className={cn('lg:col-span-7 glass-card rounded-2xl border border-slate-800 bg-[#0f1624] p-4 min-w-0', loading && 'opacity-60')}>
           <div className="text-xs text-slate-400 mb-3 cursor-help" title={t('heroesSourceHint')}>
             {t('heroesSummary', { matches: totalMatches.toLocaleString(language), heroes: rows.length })}
           </div>
@@ -150,12 +160,15 @@ export const HeroesSection: React.FC<{
                     const hero = getHero(r.heroId);
                     const small = r.matchCount < HERO_SMALL_SAMPLE;
                     return (
-                      <tr key={r.heroId} className="border-t border-slate-800/80">
+                      <tr
+                        key={r.heroId}
+                        className={cn('border-t border-slate-800/80', selectedRow?.heroId === r.heroId && 'bg-cyan-500/10')}
+                      >
                         <td className="py-2 pr-3">
                           <button
                             type="button"
-                            onClick={() => onOpenHeroMatches(r.heroId, toMatchFilters(days, patch))}
-                            title={t('heroesOpenMatches', { hero: hero.displayName })}
+                            onClick={() => setSelectedHero(r.heroId)}
+                            aria-pressed={selectedRow?.heroId === r.heroId}
                             className="flex items-center gap-2.5 text-left hover:text-cyan-200"
                           >
                             <img
@@ -165,6 +178,12 @@ export const HeroesSection: React.FC<{
                               onError={handleHeroImageError}
                             />
                             <span className="font-bold text-slate-200">{hero.displayName}</span>
+                            {/* Herói do patch novo (`NEW_HERO_IDS`, trocado a cada herói lançado). */}
+                            {NEW_HERO_IDS.has(r.heroId) && (
+                              <span className="text-[9px] px-1 bg-amber-500/20 text-amber-300 rounded font-semibold border border-amber-500/30">
+                                {t('heroNewBadge')}
+                              </span>
+                            )}
                           </button>
                         </td>
                         <td className="py-2 pr-3 text-right font-mono text-slate-200">{r.matchCount}</td>
@@ -194,6 +213,19 @@ export const HeroesSection: React.FC<{
               </table>
             </div>
           )}
+        </div>
+        {selectedRow && (
+          <div className="lg:col-span-5 lg:sticky lg:top-16 min-w-0">
+            <HeroDetailPanel
+              key={selectedRow.heroId}
+              steamAccountId={steamAccountId}
+              row={selectedRow}
+              filters={toMatchFilters(days, patch)}
+              onOpenMatch={onOpenMatch}
+              onOpenHeroMatches={() => onOpenHeroMatches(selectedRow.heroId, toMatchFilters(days, patch))}
+            />
+          </div>
+        )}
         </div>
       )}
     </section>

@@ -1,30 +1,39 @@
 # src/components/home/
 
-O Início da 2.0 (docs/PROPOSTA-V2.md §3.2, opção A dos wireframes, escolha do dono): a última
-partida no topo, depois forma e tendência, por último os cards menores.
+O Início. Na 2.0 ele saiu da opção A dos wireframes (última partida no topo, tendência na largura
+inteira, cards menores embaixo) e, no mesmo dia (2026-11-19), foi refeito a pedido do dono na
+disposição da 1.0: **coluna principal larga com as partidas, coluna lateral de cartões pequenos**.
 
 ## Arquivos
 
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
-| `HomeSection.tsx` | Monta o Início com os cards de `dashboard/` (forma, tendência, heróis, atividade, companheiros) e o `LastMatchCard` | `App.tsx` |
-| `LastMatchCard.tsx` | A última partida, com o estado do replay quando a lista o sabe (`isParsed`) e o "Pedir análise", que abre a partida e dispara o pedido | `HomeSection.tsx` |
-| `useTrendMatches.ts` | As partidas da tendência: começa com as 40 do perfil e busca as 100 mais recentes **só quando o jogador escolhe a janela de 50 ou 100** | `HomeSection.tsx` |
+| `HomeSection.tsx` | Monta as duas colunas. Principal: `LastMatchCard` e `RecentMatchesCard`. Lateral, por relevância: `RecentFormCard` (com a linha de Glint), `HeroShareCard`, `TeammatesCard`, `ActivityHeatmap` | `App.tsx` |
+| `LastMatchCard.tsx` | A última partida numa faixa: herói, resultado, KDA, GPM, duração, Glint, "Abrir partida" e, com `isParsed === false`, o "Pedir análise" com o aviso numa linha abaixo | `HomeSection.tsx` |
+| `RecentMatchesCard.tsx` | As 15 partidas seguintes, uma linha cada (herói, resultado, KDA, GPM, Glint, itens, quando) e "Ver todas" para Partidas. Tags e filtros ficam em Partidas | `HomeSection.tsx` |
+| `HeroShareCard.tsx` | O anel lateral: heróis das últimas 25 (ou 100) partidas, fatia = partidas, **cor = winrate** numa escala divergente (vermelho, cinza no meio, verde; satura em 25 pontos), cinza abaixo de `HERO_SHARE_MIN_SAMPLE`. Retrato na fatia que comporta, centro com o total ou o herói em foco, legenda em lista com o número exato. Agregação em `utils/heroShare.ts` | `HomeSection.tsx` |
+| `HomeSkeleton.tsx` | As duas colunas enquanto o perfil chega (antes aparecia o convite "configure sua conta") | `App.tsx` |
+| `useTrendMatches.ts` | As partidas da janela de 100: começa com as 40 do perfil e busca as 100 mais recentes **só quando o jogador escolhe a janela maior** | `HomeSection.tsx`, `account/AccountSection.tsx` |
 
 ## Regras locais
 
-- **Janela de tendência nunca maior que a lista.** `PerformanceTrendChart` e `TrendsCard` só
-  oferecem a janela que a lista preenche, ou que dá para buscar (`canLoadMore`). Até as 100
-  chegarem, o gráfico fica na janela de 25. Na 1.0, "100 jogos" desenhava as mesmas 40.
+- **O anel não divide por posição.** O da 1.0 dividia, e a lista da OpenDota não traz posição
+  (`role` é `UNKNOWN`); agrupar por rota sob rótulo de posição seria inventar. A fatia é o herói,
+  que vem em toda partida. A cor não identifica o herói (quem identifica é o retrato e a
+  legenda), então trocar a janela não "repinta" ninguém pela posição no ranking.
+- **Janela nunca maior que a lista.** Os cartões só oferecem a janela que a lista preenche, ou que
+  dá para buscar (`canLoadMore`). Até as 100 chegarem, ficam na de 25.
 - **A página de 100 é sob demanda, não ao abrir o Início.** Ela dispara uma tabela de percentil
   por herói, e o clique em companheiro abre o Início de outra conta: carregar sem pedido gastaria
-  cota da OpenDota a cada conta vista. Partida nova no perfil (o "atualizar") descarta o que veio,
-  para a tendência nunca ficar atrás do cartão de última partida.
+  cota da OpenDota a cada conta vista. Partida nova no perfil (o "atualizar") descarta o que veio.
 - **`isParsed` ausente não afirma nada.** O cartão só diz "replay não analisado" com
   `isParsed === false`.
 - O "Pedir análise" daqui só **abre** a partida com `requestParse`; quem pede é o `App.tsx`, no
   mesmo fluxo do cartão do modo placar. Cada pedido conta como 10 chamadas: nunca dispara sem
   clique.
+- Saíram do Início em 2026-11-19: o gráfico de evolução de largura inteira (foi para a Conta), os
+  "Heróis principais" da carreira (a seção Heróis cobre, com período) e o cartão "Tendências" com
+  barras de Glint por partida (repetia o gráfico).
 
 ## Ao sair um patch
 

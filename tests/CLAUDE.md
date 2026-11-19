@@ -14,7 +14,7 @@ que precisa saber disso. O `tsconfig.app.json` inclui `["src", "tests"]`, então
 
 | Pasta | Espelha | O que cobre |
 | --- | --- | --- |
-| `utils/` | `src/utils/` | Motores puros: `awardEngine`, `buildAdvisor`, `dotaFormatters`, `glint`, `laneResult`, `laneVerdict`, `legacyStorage`, `minimapCoords`, `navigation`, `patchTransition`, `rankBracket`, `recentFormStats`, `settingsTabs` |
+| `utils/` | `src/utils/` | Motores puros: `awardEngine`, `buildAdvisor`, `dotaFormatters`, `glint`, `heroShare`, `laneResult`, `laneVerdict`, `legacyStorage`, `minimapCoords`, `navigation`, `patchTransition`, `rankBracket`, `recentFormStats`, `settingsTabs` |
 | `utils/matchMetrics/` | `src/utils/matchMetrics/` | As métricas novas da 2.0 (`fights`, `deathCost`, `itemUsage`, `turningPoint`, `laneEfficiency`) sobre as duas fixtures reais, com oráculo tirado do cru |
 | `utils/insights/` | `src/utils/insights/` | Motor de coaching: `context`, `index`, `threatProfile`, `timeSeries`, `wilson` — mais `placeholders`, também sem fonte homônima |
 | `utils/heroGrid/` | `src/utils/heroGrid/` | Decisões puras do layout espelho: `mirrorBuilder`, `mirrorLayout`, `ranking`, `preferences`, `sourcePrecedence`, `syncScheduler`, `valveJson`, `heroTooltip`, `settingsOptions`, `tabFormat` |

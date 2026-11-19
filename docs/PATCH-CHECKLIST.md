@@ -72,7 +72,7 @@ conte com ele para registrar herói em runtime.
 
 | Onde | O quê | Sintoma de envelhecimento |
 | --- | --- | --- |
-| `src/constants/heroes.ts` | `NEW_HERO_IDS`, lido pelo badge `NEW` do `MostPlayedHeroes.tsx` | herói novo não ganha o selo; o anterior nunca deixa de ser "novo" |
+| `src/constants/heroes.ts` | `NEW_HERO_IDS`, lido pelo badge `NEW` do `heroes/HeroesSection.tsx` | herói novo não ganha o selo; o anterior nunca deixa de ser "novo" |
 | `src/components/match/ScoreboardTable.tsx` | `GENERIC_CONSUMABLES` (nomes `item_*`) e o corte `cost >= 1800` | consumível novo aparece como item de build |
 | `src/utils/performanceEnricher.ts` | `ITEM_BENCHMARKS`, `Record<itemId, segundos>` | item removido ou refeito deixa de ter timing de referência, sem aviso |
 | `src/constants/counterItems.ts` | itens de resposta por arquétipo de ameaça | item que deixou de ser resposta canônica continua sendo sugerido — mas o `buildAdvisor` filtra pelo winrate real, então corrige sozinho na maioria dos casos |

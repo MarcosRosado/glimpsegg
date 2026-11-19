@@ -10,11 +10,10 @@ Os cards de perfil que as seções da 2.0 reaproveitam: Início, Partidas e Cont
 | `ProfileHeader.tsx` | Avatar, medalha, MMR (com chip de estimativa), KPIs de carreira e o botão do espelho de heróis. Usa `getRankTierInfo`. Na seção Conta | `App.tsx` |
 | `MatchList.tsx` | Lista de partidas com filtros e badges de destaque (`getAccumulatedMatchTags`). **Concentra os limiares calibrados da dashboard** | `matches/MatchesSection.tsx` |
 | `MatchContextCell.tsx` | Célula compacta com bracket médio, tamanho do grupo e tipo de fila | `MatchList.tsx` |
-| `RecentFormCard.tsx` | O cartão "Forma" do Início: sequência dos últimos jogos, Glint médio das partidas com nota, KDA e GPM (estes vieram da antiga `StatRail`), cada um com a amostra no tooltip | `home/HomeSection.tsx` |
-| `MostPlayedHeroes.tsx` | Top heróis com winrate e KDA (este some na linha com `avgKda` nulo). **Sem nota média por herói** — a lista não traz os insumos do Glint para todas as partidas | `home/HomeSection.tsx` |
-| `PerformanceTrendChart.tsx` | Tendência de Glint/winrate/GPM com média móvel (`recharts`). A métrica de Glint (botão e gráfico) some quando nenhuma partida da janela tem nota | `home/HomeSection.tsx` |
-| `ActivityHeatmap.tsx` | Heatmap de 30 dias, partidas/dia com winrate | `home/HomeSection.tsx` |
-| `TrendsCard.tsx` | Sunburst de heróis por posição, equalizer de Glint e histórico de rota (`echarts`), mais KPIs de fila/ranque e distribuição de medalhas. `part="trend"` (Início) e `part="account"` (Conta) dividem o card como o §5 da proposta da 2.0 pede. O sunburst e o histórico de rota **hoje não aparecem** (ver *Glint e o que a lista não traz*). Era `StratzTrendsCard` até a 2.0 | `home/HomeSection.tsx` e `App.tsx` (Conta) |
+| `RecentFormCard.tsx` | O cartão "Forma" da coluna lateral do Início: sequência dos últimos jogos, Glint médio das partidas com nota, KDA e GPM (estes vieram da antiga `StatRail`), cada um com a amostra no tooltip, e a **linha de Glint** das últimas 25 partidas com nota (o que sobrou no Início do gráfico de evolução, que foi para a Conta). Blocos com rótulo em cima e valor embaixo: lado a lado, na coluna lateral, o KDA atropelava o vizinho | `home/HomeSection.tsx` |
+| `PerformanceTrendChart.tsx` | Evolução de Glint/winrate/GPM com média móvel (`recharts`), com `compact` (altura menor). A métrica de Glint (botão e gráfico) some quando nenhuma partida da janela tem nota | `account/AccountSection.tsx` |
+| `ActivityHeatmap.tsx` | Heatmap de 30 dias, partidas/dia com winrate. Cabeçalho sempre empilhado: o card mora na coluna lateral | `home/HomeSection.tsx` |
+| `QueueRankCard.tsx` | "Fila e ranque": winrate da janela com delta, histórico de rota (some sem veredito), rank médio, fila solo/grupo, não classificado e distribuição de medalhas. Era a metade `part="account"` do `TrendsCard` (antes `StratzTrendsCard`); a outra metade — sunburst de posições, que a lista nunca alimentou, e as barras de Glint por partida — foi apagada em 2026-11-19, quando saiu do Início | `account/AccountSection.tsx` |
 | `TeammatesCard.tsx` | Top companheiros com winrate junto; o clique abre a conta do companheiro (`onOpenPeer`) — na 1.0 a linha parecia clicável e não fazia nada. Era `StratzTeammatesCard` até a 2.0 | `home/HomeSection.tsx` |
 
 ## Glint e o que a lista não traz (desde 2026-11-19)
@@ -34,12 +33,13 @@ experimental, de 0 a 100.
 - **A procedência fica a um hover.** `GlintBadge` já carrega o tooltip; onde a nota é texto, o
   rótulo leva `t('glintBeta')` e `title={useGlintHint()}`. Nunca escrever "IMP" na tela.
 - **O centro da escala é `GLINT_THRESHOLDS.neutral` (48), não 50 nem 0** — linha de referência
-  do gráfico e eixo do equalizer, que normaliza cada lado pelo próprio alcance.
+  do gráfico de evolução e da linha de Glint do cartão de forma.
 - **Limiar de nota vem de `GLINT_THRESHOLDS`, convertido por quantil** (mesma taxa de disparo do
   limiar de IMP que substituiu). Somar 50 ao número antigo está errado: a escala foi comprimida.
   As constantes `GLINT_*` do `MatchList.tsx` trazem a taxa medida em `utils/glint.ts`.
 - **O que hoje não aparece, por falta de dado e não por bug:**
-  - sunburst de posições, filtro de posição e o "Pos N" da linha — `role` vem `'UNKNOWN'`. A
+  - divisão por posição (o sunburst da 1.0, apagado com o `TrendsCard`; o anel do Início é por
+    herói), filtro de posição e o "Pos N" da linha — `role` vem `'UNKNOWN'`. A
     versão anterior jogava posição desconhecida em `POSITION_1`; agrupar por `lane` sob rótulo de
     posição seria o mesmo erro com outro nome;
   - badge e histórico de rota — `laneResult` vem `'UNKNOWN'` **mesmo em partida parseada**, então
@@ -70,7 +70,7 @@ experimental, de 0 a 100.
 
 ## Ao sair um patch
 
-- O badge `NEW` do `MostPlayedHeroes.tsx` sai de `NEW_HERO_IDS` (`constants/heroes.ts`). Herói
+- O badge `NEW` da lista de `heroes/HeroesSection.tsx` sai de `NEW_HERO_IDS` (`constants/heroes.ts`). Herói
   novo: trocar o id lá; esvaziar o conjunto quando ele deixar de ser novidade.
 - Reavaliar a taxa de disparo das tags do `MatchList.tsx` se a economia do jogo mudar — a
   inflação de GPM/patrimônio é exatamente o que matou o `750`.

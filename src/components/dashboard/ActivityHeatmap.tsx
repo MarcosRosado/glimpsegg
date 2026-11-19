@@ -17,9 +17,9 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityDays =
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-slate-800 shadow-xl bg-[#111723]">
-      {/* Empilha ate `xl`: na lateral direita, `lg` da ~386px de card, e ai titulo e
-          numeros lado a lado nao cabem. */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2 mb-4">
+      {/* Sempre empilhado: desde 2026-11-19 o card mora só na coluna lateral do Início
+          (~370px a 1440px de janela), e título e números lado a lado não cabem. */}
+      <div className="flex flex-col gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-amber-400" />
           <div>
@@ -86,17 +86,17 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = ({ activityDays =
       </div>
 
       {/* Timeline Footnote */}
-      <div className="flex flex-wrap items-center justify-between gap-y-1 text-[10px] text-slate-500 font-mono mt-2">
+      <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono mt-2">
         <span>{t('thirtyDaysAgo')}</span>
-        <div className="flex items-center gap-3">
+        <span>{t('today')}</span>
+      </div>
+      <div className="flex items-center gap-3 text-[10px] text-slate-500 font-mono mt-1.5">
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded bg-emerald-500" /> &gt;50% {t('winRate')}
           </span>
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded bg-rose-500" /> &lt;50% {t('winRate')}
           </span>
-        </div>
-        <span>{t('today')}</span>
       </div>
     </div>
   );

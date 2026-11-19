@@ -22,12 +22,18 @@ nenhum número aparece na tela sem procedência (ver a doutrina em [../CLAUDE.md
 ## Navegação (`App.tsx`, desde a 2.0)
 
 A moldura é a de docs/PROPOSTA-V2.md §3, com as escolhas do dono de 2026-11-19: barra lateral
-que recolhe em trilho (`layout/Sidebar.tsx`), Início com a última partida no topo, partida
-analisada em abas com um seletor de jogador só.
+que recolhe em trilho (`layout/Sidebar.tsx`), partida analisada em abas com um seletor de
+jogador só. O Início foi refeito no mesmo dia, a pedido do dono, na disposição da 1.0: coluna
+principal com a última partida e as recentes, coluna lateral de cartões pequenos.
+
+**Carregamento tem forma.** Primeira carga mostra skeleton (`ui/Skeleton.tsx`) no formato do que
+vai chegar: `MatchSkeleton` ao abrir partida (`loadingMatchId`; recarga da mesma partida não troca
+a tela), `HomeSkeleton` enquanto o perfil chega, e linhas nas seções. Recarga com dado na tela
+segue com `opacity-60`. Falha mostra aviso com "tentar de novo", nunca área em branco.
 
 - **`AppSection`** (`layout/Sidebar.tsx`) — sem partida aberta: `HOME` (Início) · `MATCHES`
-  (`MatchesSection`) · `HEROES` (`HeroesSection`) · `ACCOUNT` (`ProfileHeader`, `AccountStats` e a
-  parte de conta do `TrendsCard`) ·
+  (`MatchesSection`) · `HEROES` (`HeroesSection`, lista e painel do herói) · `ACCOUNT`
+  (`AccountSection`: `ProfileHeader`, evolução, `AccountStats` e `QueueRankCard`) ·
   `HERO_GRID`, só com a feature ligada, com `heroGridView` `PANEL` → `HeroGridTab` ou
   `MIRROR` → `HeroGridMirrorScreen`. Seção sem dado fica em `HIDDEN_SECTIONS` e some da barra
   (hoje vazia).

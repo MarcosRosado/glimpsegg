@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Sigma, Medal, PieChart, Loader2 } from 'lucide-react';
+import { Sigma, Medal, PieChart, AlertTriangle } from 'lucide-react';
 import {
   fetchAccountCounts,
   fetchAccountRecords,
@@ -18,6 +18,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { cn } from '../../utils/cn';
 import { EstimateChip } from '../ui/EstimateChip';
+import { Skeleton, SkeletonCard, SkeletonRows } from '../ui/Skeleton';
 
 /** Rótulo de cada campo de totais/recordes. Literais: o teste de chave órfã precisa enxergá-los. */
 const FIELD_LABEL: Record<AccountTotalField, TranslationKey> = {
@@ -101,16 +102,21 @@ const Card: React.FC<{ icon: React.ReactNode; title: string; hint?: string; chil
  *   modo sai por `matchModeKey` SEM a fila (a contagem por modo não traz o lobby): "All Pick",
  *   nunca "casual" ou "ranqueado" no chute. Modo sem rótulo conhecido fica de fora.
  *
- * Cada bloco some sozinho se a chamada dele falhar — os outros seguem.
+ * Cada bloco some sozinho se a chamada dele falhar — os outros seguem — e um aviso com
+ * "tentar de novo" diz que faltou algo. Sem o aviso, a falha das três chamadas (o caso comum
+ * sob limite de uso da OpenDota) deixava a seção em branco, igual a uma conta sem dado.
  */
-export const AccountStats: React.FC<{ steamAccountId: string; onOpenMatch: (matchId: string) => void }> = ({
-  steamAccountId,
-  onOpenMatch,
-}) => {
+export const AccountStats: React.FC<{
+  steamAccountId: string;
+  onOpenMatch: (matchId: string) => void;
+  /** Cartão do topo da coluna direita (fila e ranque): as duas colunas ficam com altura parecida. */
+  aside?: React.ReactNode;
+}> = ({ steamAccountId, onOpenMatch, aside }) => {
   const { t, language } = useLanguage();
-  const totals = useAsync<AccountTotal[]>(() => fetchAccountTotals(steamAccountId), [steamAccountId]);
-  const records = useAsync<AccountRecord[]>(() => fetchAccountRecords(steamAccountId), [steamAccountId]);
-  const counts = useAsync<AccountCounts>(() => fetchAccountCounts(steamAccountId), [steamAccountId]);
+  const [attempt, setAttempt] = useState(0);
+  const totals = useAsync<AccountTotal[]>(() => fetchAccountTotals(steamAccountId), [steamAccountId, attempt]);
+  const records = useAsync<AccountRecord[]>(() => fetchAccountRecords(steamAccountId), [steamAccountId, attempt]);
+  const counts = useAsync<AccountCounts>(() => fetchAccountCounts(steamAccountId), [steamAccountId, attempt]);
   const patches = useAsync(() => fetchPatchCatalog(), []);
 
   const fmt = (n: number, digits = 0) => n.toLocaleString(language, { maximumFractionDigits: digits });
@@ -140,19 +146,50 @@ export const AccountStats: React.FC<{ steamAccountId: string; onOpenMatch: (matc
     </li>
   );
 
+  const anyFailed = !anyLoading && (totals.failed || records.failed || counts.failed);
+
   if (anyLoading && nothing) {
     return (
-      <div className="flex items-center gap-2 text-xs text-slate-400 py-8 justify-center">
-        <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-        {t('matchesLoading')}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        <SkeletonCard>
+          <Skeleton className="h-3.5 w-40 mb-5" />
+          {Array.from({ length: 12 }, (_, i) => (
+            <div key={i} className="flex items-center justify-between gap-4 py-1.5">
+              <Skeleton className="h-3 w-28" />
+              <div className="flex gap-6">
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-3 w-14" />
+                <Skeleton className="h-3 w-10" />
+              </div>
+            </div>
+          ))}
+        </SkeletonCard>
+        <div className="space-y-6 min-w-0">
+          {aside}
+          <SkeletonCard>
+            <Skeleton className="h-3.5 w-32 mb-5" />
+            <SkeletonRows rows={5} />
+          </SkeletonCard>
+        </div>
       </div>
     );
   }
 
   return (
+    <div className="space-y-6">
+    {anyFailed && (
+      <div role="alert" className="flex items-center gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
+        <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
+        <span className="flex-1">{t('acctLoadError')}</span>
+        <button type="button" onClick={() => setAttempt((n) => n + 1)} className="rounded-lg border border-rose-400/40 px-3 py-1.5 font-bold hover:bg-rose-500/20">
+          {t('parseRetryButton')}
+        </button>
+      </div>
+    )}
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+      <div className="space-y-6 min-w-0">
       {totals.data && totals.data.length > 0 && (
-        <Card icon={<Sigma className="w-4 h-4 text-cyan-400" aria-hidden />} title={t('acctTotalsTitle')} hint={t('acctTotalsHint')} className="xl:row-span-2">
+        <Card icon={<Sigma className="w-4 h-4 text-cyan-400" aria-hidden />} title={t('acctTotalsTitle')} hint={t('acctTotalsHint')}>
           <table className="w-full text-xs">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-slate-500 text-left">
@@ -188,6 +225,9 @@ export const AccountStats: React.FC<{ steamAccountId: string; onOpenMatch: (matc
           </table>
         </Card>
       )}
+      </div>
+      <div className="space-y-6 min-w-0">
+        {aside}
 
       {records.data && records.data.length > 0 && (
         <Card icon={<Medal className="w-4 h-4 text-amber-400" aria-hidden />} title={t('acctRecordsTitle')} hint={t('acctRecordsHint')}>
@@ -266,6 +306,8 @@ export const AccountStats: React.FC<{ steamAccountId: string; onOpenMatch: (matc
           </div>
         </Card>
       )}
+      </div>
+    </div>
     </div>
   );
 };

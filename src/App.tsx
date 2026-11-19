@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { BrandMark } from './components/brand/BrandMark';
 import { BrandLockup } from './components/brand/BrandLockup';
-import { TrendsCard } from './components/dashboard/TrendsCard';
 import { LOCAL_STORAGE_KEYS, migrateLegacyLocalStorage } from './utils/legacyStorage';
 import { ProfileHeader } from './components/dashboard/ProfileHeader';
 import { MatchHeader } from './components/match/MatchHeader';
@@ -15,7 +14,7 @@ import { Sidebar, type AppSection } from './components/layout/Sidebar';
 import { HomeSection } from './components/home/HomeSection';
 import { MatchesSection } from './components/matches/MatchesSection';
 import { HeroesSection } from './components/heroes/HeroesSection';
-import { AccountStats } from './components/account/AccountStats';
+import { AccountSection } from './components/account/AccountSection';
 import { classifySearchInput, initialMatchView, type MatchTab } from './utils/navigation';
 import { ScoreboardTable } from './components/match/ScoreboardTable';
 import { AdvantageTimeline } from './components/match/AdvantageTimeline';
@@ -38,6 +37,8 @@ import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { Sparkles, DownloadCloud, UserX } from 'lucide-react';
 
 import { useHeroGridSync } from './hooks/useHeroGridSync';
+import { MatchSkeleton } from './components/match/MatchSkeleton';
+import { HomeSkeleton } from './components/home/HomeSkeleton';
 
 /**
  * As duas telas do layout espelho, dentro da seção `HERO_GRID` da barra lateral.
@@ -80,6 +81,8 @@ function MainAppContent() {
   const [profile, setProfile] = useState<PlayerProfileSummary | null>(null);
   const [profileHistory, setProfileHistory] = useState<ProfileHistoryItem[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MatchDetails | null>(null);
+  /** Partida sendo buscada: mostra o `MatchSkeleton` até o detalhe chegar (ou falhar). */
+  const [loadingMatchId, setLoadingMatchId] = useState<string | null>(null);
   const [selectedPlayerSlot, setSelectedPlayerSlot] = useState<number>(0);
   const [activeMatchTab, setActiveMatchTab] = useState<MatchTab>('SUMMARY');
   /**
@@ -354,6 +357,7 @@ function MainAppContent() {
     opts: { keepView?: boolean; requestParse?: boolean } = {},
   ) => {
     setIsLoading(true);
+    setLoadingMatchId(matchId);
     try {
       const match = await fetchOpenDotaMatchDetails(matchId);
       // `fetchMatchDetails` devolvia o dataset de demonstracao quando a API falhava,
@@ -377,6 +381,7 @@ function MainAppContent() {
       showToast(t('matchLoadError'));
     } finally {
       setIsLoading(false);
+      setLoadingMatchId(null);
     }
   };
 
@@ -585,6 +590,8 @@ function MainAppContent() {
   /** Partida aberta: sem análise é o "modo placar" — outra forma de tela, não um aviso por cima. */
   const isScoreboardMode = !!selectedMatch && !selectedMatch.availability.parsed;
 
+  const showMatchSkeleton = loadingMatchId !== null && selectedMatch?.id !== loadingMatchId;
+
   const renderMatch = (match: MatchDetails) => (
     <div className="space-y-5 animate-in fade-in duration-200">
       <MatchHeader match={match} onBack={() => setSelectedMatch(null)} />
@@ -690,6 +697,7 @@ function MainAppContent() {
         return (
           <HeroesSection
             steamAccountId={p.steamAccountId}
+            onOpenMatch={(id) => void handleSelectMatch(id)}
             onOpenHeroMatches={(heroId, filters) => {
               setHeroFilterId(heroId);
               setMatchesPreset(filters);
@@ -699,28 +707,22 @@ function MainAppContent() {
         );
       case 'ACCOUNT':
         return (
-          <div className="space-y-6">
-            <ProfileHeader
-              profile={p}
-              heroGridEnabled={heroGridEnabled}
-              lastMirrorSyncAt={heroGridSync.mirrorSnapshot?.at ?? null}
-              isViewingDifferentAccount={isViewingDifferentAccount}
-              onOpenHeroGridMirror={() => {
-                setHeroGridView('MIRROR');
-                setSection('HERO_GRID');
-              }}
-            />
-            <AccountStats steamAccountId={p.steamAccountId} onOpenMatch={(id) => void handleSelectMatch(id)} />
-            <div className="max-w-2xl">
-              <TrendsCard
-                part="account"
-                matches={p.recentMatches}
-                seasonRank={p.seasonRank}
-                leaderboardRank={p.leaderboardRank}
-                onSelectMatch={(id) => void handleSelectMatch(id)}
+          <AccountSection
+            profile={p}
+            onOpenMatch={(id) => void handleSelectMatch(id)}
+            header={
+              <ProfileHeader
+                profile={p}
+                heroGridEnabled={heroGridEnabled}
+                lastMirrorSyncAt={heroGridSync.mirrorSnapshot?.at ?? null}
+                isViewingDifferentAccount={isViewingDifferentAccount}
+                onOpenHeroGridMirror={() => {
+                  setHeroGridView('MIRROR');
+                  setSection('HERO_GRID');
+                }}
               />
-            </div>
-          </div>
+            }
+          />
         );
       case 'HOME':
       default:
@@ -735,6 +737,10 @@ function MainAppContent() {
               setSection('MATCHES');
             }}
             onOpenPeer={(accountId) => void handleSelectProfileFromHistory(accountId)}
+            onSeeAllMatches={() => {
+              setHeroFilterId(null);
+              navigate('MATCHES');
+            }}
           />
         );
     }
@@ -793,12 +799,13 @@ function MainAppContent() {
             </div>
           )}
 
-          {selectedMatch && renderMatch(selectedMatch)}
+          {/* Recarga da MESMA partida (a análise que chegou) não troca a tela pelo skeleton. */}
+          {showMatchSkeleton ? <MatchSkeleton /> : selectedMatch && renderMatch(selectedMatch)}
 
           {/* A seção fica MONTADA (só escondida) enquanto a partida está aberta: voltar da
               partida devolve os filtros e as páginas já carregadas de Partidas e Heróis, em vez
               de refazer as chamadas do zero. */}
-          <div className={selectedMatch ? 'hidden' : undefined}>
+          <div className={selectedMatch || showMatchSkeleton ? 'hidden' : undefined}>
           {section === 'HERO_GRID' && heroGridEnabled ? (
             /* HERO GRID — painel (sincronização, diagnóstico, ranking) ou réplica do layout */
             <div className="animate-in fade-in duration-200 space-y-4">
@@ -813,6 +820,8 @@ function MainAppContent() {
                 <HeroGridTab sync={heroGridSync} onOpenMirror={() => setHeroGridView('MIRROR')} />
               )}
             </div>
+          ) : !profile && isLoading ? (
+            <HomeSkeleton />
           ) : !profile ? (
             /* Empty Setup State when no profile is loaded yet */
             <div className="flex flex-col items-center justify-center py-28 text-center space-y-5 animate-in fade-in duration-300">

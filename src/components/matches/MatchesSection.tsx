@@ -4,6 +4,7 @@ import type { PatchWindow, PlayerMatchSummary } from '../../types/dota';
 import { fetchPlayerMatchesPage, RECENT_MATCHES_LIMIT } from '../../services/openDotaProfile';
 import { useLanguage } from '../../context/LanguageContext';
 import { MatchList } from '../dashboard/MatchList';
+import { Skeleton, SkeletonCard, SkeletonRows } from '../ui/Skeleton';
 import { PeriodPatchFilter, toMatchFilters, usePatchWindows, type PeriodDays } from '../filters/PeriodPatchFilter';
 
 /**
@@ -101,10 +102,10 @@ export const MatchesSection: React.FC<{
       )}
 
       {loading && matches.length === 0 ? (
-        <div className="flex items-center gap-2 text-xs text-slate-400 py-8 justify-center">
-          <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-          {t('matchesLoading')}
-        </div>
+        <SkeletonCard>
+          <Skeleton className="h-5 w-56 mb-5" />
+          <SkeletonRows rows={8} />
+        </SkeletonCard>
       ) : (
         <MatchList
           matches={matches}
