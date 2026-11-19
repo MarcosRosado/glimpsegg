@@ -39,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onReturnToConfiguredAccount,
   onRefresh,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { patch } = useGamePatch();
   const rankInfo = profile ? getRankTierInfo(profile.seasonRank, profile.leaderboardRank) : null;
 
@@ -95,7 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   tem de vir rotulado como estimativa. */}
               <span className="hidden md:inline-flex items-center gap-1 shrink-0">
                 <span className="text-[10px] font-mono text-amber-400/90 tabular-nums">
-                  ~{rankInfo.approxMmr.toLocaleString()} MMR
+                  ~{rankInfo.approxMmr.toLocaleString(language)} MMR
                 </span>
                 <EstimateChip hint={t('mmrEstimateHint')} />
               </span>

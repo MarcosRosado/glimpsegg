@@ -14,7 +14,7 @@ interface TeammatesCardProps {
 }
 
 export const TeammatesCard: React.FC<TeammatesCardProps> = ({ peers = [], onOpenPeer }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   if (peers.length === 0) {
     return null;
@@ -38,7 +38,7 @@ export const TeammatesCard: React.FC<TeammatesCardProps> = ({ peers = [], onOpen
         <div className="flex items-center gap-1 text-xs text-slate-400 font-mono">
           <Users className="w-3.5 h-3.5" />
           <span className="text-[11px]">
-            {sampledMatches.toLocaleString()} {t('matches')}
+            {sampledMatches.toLocaleString(language)} {t('matches')}
           </span>
         </div>
       </div>
@@ -74,7 +74,7 @@ export const TeammatesCard: React.FC<TeammatesCardProps> = ({ peers = [], onOpen
               {/* Center: Winrate % & Green/Red Mini Progress Bar */}
               <div className="flex items-center gap-2 w-28 justify-end">
                 <span className="text-slate-300 font-bold text-xs">
-                  {peer.winRateWith.toFixed(1).replace('.', ',')}%
+                  {peer.winRateWith.toLocaleString(language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
                 </span>
                 <div className="w-12 h-2 rounded bg-[#1e2530] overflow-hidden">
                   <div

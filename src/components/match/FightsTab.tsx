@@ -1,7 +1,7 @@
 import React from 'react';
 import { Swords, Skull, Flag } from 'lucide-react';
 import { MatchDetails } from '../../types/dota';
-import { summarizeFights } from '../../utils/matchMetrics/fights';
+import { summarizeFights, type FightSummary } from '../../utils/matchMetrics/fights';
 import { formatMatchClock, formatGold } from '../../utils/dotaFormatters';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
@@ -20,8 +20,49 @@ import { OBJECTIVE_LABEL } from './objectiveLabels';
 
 const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatGold(Math.abs(n))}`;
 
-export const FightsTab: React.FC<{ match: MatchDetails; playerSlot: number }> = ({ match, playerSlot }) => {
+/** Quantos objetivos aparecem abertos; o resto fica num "+N", recolhido mas alcançável. */
+const OPEN_OBJECTIVES = 3;
+
+/**
+ * Os objetivos até a luta seguinte. A janela vai até a PRÓXIMA luta, que pode vir 20 minutos
+ * depois, e a lista então fica longa. O corte é por QUANTIDADE, não por distância: cortar por
+ * distância diria "estes não têm a ver com a luta", e esse limiar nunca foi medido. Nada some —
+ * o resto abre no clique, e cada linha diz a distância em mm:ss.
+ */
+const ObjectiveList: React.FC<{ items: FightSummary['objectivesAfter'] }> = ({ items }) => {
   const { t } = useLanguage();
+  const row = (o: FightSummary['objectivesAfter'][number], i: number) => (
+    <li key={i} className="flex items-center gap-1.5 text-[11px]">
+      <Flag className={cn('w-3 h-3', o.objective.takenBy === 'RADIANT' ? 'text-emerald-400' : 'text-rose-400')} aria-hidden />
+      <span className="text-slate-200">{t(OBJECTIVE_LABEL[o.objective.kind])}</span>
+      <span className="text-slate-500">
+        {t('fightsTakenBy', { team: o.objective.takenBy === 'RADIANT' ? t('radiant') : t('dire') })}
+        {' · '}
+        {o.secondsAfterEnd < 0
+          ? t('fightsDuringFight')
+          : t('fightsTimeAfter', { time: formatMatchClock(Math.round(o.secondsAfterEnd)) })}
+      </span>
+    </li>
+  );
+  const open = items.slice(0, OPEN_OBJECTIVES);
+  const rest = items.slice(OPEN_OBJECTIVES);
+  return (
+    <div>
+      <ul className="space-y-0.5">{open.map(row)}</ul>
+      {rest.length > 0 && (
+        <details className="mt-0.5">
+          <summary className="cursor-pointer text-[11px] text-cyan-300/80 hover:text-cyan-200 select-none">
+            {t('fightsMoreObjectives', { count: rest.length })}
+          </summary>
+          <ul className="space-y-0.5 mt-0.5">{rest.map((o, i) => row(o, i + OPEN_OBJECTIVES))}</ul>
+        </details>
+      )}
+    </div>
+  );
+};
+
+export const FightsTab: React.FC<{ match: MatchDetails; playerSlot: number }> = ({ match, playerSlot }) => {
+  const { t, language } = useLanguage();
   const fights = summarizeFights(match, playerSlot);
   if (!fights) return null;
 
@@ -86,7 +127,7 @@ export const FightsTab: React.FC<{ match: MatchDetails; playerSlot: number }> = 
                       <div className={cn('text-[11px]', f.player.deaths > 0 ? 'text-rose-300' : 'text-slate-300')}>
                         {f.player.deaths > 0 ? t('fightsYouDied') : t('fightsYouSurvived')}
                         <div className="text-[10px] text-slate-400">
-                          {signed(f.player.goldDelta)} {t('fightsGoldShort')} · {f.player.damage.toLocaleString()} {t('fightsDamageShort')}
+                          {signed(f.player.goldDelta)} {t('fightsGoldShort')} · {f.player.damage.toLocaleString(language)} {t('fightsDamageShort')}
                         </div>
                       </div>
                     ) : (
@@ -97,24 +138,7 @@ export const FightsTab: React.FC<{ match: MatchDetails; playerSlot: number }> = 
                     {f.objectivesAfter.length === 0 ? (
                       <span className="text-[11px] text-slate-600">—</span>
                     ) : (
-                      <ul className="space-y-0.5">
-                        {f.objectivesAfter.map((o, i) => (
-                          <li key={i} className="flex items-center gap-1.5 text-[11px]">
-                            <Flag
-                              className={cn('w-3 h-3', o.objective.takenBy === 'RADIANT' ? 'text-emerald-400' : 'text-rose-400')}
-                              aria-hidden
-                            />
-                            <span className="text-slate-200">{t(OBJECTIVE_LABEL[o.objective.kind])}</span>
-                            <span className="text-slate-500">
-                              {t('fightsTakenBy', { team: o.objective.takenBy === 'RADIANT' ? t('radiant') : t('dire') })}
-                              {' · '}
-                              {o.secondsAfterEnd < 0
-                                ? t('fightsDuringFight')
-                                : t('fightsSecondsAfter', { s: Math.round(o.secondsAfterEnd) })}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                      <ObjectiveList items={f.objectivesAfter} />
                     )}
                   </td>
                 </tr>

@@ -266,7 +266,7 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
   onSelectPlayer,
   variant = 'full',
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const computed = computeMatchAwards(match);
   const { awards, aggregates, scoreKind } = computed;
   const scoreboardOnly = variant === 'scoreboard';
@@ -456,11 +456,11 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
           {/* Hero Damage Bar */}
           <div>
             <div className="flex items-center justify-between text-slate-300 mb-1.5 font-sans">
-              <span className="font-bold text-emerald-400">{aggregates.radiantHeroDamage.toLocaleString()}</span>
+              <span className="font-bold text-emerald-400">{aggregates.radiantHeroDamage.toLocaleString(language)}</span>
               <span className="text-slate-400 font-medium flex items-center gap-1">
                 <Flame className="w-3.5 h-3.5 text-orange-400" /> {t('totalDamage')}
               </span>
-              <span className="font-bold text-rose-400">{aggregates.direHeroDamage.toLocaleString()}</span>
+              <span className="font-bold text-rose-400">{aggregates.direHeroDamage.toLocaleString(language)}</span>
             </div>
             <div className="w-full h-3 rounded-full bg-slate-900 flex overflow-hidden border border-slate-800">
               <div
@@ -482,9 +482,9 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
                 <span className="text-slate-300 font-sans font-medium">{t('towerDamage')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">{aggregates.radiantTowerDamage.toLocaleString()}</span>
+                <span className="text-emerald-400 font-bold">{aggregates.radiantTowerDamage.toLocaleString(language)}</span>
                 <span className="text-slate-600">vs</span>
-                <span className="text-rose-400 font-bold">{aggregates.direTowerDamage.toLocaleString()}</span>
+                <span className="text-rose-400 font-bold">{aggregates.direTowerDamage.toLocaleString(language)}</span>
               </div>
             </div>
 
@@ -494,9 +494,9 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
                 <span className="text-slate-300 font-sans font-medium">{t('healingDone')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">{aggregates.radiantHealing.toLocaleString()}</span>
+                <span className="text-emerald-400 font-bold">{aggregates.radiantHealing.toLocaleString(language)}</span>
                 <span className="text-slate-600">vs</span>
-                <span className="text-rose-400 font-bold">{aggregates.direHealing.toLocaleString()}</span>
+                <span className="text-rose-400 font-bold">{aggregates.direHealing.toLocaleString(language)}</span>
               </div>
             </div>
 

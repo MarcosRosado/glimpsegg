@@ -581,7 +581,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               </h4>
             </div>
             <span className="text-xs font-black text-rose-400 font-mono">
-              {t('damageTotal', { damage: player.heroDamage.toLocaleString() })}
+              {t('damageTotal', { damage: player.heroDamage.toLocaleString(language) })}
             </span>
           </div>
 
@@ -594,9 +594,9 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
             {(
               <>
                 <div className="flex justify-between text-xs font-mono mb-1.5">
-                  <span className="text-orange-400 font-bold">{t('dmgTypePhysical')}: {split.physicalDamage.toLocaleString()} ({physPct}%)</span>
-                  <span className="text-cyan-400 font-bold">{t('dmgTypeMagical')}: {split.magicalDamage.toLocaleString()} ({magicPct}%)</span>
-                  <span className="text-purple-400 font-bold">{t('dmgTypePure')}: {split.pureDamage.toLocaleString()} ({purePct}%)</span>
+                  <span className="text-orange-400 font-bold">{t('dmgTypePhysical')}: {split.physicalDamage.toLocaleString(language)} ({physPct}%)</span>
+                  <span className="text-cyan-400 font-bold">{t('dmgTypeMagical')}: {split.magicalDamage.toLocaleString(language)} ({magicPct}%)</span>
+                  <span className="text-purple-400 font-bold">{t('dmgTypePure')}: {split.pureDamage.toLocaleString(language)} ({purePct}%)</span>
                 </div>
                 <div className="w-full bg-slate-900 h-3 rounded-full overflow-hidden flex border border-slate-800">
                   <div className="bg-orange-500 h-full transition-all" style={{ width: `${physPct}%` }} title={`${t('dmgTypePhysical')}: ${physPct}%`} />
@@ -616,14 +616,14 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
                 <div className="text-[10px] text-slate-400">{t('damageReceived')}</div>
                 <div className="text-sm font-black text-slate-200 mt-0.5">
-                  {combatStats.damageReceived.toLocaleString()}
+                  {combatStats.damageReceived.toLocaleString(language)}
                 </div>
               </div>
             )}
             <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
               <div className="text-[10px] text-slate-400">{t('healingSupport')}</div>
               <div className="text-sm font-black text-emerald-400 mt-0.5">
-                {combatStats.healingProvided.toLocaleString()}
+                {combatStats.healingProvided.toLocaleString(language)}
               </div>
             </div>
           </div>
@@ -792,11 +792,11 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
         <div className="grid grid-cols-2 gap-3 font-mono text-xs">
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
             <div className="text-[10px] text-slate-400">{t('towerDamage')}</div>
-            <div className="text-base font-black text-emerald-400 mt-0.5">{player.towerDamage.toLocaleString()}</div>
+            <div className="text-base font-black text-emerald-400 mt-0.5">{player.towerDamage.toLocaleString(language)}</div>
           </div>
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
             <div className="text-[10px] text-slate-400">{t('heroDamageFull')}</div>
-            <div className="text-base font-black text-rose-400 mt-0.5">{player.heroDamage.toLocaleString()}</div>
+            <div className="text-base font-black text-rose-400 mt-0.5">{player.heroDamage.toLocaleString(language)}</div>
           </div>
         </div>
       </div>

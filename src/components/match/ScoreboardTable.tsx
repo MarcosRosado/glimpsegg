@@ -86,7 +86,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
   onNavigateToPerformance,
   didRadiantWin,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const glintHint = useGlintHint();
   const hasGlint = players.some((p) => typeof p.glint === 'number');
   // Multi-expansion set: supports multiple players open concurrently
@@ -276,13 +276,13 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
                       {/* Hero Damage */}
                       <td className="py-2.5 px-2 text-right text-slate-300">
-                        {player.heroDamage.toLocaleString()}
+                        {player.heroDamage.toLocaleString(language)}
                       </td>
 
                       {/* Ally Healing */}
                       <td className="py-2.5 px-2 text-right font-mono">
                         {player.heroHealing > 0 ? (
-                          <span className="text-teal-400 font-bold">{player.heroHealing.toLocaleString()}</span>
+                          <span className="text-teal-400 font-bold">{player.heroHealing.toLocaleString(language)}</span>
                         ) : (
                           <span className="text-slate-600">-</span>
                         )}
@@ -290,7 +290,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
                       {/* Tower Damage */}
                       <td className="py-2.5 px-2 text-right text-slate-400">
-                        {player.towerDamage.toLocaleString()}
+                        {player.towerDamage.toLocaleString(language)}
                       </td>
 
                       {/* Items & Neutral */}
@@ -501,7 +501,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                               <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
                                 <div className="text-[10px] text-slate-400 uppercase font-mono">{t('heroDamageFull')}</div>
                                 <div className="text-sm font-black text-emerald-400 font-mono mt-0.5">
-                                  {player.heroDamage.toLocaleString()}
+                                  {player.heroDamage.toLocaleString(language)}
                                 </div>
                               </div>
 
@@ -509,7 +509,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                               <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
                                 <div className="text-[10px] text-slate-400 uppercase font-mono">{t('towerDamageFull')}</div>
                                 <div className="text-sm font-black text-amber-400 font-mono mt-0.5">
-                                  {player.towerDamage.toLocaleString()}
+                                  {player.towerDamage.toLocaleString(language)}
                                 </div>
                               </div>
 
@@ -517,7 +517,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                               <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
                                 <div className="text-[10px] text-slate-400 uppercase font-mono">{t('healingToAllies')}</div>
                                 <div className="text-sm font-black text-teal-400 font-mono mt-0.5">
-                                  {player.heroHealing.toLocaleString()}
+                                  {player.heroHealing.toLocaleString(language)}
                                 </div>
                               </div>
 

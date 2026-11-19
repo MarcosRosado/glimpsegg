@@ -106,7 +106,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>{profile.totalMatches.toLocaleString()} {t('matches')}</span>
+                <span>{profile.totalMatches.toLocaleString(language)} {t('matches')}</span>
               </span>
             </div>
 
@@ -127,7 +127,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   e rotulada como tal. */}
               <div className="flex items-center gap-1.5 text-xs font-mono font-medium text-slate-300 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
                 <span>
-                  ~<span className="text-amber-400 font-bold">{rankInfo.approxMmr.toLocaleString()}</span> MMR
+                  ~<span className="text-amber-400 font-bold">{rankInfo.approxMmr.toLocaleString(language)}</span> MMR
                 </span>
                 <EstimateChip hint={t('mmrEstimateHint')} />
               </div>
@@ -185,7 +185,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <Flame className="w-3.5 h-3.5 text-orange-400" />
               <span>{t('careerMatches')}</span>
             </div>
-            <div className="text-xl font-black text-white">{profile.totalMatches.toLocaleString()}</div>
+            <div className="text-xl font-black text-white">{profile.totalMatches.toLocaleString(language)}</div>
             <div className="text-[10px] text-slate-500 mt-0.5">{t('matches')}</div>
           </div>
 
