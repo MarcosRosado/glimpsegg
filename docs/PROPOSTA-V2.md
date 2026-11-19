@@ -220,3 +220,19 @@ regra. Não recomendo.
    mesma decisão da D6)?
 5. **Publicação**: a recomendação do §7 (workflow respeita o `package.json` + notas por arquivo)?
 6. **Veredito de rota com xp** (D1, pendente desde o item 3): a regra hoje usa só patrimônio.
+
+### Decidido pelo dono em 2026-11-19
+
+| Ponto | Decisão |
+| --- | --- |
+| 1. Moldura | **Aberto.** O dono responde sobre o artefato de wireframes (moldura, hierarquia do Início, abas da partida analisada, telas de Heróis e Conta). Nenhuma interface nova é codada antes disso |
+| 2. Partida não analisada | **Decidido: recorte menor.** A tela diz claramente que o replay não foi analisado e mostra só o que já está disponível, **sem** as seções que dependem de análise — a linha do "modo placar" do §3.4 |
+| 3. Escopo | **Decidido: o recorte do §4.** Entram as seções novas (Partidas, Heróis e Conta) e as cinco métricas (conversão de luta, tempo morto no pior momento, uso de item ativo, eficiência de rota, momento de virada). Outras métricas do §4 entram se se mostrarem pertinentes durante o desenvolvimento, cada uma pelo critério de lá: janela e unidade declaradas, procedência na tela, taxa de disparo medida e teste na fixture real |
+| 4. Confrontos por faixa | **Fora da 2.0**, como recomendado — não foram citados no escopo |
+| 5. Publicação | **Decidido: a recomendação do §7 (opção a).** A versão vira 2.0.0 e chega ao usuário pelo auto-update normal: o passo de versão passa a respeitar um `major.minor` maior no `package.json`, e as notas saem de `docs/release-notes/v<versão>.md` quando o arquivo existe. O `version` só vai para `2.0.0` no commit final da 2.0, junto com as notas |
+| 6. Veredito de rota com xp | **Decidido: o xp entra, com o mesmo peso do patrimônio** ("o XP é tão importante quanto o patrimônio"). Remedido no mesmo dia, aceite mantido: 99,1% em 7.42 e 98,7% em 7.41 (ver a Fase 3 do plano) |
+
+**O que pode andar antes do layout**, desde que cada parte entre testada e commitada: as funções
+puras das métricas novas em `src/utils/` (teste nas fixtures reais, taxa de disparo medida nos
+pares), a paginação da lista de partidas (`offset`), `start_time` na projeção da lista completa
+com o filtro `?patch=`, e os renomes com migração do config (§6).
