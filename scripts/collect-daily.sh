@@ -8,6 +8,8 @@
 #   GABARITO_UNTIL=2026-12-03   ultimo dia em que a rotina ainda colhe (obrigatorio)
 #   WINDOW_MINUTES=180          teto de duracao da coleta do dia (padrao 180)
 #   UNTIL_TIME=20:57            hora local em que a coleta tem de PARAR (opcional)
+#   APP_RESERVE=500             saldo do dia que a trilha 7.42 deixa para o app (padrao 150,
+#                               o minimo do coletor)
 #
 # UNTIL_TIME existe para a rotina rodar no fim do dia e gastar so a SOBRA da cota: a OpenDota
 # zera o contador a meia-noite UTC (21h de Brasilia), e coleta que passasse disso comecaria a
@@ -61,8 +63,8 @@ HALF_S=$(( $(secs_left) / 2 ))
 echo "--- trilha 7.41 (ate $(( HALF_S / 60 )) min, ate o saldo do dia chegar em 1500) ---"
 [ "$HALF_S" -gt 0 ] && timeout -s INT -k 60 "${HALF_S}s" node scripts/collect-pairs.cjs --lane 7.41 --reserve 1500
 REST_S=$(secs_left)
-echo "--- trilha 7.42 (ate $(( REST_S / 60 )) min) ---"
-[ "$REST_S" -gt 0 ] && timeout -s INT -k 60 "${REST_S}s" node scripts/collect-pairs.cjs
+echo "--- trilha 7.42 (ate $(( REST_S / 60 )) min, ate o saldo do dia chegar em ${APP_RESERVE:-150}) ---"
+[ "$REST_S" -gt 0 ] && timeout -s INT -k 60 "${REST_S}s" node scripts/collect-pairs.cjs --reserve "${APP_RESERVE:-150}"
 echo "--- aceite da Fase 1 ---"
 node scripts/accept-phase1.cjs | sed -n '/^POR FAIXA/,/^acertos/p;/^VEREDITO/,$p'
 echo "--- criterio de corte ---"
