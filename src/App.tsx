@@ -15,6 +15,8 @@ import { MatchHeader } from './components/match/MatchHeader';
 import { ParseRequestCard, PARSE_POLL_DELAYS_MS, type ParseState } from './components/match/ParseRequestCard';
 import { MatchTabs } from './components/match/MatchTabs';
 import { MatchPlayerPicker } from './components/match/MatchPlayerPicker';
+import { FightsTab } from './components/match/FightsTab';
+import { TurningPointNote } from './components/match/TurningPointNote';
 import { Sidebar, type AppSection } from './components/layout/Sidebar';
 import { LastMatchCard } from './components/home/LastMatchCard';
 import { classifySearchInput, initialMatchView, type MatchTab } from './utils/navigation';
@@ -56,8 +58,14 @@ type HeroGridView = 'PANEL' | 'MIRROR';
  */
 const HIDDEN_SECTIONS: AppSection[] = ['HEROES'];
 
-/** Abas da partida analisada que existem hoje. `FIGHTS` entra quando a metrica de luta existir. */
-const ANALYZED_TABS: MatchTab[] = ['SUMMARY', 'MY_GAME', 'VISION', 'COACHING'];
+/**
+ * Abas da partida analisada. `FIGHTS` só entra com `availability.teamfights`: aba sem dado não
+ * aparece, nem desabilitada.
+ */
+const analyzedTabs = (match: MatchDetails): MatchTab[] =>
+  match.availability.teamfights
+    ? ['SUMMARY', 'MY_GAME', 'FIGHTS', 'VISION', 'COACHING']
+    : ['SUMMARY', 'MY_GAME', 'VISION', 'COACHING'];
 
 function MainAppContent() {
   const { t } = useLanguage();
@@ -584,7 +592,11 @@ function MainAppContent() {
            dependem do placar, Glint beta e o placar completo. Sem abas, sem linha de
            vantagem, sem comparativo, sem "quem liderou" e sem melhor por posição. */
         <>
-          <ParseRequestCard state={parseState} onRequest={() => void handleRequestParse()} />
+          <ParseRequestCard
+            state={parseState}
+            onRequest={() => void handleRequestParse()}
+            extraUnlocks={['parseUnlockFights']}
+          />
           <TeamOverviewCard
             match={match}
             variant="scoreboard"
@@ -601,7 +613,7 @@ function MainAppContent() {
       ) : (
         <>
           <MatchTabs
-            tabs={ANALYZED_TABS}
+            tabs={analyzedTabs(match)}
             active={activeMatchTab}
             onChange={setActiveMatchTab}
             trailing={
@@ -623,6 +635,7 @@ function MainAppContent() {
                 selectedPlayerSlot={selectedPlayerSlot}
                 onSelectPlayer={setSelectedPlayerSlot}
               />
+              <TurningPointNote match={match} />
               <AdvantageTimeline timeline={match.advantageTimeline} />
               <ScoreboardTable
                 players={match.players}
@@ -639,6 +652,10 @@ function MainAppContent() {
 
           {activeMatchTab === 'MY_GAME' && activeMatchPlayer && (
             <PlayerPerformanceTab player={activeMatchPlayer} match={match} />
+          )}
+
+          {activeMatchTab === 'FIGHTS' && match.availability.teamfights && (
+            <FightsTab match={match} playerSlot={selectedPlayerSlot} />
           )}
 
           {activeMatchTab === 'VISION' && activeMatchPlayer && (

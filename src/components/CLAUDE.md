@@ -15,7 +15,7 @@ o que precisa ser verificado vira função pura em `utils/`.
 | `home/` | `LastMatchCard.tsx` — o topo do Início: última partida, estado do replay e o "Pedir análise" (que abre a partida e dispara o pedido). O resto do Início reaproveita cards de `dashboard/` | — |
 | `layout/` | A moldura: `Sidebar` (seções) e `Navbar` (topo) | [ver](layout/CLAUDE.md) |
 | `match/` | Cabeçalho, abas, seletor de jogador, modo placar e a aba Resumo da partida | [ver](match/CLAUDE.md) |
-| `performance/` | `PlayerPerformanceTab.tsx` — aba `MY_GAME` ("Meu jogo"): radar de 5 eixos, stats de combate e farm, timeline de itens, habilidades, objetivos | — |
+| `performance/` | A aba "Meu jogo": desempenho de um jogador, uso de item ativo e tempo morto | [ver](performance/CLAUDE.md) |
 | `search/` | `SearchPlayerModal.tsx` — busca (Ctrl+K) de conta **ou partida** (`classifySearchInput`; o número ambíguo ganha a opção "abrir como partida"), histórico e favoritos | — |
 | `settings/` | `SettingsModal.tsx` — o maior componente do projeto: conta Steam, idioma e toda a configuração do hero grid | — |
 | `ui/` | Primitivos compartilhados | [ver](ui/CLAUDE.md) |
@@ -43,7 +43,7 @@ Três lugares na UI têm dado de Dota cravado, e nenhum deles quebra visivelment
 - `dashboard/MostPlayedHeroes.tsx` — badge `NEW` lê `NEW_HERO_IDS` de `constants/heroes.ts`.
 - `match/ScoreboardTable.tsx` — `GENERIC_CONSUMABLES` (nomes `item_*`) e o corte `cost >= 1800`
   que define "item core".
-- `performance/PlayerPerformanceTab.tsx` — `deltaSec <= -45` / `>= 60` para item adiantado/atrasado.
+- `performance/PlayerPerformanceTab.tsx` — `deltaSec <= -45` / `>= 60` para item adiantado/atrasado (ver [performance/CLAUDE.md](performance/CLAUDE.md)).
 
 Os limiares de destaque da lista de partidas estão em [dashboard/CLAUDE.md](dashboard/CLAUDE.md).
 Roteiro completo: [docs/PATCH-CHECKLIST.md](../../docs/PATCH-CHECKLIST.md).

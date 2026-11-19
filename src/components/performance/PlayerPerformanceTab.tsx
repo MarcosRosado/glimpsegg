@@ -28,6 +28,10 @@ import { handleHeroImageError, handleItemImageError, handleAbilityImageError } f
 import { getHeroAbilities } from '../../constants/abilities';
 import { Swords, Target, Clock, Zap, Trophy, Coins, Layers, Timer } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { EstimateChip } from '../ui/EstimateChip';
+import { laneEfficiency } from '../../utils/matchMetrics/laneEfficiency';
+import { ItemUsageList } from './ItemUsageList';
+import { DeathCostCard } from './DeathCostCard';
 
 interface PlayerPerformanceTabProps {
   player: MatchPlayer;
@@ -55,6 +59,9 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
   const hero = getHero(player.heroId);
   const heroAbilities = getHeroAbilities(player.heroId, hero.shortName);
   const baseline = getRoleBaseline(player.role);
+  // Eficiência de rota da OpenDota: ouro aos 10 min contra uma referência FIXA de 4.948,
+  // não contra herói, posição nem ranque — por isso sai com o chip de estimativa.
+  const laneEff = laneEfficiency(player);
 
   // Enriched Analytics — so dado real; o que a STRATZ nao devolveu vem null/vazio.
   const combatStats = getEnrichedCombatStats(player);
@@ -195,8 +202,10 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               <Timer className="w-4 h-4 text-cyan-400" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-100 uppercase tracking-wider">
+              <h3 className="text-sm font-black text-slate-100 uppercase tracking-wider flex items-center gap-2">
                 {t('buildTimersTitle')}
+                {/* O alvo de cada item sai de `ITEM_BENCHMARKS`, tabela fixa: estimativa. */}
+                <EstimateChip hint={t('itemBenchmarkEstimateHint')} />
               </h3>
               <p className="text-[11px] text-slate-400">
                 {t('buildTimersSubtitle')}
@@ -208,9 +217,6 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
           </span>
         </div>
 
-        {itemTimings.length === 0 && (
-          <p className="text-[11px] text-slate-400 leading-relaxed">{t('itemTimingsUnavailable')}</p>
-        )}
 
         {/* Horizontal Timeline Scroll */}
         <div className="flex items-stretch gap-3 overflow-x-auto pb-3 pt-1">
@@ -285,7 +291,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
           {/* Active 6 Slots + Backpack */}
           <div>
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 block font-mono">
-              Inventário Final (6 Slots + Mochila + Neutro)
+              {t('finalInventoryTitle')}
             </span>
             <div className="flex items-center gap-2 flex-wrap">
               {player.items.map((itemId, i) => {
@@ -319,7 +325,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                   <div
                     key={`bp-${i}`}
                     className="w-9 h-6 rounded-md overflow-hidden border border-slate-800 bg-slate-950/80 opacity-75"
-                    title={`Mochila: ${item.displayName}`}
+                    title={t('backpackItem', { name: item.displayName })}
                   >
                     {itemId > 0 && (
                       <img
@@ -340,7 +346,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                   return (
                     <div
                       className="w-9 h-6 rounded-full overflow-hidden border-2 border-teal-500/60 bg-slate-950 shadow-md ml-1"
-                      title={`Neutro: ${nItem.displayName}`}
+                      title={t('neutralItem', { name: nItem.displayName })}
                     >
                       <img
                         src={nItem.imageUrl}
@@ -356,6 +362,8 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
           </div>
 
         </div>
+
+        <ItemUsageList player={player} durationSeconds={match.durationSeconds} />
       </div>
 
       {/* 3. Main Analytics Grid: Radar vs Laning Phase Deep Breakdown */}
@@ -369,7 +377,11 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                 {t('radarTitle')}
               </h4>
             </div>
-            <span className="text-[10px] text-cyan-400 font-mono font-bold">{t('radarScoreRange')}</span>
+            <span className="flex items-center gap-2">
+              {/* Os eixos comparam contra `ROLE_BASELINES`, constante por função: estimativa. */}
+              <EstimateChip hint={t('radarEstimateHint')} />
+              <span className="text-[10px] text-cyan-400 font-mono font-bold">{t('radarScoreRange')}</span>
+            </span>
           </div>
 
           <div className="h-64 w-full">
@@ -451,7 +463,12 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               <div className="text-[10px] text-slate-400">{t('csAt10')}</div>
               <div className="text-base font-black text-white mt-0.5">
                 {csCell(farmStats.cs10Min)}
-                <span className="text-[10px] text-slate-500 font-normal ml-1">/ {baseline.cs10Min}</span>
+                <span
+                  className="text-[10px] text-slate-500 font-normal ml-1 cursor-help"
+                  title={t('csBaselineEstimateHint')}
+                >
+                  / {baseline.cs10Min}*
+                </span>
               </div>
             </div>
 
@@ -492,6 +509,26 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               </div>
             </div>
           </div>
+
+          {/* Eficiência de rota (§4 da proposta): ouro aos 10 min ÷ 4.948, referência FIXA da
+              OpenDota. Complementa o veredito, que compara os dois lados da rota; esta compara
+              o jogador com um número fixo, e por isso leva o chip de estimativa. */}
+          {laneEff && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-2 font-mono">
+              <span className="flex items-center gap-2 text-[11px] text-slate-400">
+                {t('laneEfficiencyLabel')}
+                <EstimateChip
+                  hint={t('laneEfficiencyHint', {
+                    reference: laneEff.referenceGold.toLocaleString(language),
+                    gold: laneEff.gold10.toLocaleString(language),
+                  })}
+                />
+              </span>
+              <span className="text-base font-black text-cyan-300">
+                {laneEff.pct.toLocaleString(language, { maximumFractionDigits: 0 })}%
+              </span>
+            </div>
+          )}
 
           {/* CS Milestones Progression (5m, 10m, 15m, 20m, Fim) */}
           <div className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800">
@@ -548,9 +585,11 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
 
           {/* Composicao do dano RECEBIDO. Sem `damageReport`, nao ha split — o chute
               por role (`isCaster ? 0.65 : 0.25`) foi removido. */}
+          {/* Sem a divisão, o bloco some (não diz "indisponível"): é a regra de seção sem dado. */}
+          {split && (
           <div>
             <div className="text-[10px] text-slate-400 font-mono mb-1.5">{t('damageReceivedSplitTitle')}</div>
-            {split ? (
+            {(
               <>
                 <div className="flex justify-between text-xs font-mono mb-1.5">
                   <span className="text-orange-400 font-bold">{t('dmgTypePhysical')}: {split.physicalDamage.toLocaleString()} ({physPct}%)</span>
@@ -563,20 +602,22 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                   <div className="bg-purple-500 h-full transition-all" style={{ width: `${purePct}%` }} title={`${t('dmgTypePure')}: ${purePct}%`} />
                 </div>
               </>
-            ) : (
-              <p className="text-[11px] text-slate-400 leading-relaxed">{t('damageSplitUnavailable')}</p>
             )}
           </div>
+          )}
 
           {/* Metricas reais. Sairam daqui: dano mitigado (= 42% do recebido) e "stun
               aplicado" (= base por role + assists*1.8) — nenhum dos dois tem fonte. */}
           <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-400">{t('damageReceived')}</div>
-              <div className="text-sm font-black text-slate-200 mt-0.5">
-                {combatStats.damageReceived !== null ? combatStats.damageReceived.toLocaleString() : t('noData')}
+            {/* Dano recebido some quando não veio (a OpenDota não mede sem o relatório de dano). */}
+            {combatStats.damageReceived !== null && (
+              <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                <div className="text-[10px] text-slate-400">{t('damageReceived')}</div>
+                <div className="text-sm font-black text-slate-200 mt-0.5">
+                  {combatStats.damageReceived.toLocaleString()}
+                </div>
               </div>
-            </div>
+            )}
             <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
               <div className="text-[10px] text-slate-400">{t('healingSupport')}</div>
               <div className="text-sm font-black text-emerald-400 mt-0.5">
@@ -628,7 +669,11 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
         </div>
       </div>
 
-      {/* 5. Ability & Skill Progression Order (Ultra Compact Dota-Style Ribbon) */}
+      <DeathCostCard match={match} playerSlot={player.playerSlot} />
+
+      {/* 5. Ability & Skill Progression Order. Sem a ordem de skills (a OpenDota só a traz
+          em parte das partidas), a seção some inteira — antes dizia "indisponível". */}
+      {abilityUpgrades.length > 0 && (
       <div className="glass-card rounded-2xl p-4 border border-slate-800/80 bg-[#0b101a] shadow-xl space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-800">
           <div className="flex items-center gap-2">
@@ -662,9 +707,6 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
           </div>
         </div>
 
-        {abilityUpgrades.length === 0 && (
-          <p className="text-[11px] text-slate-400 leading-relaxed">{t('abilityBuildUnavailable')}</p>
-        )}
 
         {/* Compact Level 1 to 25/30 Ribbon */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 scrollbar-thin">
@@ -693,7 +735,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                 {isTal ? (
                   <div
                     className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-400/60 flex items-center justify-center text-[10px] shadow-sm my-0.5"
-                    title={`Talento Nível ${ab.level}`}
+                    title={t('talentAtLevel', { level: ab.level })}
                   >
                     🌳
                   </div>
@@ -718,7 +760,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                     isTal ? 'text-amber-400' : isUlt ? 'text-purple-300' : 'text-cyan-300'
                   }`}
                 >
-                  {isTal ? 'TAL' : ab.slot || 'Q'}
+                  {isTal ? t('talentShort') : ab.slot || 'Q'}
                 </span>
 
                 {/* Timestamp */}
@@ -730,6 +772,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
           })}
         </div>
       </div>
+      )}
 
       {/* 6. Strategic Objectives & Map Pressure */}
       <div className="glass-card rounded-2xl p-5 border border-slate-800/80 bg-[#0b101a] shadow-xl">

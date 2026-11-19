@@ -13,6 +13,9 @@ montados pelo `App.tsx` quando há `selectedMatch`.
 | `MatchPlayerPicker.tsx` | O seletor de jogador único, fixo ao lado das abas (`<select>` nativo, agrupado por lado, "(você)" na conta configurada) |
 | `TeamOverviewCard.tsx` | Pódio de destaques (MVP, melhor core, melhor suporte, superlativos), melhor por posição e comparativo entre times. `variant="scoreboard"` mostra só os destaques de papel |
 | `AdvantageTimeline.tsx` | Curva de vantagem de ouro e XP (`recharts`) |
+| `TurningPointNote.tsx` | Nota acima da curva: o maior déficit do vencedor (`utils/matchMetrics/turningPoint.ts`). Só diz "Virada" com `isComeback` (piso medido por taxa de disparo, no `title`); vencedor que nunca esteve atrás some |
+| `FightsTab.tsx` | Aba "Lutas" (`summarizeFights`): por luta, mortes, buybacks, ouro e xp de cada lado, o que o jogador fez e os objetivos até a luta seguinte. Só existe com `availability.teamfights` |
+| `objectiveLabels.ts` | `OBJECTIVE_LABEL`: rótulo i18n de cada tipo de objetivo, usado por Lutas e pelo cartão de tempo morto |
 | `ScoreboardTable.tsx` | Tabela dos 10 jogadores com itens e tempo de compra |
 
 ## Regras locais
@@ -28,6 +31,9 @@ montados pelo `App.tsx` quando há `selectedMatch`.
   (`useGlintHint`) acompanha a nota; a coluna do placar só existe quando a partida tem nota.
 - **Lista de destaques vazia é resultado válido.** Superlativo exige margem sobre o segundo
   colocado; "o primeiro de uma lista empatada" não é destaque.
+- **Lutas é descritiva.** Não existe "luta vencida" nem "convertida": nenhum limiar foi medido.
+  A tela põe os números dos dois lados juntos. A OpenDota lista os 10 jogadores em toda luta, então
+  a coluna do jogador diz "Morreu"/"Não morreu", nunca "participou".
 - **Modo placar é recorte, não aviso.** Sem análise, `TeamOverviewCard` sai em `scoreboard` e o
   placar perde o botão "Ver análise completa" (`onNavigateToPerformance` ausente): a aba que ele
   abriria não existe. No placar, posição `UNKNOWN` e log de compras vazio somem — nem a moldura
