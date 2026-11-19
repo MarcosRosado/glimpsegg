@@ -1,9 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import {
   classifyMatchDynamic,
+  filterRowsToPatch,
+  mapHeroPerformance,
+  mapMostPlayedHeroes,
   mapOpenDotaPeers,
   mapOpenDotaPlayerMatch,
   mapOpenDotaProfile,
+  mapPatchCatalog,
+  patchServerQuery,
+  patchWindows,
+  playerMatchesEndpoint,
 } from '../../src/services/openDotaProfile';
 import { GLINT_THRESHOLDS } from '../../src/utils/glint';
 import { resolveMatchType } from '../../src/utils/dotaFormatters';
@@ -164,5 +171,94 @@ describe('mapOpenDotaPeers', () => {
     ]);
     expect(peers.length).toBe(1);
     expect(peers[0].winRateWith).toBe(75);
+  });
+});
+
+/**
+ * Catalogo de patches com o formato REAL de `/constants/patch` (os tres ultimos itens, como a
+ * OpenDota respondeu em 2026-11-19).
+ */
+const PATCH_RAW = [
+  { name: '7.40', date: '2025-12-16T00:50:40.281Z', id: 59 },
+  { name: '7.41', date: '2026-03-24T00:50:59.580Z', id: 60 },
+  { name: '7.42', date: '2026-11-18T21:28:07.019Z', id: 61 },
+];
+const T742 = Math.floor(Date.parse('2026-11-18T21:28:07.019Z') / 1000);
+const T741 = Math.floor(Date.parse('2026-03-24T00:50:59.580Z') / 1000);
+
+describe('catalogo e janelas de patch', () => {
+  it('mapPatchCatalog: mais recente primeiro, com a virada em segundos', () => {
+    expect(mapPatchCatalog(PATCH_RAW).map((p) => [p.id, p.name, p.releasedAt])).toEqual([
+      [61, '7.42', T742],
+      [60, '7.41', T741],
+      [59, '7.40', Math.floor(Date.parse('2025-12-16T00:50:40.281Z') / 1000)],
+    ]);
+    expect(mapPatchCatalog([{ name: '', id: 1, date: 'x' }, null, 'lixo'])).toEqual([]);
+    expect(mapPatchCatalog(null)).toEqual([]);
+  });
+
+  it('patchWindows: cada patch vai ate a virada do seguinte; o atual fica aberto', () => {
+    const w = patchWindows(mapPatchCatalog(PATCH_RAW));
+    expect(w[0]).toEqual({ id: 61, name: '7.42', startsAt: T742, endsAt: null });
+    expect(w[1]).toEqual({ id: 60, name: '7.41', startsAt: T741, endsAt: T742 });
+  });
+});
+
+describe('filtro de patch: o servidor nao conhece o patch novo logo depois da virada', () => {
+  const [w742, w741] = patchWindows(mapPatchCatalog(PATCH_RAW));
+  const now = T742 + 20 * 3600; // 20 h depois da virada da 7.42
+
+  it('patch atual vai por `?date=` (dias desde a virada, com folga), nao por `?patch=`', () => {
+    // Em 2026-11-19 `?patch=61` voltava [] para uma conta com partidas de 7.42.
+    expect(patchServerQuery(w742, now)).toEqual({ days: 2 });
+  });
+
+  it('patch anterior vai por `?patch=<id>`', () => {
+    expect(patchServerQuery(w741, now)).toEqual({ patchId: 60 });
+  });
+
+  it('o endpoint pagina, filtra e projeta `start_time` quando ha patch', () => {
+    expect(playerMatchesEndpoint(7, ['hero_id'], { limit: 40, offset: 80, patch: w741 }, now)).toBe(
+      'players/7/matches?limit=40&offset=80&patch=60&project=hero_id&project=start_time',
+    );
+    expect(playerMatchesEndpoint(7, ['hero_id', 'start_time'], { patch: w742 }, now)).toBe(
+      'players/7/matches?date=2&project=hero_id&project=start_time',
+    );
+    // Patch e periodo juntos: vale o menor periodo.
+    expect(playerMatchesEndpoint(7, ['hero_id'], { patch: w742, days: 1 }, now)).toContain('date=1&');
+    // Sem filtro: so paginacao e campos, sem `offset=0`.
+    expect(playerMatchesEndpoint(7, ['hero_id'], { limit: 40, offset: 0 }, now)).toBe('players/7/matches?limit=40&project=hero_id');
+  });
+
+  it('corte local: so a janela do patch, e linha sem `start_time` sai (nao da para afirmar o patch)', () => {
+    const rows = [{ start_time: T742 + 10 }, { start_time: T742 - 10 }, { start_time: T741 - 1 }, {}];
+    expect(filterRowsToPatch(rows, w742)).toEqual([{ start_time: T742 + 10 }]);
+    expect(filterRowsToPatch(rows, w741)).toEqual([{ start_time: T742 - 10 }]);
+    expect(filterRowsToPatch(rows, undefined)).toBe(rows);
+  });
+});
+
+describe('mapHeroPerformance — a base da secao Herois', () => {
+  it('conta todos os herois da lista completa, mais jogado primeiro', () => {
+    const all = mapHeroPerformance(fx.heroMatches);
+    const distinct = new Set(fx.heroMatches.map((m: any) => m.hero_id)).size;
+    expect(all).toHaveLength(distinct);
+    expect(all.reduce((s, h) => s + h.matchCount, 0)).toBe(fx.heroMatches.length);
+    for (let i = 1; i < all.length; i++) expect(all[i].matchCount).toBeLessThanOrEqual(all[i - 1].matchCount);
+  });
+
+  it('os "mais jogados" sao o topo dela, com os mesmos numeros', () => {
+    const all = mapHeroPerformance(fx.heroMatches);
+    expect(mapMostPlayedHeroes(fx.heroMatches).map((h) => [h.heroId, h.matchCount, h.winRate, h.avgKda])).toEqual(
+      all.slice(0, 8).map((h) => [h.heroId, h.matchCount, h.winRate, h.kda]),
+    );
+  });
+
+  it('ultima vez jogado sai do `start_time`; sem o campo, null (a fixture antiga nao o projetava)', () => {
+    expect(mapHeroPerformance(fx.heroMatches).every((h) => h.lastPlayed === null)).toBe(true);
+    const comData = mapHeroPerformance(fx.matches);
+    const top = comData[0];
+    const max = Math.max(...fx.matches.filter((m: any) => m.hero_id === top.heroId).map((m: any) => m.start_time));
+    expect(top.lastPlayed).toBe(max);
   });
 });

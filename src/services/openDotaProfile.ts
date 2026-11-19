@@ -30,9 +30,13 @@
  */
 import type {
   ActivityDay,
+  HeroPerformance,
   Lane,
   MatchDynamicType,
+  PatchInfo,
+  PatchWindow,
   PeerTeammate,
+  PlayerMatchFilters,
   PlayerMatchSummary,
   PlayerProfileSummary,
 } from '../types/dota';
@@ -57,7 +61,67 @@ const MATCH_FIELDS = [
   'item_5', 'item_neutral', 'party_size', 'average_rank', 'lane_role', 'is_roaming', 'version',
 ];
 
-const HERO_FIELDS = ['hero_id', 'kills', 'deaths', 'assists', 'player_slot', 'radiant_win'];
+/**
+ * A lista COMPLETA so com o que os herois precisam. `start_time` entrou na 2.0 para a secao
+ * Herois dizer quando o heroi foi jogado por ultimo; o filtro de patch e de periodo é da
+ * OpenDota (`?patch=`, `?date=`), entao nao precisa de data para filtrar aqui.
+ */
+const HERO_FIELDS = ['hero_id', 'kills', 'deaths', 'assists', 'player_slot', 'radiant_win', 'start_time'];
+
+/**
+ * FILTRO DE PATCH. `?patch=<id>` da OpenDota filtra no servidor, MAS nao conhece o patch novo
+ * logo depois da virada: em 2026-11-19, um dia depois da 7.42, `?patch=61` voltava `[]` para
+ * uma conta com partidas de 7.42 na lista, enquanto `?patch=60` funcionava. Um filtro so do
+ * servidor diria "0 partidas neste patch" — afirmacao falsa. Entao:
+ *  - patch ATUAL (`endsAt` null): `?date=` com os dias desde a virada, e corte local pelo
+ *    `start_time` (o `date` conta dias, nao instantes);
+ *  - patch ANTERIOR: `?patch=<id>`, que la ja esta indexado, e o mesmo corte local.
+ * O corte local exige `start_time` na projecao, e `filterRowsToPatch` o aplica.
+ */
+export function patchServerQuery(patch: PatchWindow, nowSeconds: number): { patchId?: number; days?: number } {
+  if (patch.endsAt === null) return { days: Math.max(1, Math.ceil((nowSeconds - patch.startsAt) / 86400) + 1) };
+  return { patchId: patch.id };
+}
+
+/** Linhas cruas dentro da janela do patch. Linha sem `start_time` sai: nao da para afirmar o patch. */
+export function filterRowsToPatch(rows: any[], patch: PatchWindow | undefined): any[] {
+  if (!patch) return rows;
+  return rows.filter((m) => {
+    const t = numOrUndef(m?.start_time);
+    return t !== undefined && t >= patch.startsAt && (patch.endsAt === null || t < patch.endsAt);
+  });
+}
+
+/**
+ * Endpoint da lista de partidas da conta. Puro. `limit`/`offset` paginam (a OpenDota aceita os
+ * dois, conferido em 2026-11-19); o filtro de patch passa por `patchServerQuery`, e `days`
+ * pelo `?date=` da OpenDota. Com os dois, vale o menor periodo.
+ */
+export function playerMatchesEndpoint(
+  accountId: number,
+  fields: readonly string[],
+  opts: PlayerMatchFilters & { limit?: number; offset?: number } = {},
+  nowSeconds: number = Math.floor(Date.now() / 1000),
+): string {
+  const params: string[] = [];
+  if (opts.limit !== undefined) params.push(`limit=${Math.max(1, Math.floor(opts.limit))}`);
+  if (opts.offset) params.push(`offset=${Math.max(0, Math.floor(opts.offset))}`);
+  const server = opts.patch ? patchServerQuery(opts.patch, nowSeconds) : {};
+  if (server.patchId !== undefined) params.push(`patch=${server.patchId}`);
+  const days = [server.days, opts.days].filter((d): d is number => typeof d === 'number' && d > 0);
+  if (days.length) params.push(`date=${Math.max(1, Math.floor(Math.min(...days)))}`);
+  const projected = opts.patch && !fields.includes('start_time') ? [...fields, 'start_time'] : fields;
+  for (const f of projected) params.push(`project=${f}`);
+  return `players/${accountId}/matches?${params.join('&')}`;
+}
+
+/** Janelas de patch a partir do catalogo (mais recente primeiro): cada uma termina na virada seguinte. Pura. */
+export function patchWindows(catalog: PatchInfo[]): PatchWindow[] {
+  const byTime = [...catalog].sort((a, b) => a.releasedAt - b.releasedAt);
+  return byTime
+    .map((p, i) => ({ id: p.id, name: p.name, startsAt: p.releasedAt, endsAt: i + 1 < byTime.length ? byTime[i + 1].releasedAt : null }))
+    .reverse();
+}
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 const numOrUndef = (v: unknown): number | undefined =>
@@ -189,34 +253,65 @@ export interface OpenDotaProfileRaw {
   peers?: any[];
 }
 
-/** Herois mais jogados, contados na lista completa de partidas. Pura. */
-export function mapMostPlayedHeroes(heroMatches: unknown, limit = 8): PlayerProfileSummary['mostPlayedHeroes'] {
+/**
+ * Desempenho por heroi, contado na lista completa de partidas, mais jogado primeiro (empate:
+ * menor id). Pura. É a base da secao Herois e dos "mais jogados" do Inicio.
+ */
+export function mapHeroPerformance(heroMatches: unknown): HeroPerformance[] {
   if (!Array.isArray(heroMatches)) return [];
-  const byHero = new Map<number, { games: number; wins: number; k: number; d: number; a: number }>();
+  const byHero = new Map<number, { games: number; wins: number; k: number; d: number; a: number; last: number | null }>();
   for (const m of heroMatches) {
     const heroId = num(m?.hero_id);
     if (!heroId) continue;
-    const h = byHero.get(heroId) || { games: 0, wins: 0, k: 0, d: 0, a: 0 };
+    const h = byHero.get(heroId) || { games: 0, wins: 0, k: 0, d: 0, a: 0, last: null };
     byHero.set(heroId, h);
     h.games++;
     if ((num(m?.player_slot) < 128) === !!m?.radiant_win) h.wins++;
     h.k += num(m?.kills);
     h.d += num(m?.deaths);
     h.a += num(m?.assists);
+    const t = numOrUndef(m?.start_time);
+    if (t !== undefined && (h.last === null || t > h.last)) h.last = t;
   }
   return [...byHero.entries()]
     .sort((x, y) => y[1].games - x[1].games || x[0] - y[0])
-    .slice(0, limit)
     .map(([heroId, h]) => ({
       heroId,
       matchCount: h.games,
       winCount: h.wins,
       winRate: parseFloat(((h.wins / h.games) * 100).toFixed(1)),
       // KDA do agregado (soma de abates e assistencias sobre soma de mortes), nao media de razoes.
-      avgKda: parseFloat((h.d === 0 ? h.k + h.a : (h.k + h.a) / h.d).toFixed(1)),
+      kda: parseFloat((h.d === 0 ? h.k + h.a : (h.k + h.a) / h.d).toFixed(1)),
+      lastPlayed: h.last,
+    }));
+}
+
+/** Herois mais jogados, contados na lista completa de partidas. Pura. */
+export function mapMostPlayedHeroes(heroMatches: unknown, limit = 8): PlayerProfileSummary['mostPlayedHeroes'] {
+  return mapHeroPerformance(heroMatches)
+    .slice(0, limit)
+    .map((h) => ({
+      heroId: h.heroId,
+      matchCount: h.matchCount,
+      winCount: h.winCount,
+      winRate: h.winRate,
+      avgKda: h.kda,
       // Nota media por heroi nao existe neste caminho.
       avgImp: null,
     }));
+}
+
+/** `/constants/patch` -> catalogo, mais recente primeiro. Pura; item sem nome, id ou data sai. */
+export function mapPatchCatalog(raw: unknown): PatchInfo[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PatchInfo[] = [];
+  for (const p of raw) {
+    const id = numOrUndef(p?.id);
+    const ms = typeof p?.date === 'string' ? Date.parse(p.date) : NaN;
+    if (id === undefined || typeof p?.name !== 'string' || !p.name || !Number.isFinite(ms)) continue;
+    out.push({ id, name: p.name, releasedAt: Math.floor(ms / 1000) });
+  }
+  return out.sort((a, b) => b.releasedAt - a.releasedAt || b.id - a.id);
 }
 
 export function mapOpenDotaPeers(peers: unknown): PeerTeammate[] {
@@ -340,12 +435,11 @@ export async function fetchPlayerProfile(steamAccountId: string): Promise<Player
   const numericId = parseInt(steamAccountId, 10);
   if (isNaN(numericId) || numericId <= 0) return null;
   try {
-    const project = MATCH_FIELDS.map((f) => `project=${f}`).join('&');
     const [player, wl, matches, heroMatches, peers] = await Promise.all([
       openDotaGet<any>(`players/${numericId}`),
       openDotaGet<any>(`players/${numericId}/wl`),
-      openDotaGet<any[]>(`players/${numericId}/matches?limit=${RECENT_MATCHES_LIMIT}&${project}`),
-      openDotaGet<any[]>(`players/${numericId}/matches?${HERO_FIELDS.map((f) => `project=${f}`).join('&')}`),
+      openDotaGet<any[]>(playerMatchesEndpoint(numericId, MATCH_FIELDS, { limit: RECENT_MATCHES_LIMIT })),
+      openDotaGet<any[]>(playerMatchesEndpoint(numericId, HERO_FIELDS)),
       openDotaGet<any[]>(`players/${numericId}/peers`),
     ]);
     if (!player?.profile) return null;
@@ -356,4 +450,48 @@ export async function fetchPlayerProfile(steamAccountId: string): Promise<Player
     console.warn('OpenDota profile fetch failed:', err);
     return null;
   }
+}
+
+/**
+ * Uma pagina da lista de partidas, com os mesmos campos e o mesmo Glint da dashboard. `hasMore`
+ * diz se a pagina veio cheia (pode haver mais); `null` em falha de rede — quem chama mostra o
+ * erro em vez de fingir que a lista acabou.
+ */
+export async function fetchPlayerMatchesPage(
+  steamAccountId: string,
+  opts: PlayerMatchFilters & { offset?: number; limit?: number } = {},
+): Promise<{ matches: PlayerMatchSummary[]; hasMore: boolean } | null> {
+  const numericId = parseInt(steamAccountId, 10);
+  if (isNaN(numericId) || numericId <= 0) return null;
+  const limit = opts.limit ?? RECENT_MATCHES_LIMIT;
+  try {
+    const rows = await openDotaGet<any[]>(playerMatchesEndpoint(numericId, MATCH_FIELDS, { ...opts, limit }));
+    if (!Array.isArray(rows)) return null;
+    // `hasMore` olha a pagina CRUA: o corte local pode encurtar uma pagina que ainda tem sequencia.
+    const kept = filterRowsToPatch(rows, opts.patch);
+    const tables = await fetchBenchmarkTables(kept.map((m) => num(m?.hero_id)));
+    return { matches: kept.map((m) => mapOpenDotaPlayerMatch(m, tables)), hasMore: rows.length >= limit };
+  } catch (err) {
+    console.warn('OpenDota match page fetch failed:', err);
+    return null;
+  }
+}
+
+/** Desempenho por heroi da conta, com filtro de patch e periodo no servidor. `null` em falha. */
+export async function fetchHeroPerformance(steamAccountId: string, filters: PlayerMatchFilters = {}): Promise<HeroPerformance[] | null> {
+  const numericId = parseInt(steamAccountId, 10);
+  if (isNaN(numericId) || numericId <= 0) return null;
+  const rows = await openDotaGet<any[]>(playerMatchesEndpoint(numericId, HERO_FIELDS, filters));
+  return Array.isArray(rows) ? mapHeroPerformance(filterRowsToPatch(rows, filters.patch)) : null;
+}
+
+/** Catalogo de patches para o filtro, com cache de 7 dias. `null` em falha. */
+export async function fetchPatchCatalog(): Promise<PatchInfo[] | null> {
+  const key = statsCacheKey(['od-patch-catalog']);
+  const cached = readStatsCache<PatchInfo[]>(key);
+  if (cached && cached.length) return cached;
+  const list = mapPatchCatalog(await openDotaGet<any[]>('constants/patch'));
+  if (!list.length) return null;
+  writeStatsCache(key, list);
+  return list;
 }

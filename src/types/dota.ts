@@ -675,6 +675,48 @@ export interface PlayerProfileSummary {
   activityDays?: ActivityDay[];
 }
 
+/**
+ * Desempenho da conta num heroi, contado na lista COMPLETA de partidas (com filtro de patch e
+ * periodo feito pela OpenDota). Sem nota media: a lista completa nao traz os oito insumos do
+ * Glint, e buscar a tabela de percentis de todos os herois estoura o limite por minuto.
+ */
+export interface HeroPerformance {
+  heroId: number;
+  matchCount: number;
+  winCount: number;
+  /** Percentual, uma casa. */
+  winRate: number;
+  /** KDA do agregado: (abates + assistencias) / mortes somados, nao media de razoes. */
+  kda: number;
+  /** Unix (s) da partida mais recente com o heroi; `null` se a resposta nao trouxe `start_time`. */
+  lastPlayed: number | null;
+}
+
+/** Um patch do catalogo da OpenDota (`/constants/patch`). `id` é o que `?patch=` aceita. */
+export interface PatchInfo {
+  id: number;
+  name: string;
+  /** Unix (s) da virada. */
+  releasedAt: number;
+}
+
+/** A janela de um patch: da virada dele ate a virada do seguinte (`null` = patch atual). */
+export interface PatchWindow {
+  id: number;
+  name: string;
+  /** Unix (s). */
+  startsAt: number;
+  /** Unix (s), exclusivo. `null` = é o patch atual. */
+  endsAt: number | null;
+}
+
+/** Filtros da lista de partidas. */
+export interface PlayerMatchFilters {
+  patch?: PatchWindow;
+  /** So as partidas dos ultimos N dias (`?date=` da OpenDota). */
+  days?: number;
+}
+
 export interface ProfileHistoryItem {
   steamAccountId: string;
   steamId64?: string;

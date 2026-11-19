@@ -10,7 +10,7 @@ Toda a rede do app. Nada aqui renderiza: os módulos buscam, mapeiam e cacheiam.
 | --- | --- | --- |
 | `gameVersionService.ts` | Resolvedor de patch em cascata: Steam News → OpenDota `constants/patch` → GitHub dotaconstants → `CURRENT_GAME_PATCH` (o degrau da STRATZ e o parâmetro `token` saíram em 2026-11-19). Cache em `localStorage` com TTL de 1h. Expõe `parsePatchVersion`, `comparePatches`, `extractPatchFromTitle`, `getCachedGamePatch`, `fetchLatestGamePatch`, `subscribeToPatchUpdates` | `hooks/useGamePatch.ts`, `statsCache.ts`, `heroGrid/openDotaWinrates.ts`, `hooks/useHeroGridSync.ts` |
 | `statsCache.ts` | `localStorage` + memória, TTL de 7 dias. `readStatsCache`/`writeStatsCache`/`statsCacheKey`, com poda quando a cota estoura | `heroGrid/openDotaWinrates.ts` |
-| `openDotaProfile.ts` | **A dashboard inteira.** `fetchPlayerProfile` (perfil, vitórias, 40 partidas recentes, heróis mais jogados, companheiros), `fetchHeroBenchmarkTable` (tabela de percentis por herói, cache de 7 dias) e os mappers puros `mapOpenDotaProfile`, `mapOpenDotaPlayerMatch`, `mapMostPlayedHeroes`, `mapOpenDotaPeers`, `classifyMatchDynamic`. O cabeçalho lista o que a lista de partidas **não** tem | `App.tsx` |
+| `openDotaProfile.ts` | **A dashboard inteira.** `fetchPlayerProfile` (perfil, vitórias, 40 partidas recentes, heróis mais jogados, companheiros), `fetchHeroBenchmarkTable` (tabela de percentis por herói, cache de 7 dias) e os mappers puros `mapOpenDotaProfile`, `mapOpenDotaPlayerMatch`, `mapMostPlayedHeroes`, `mapOpenDotaPeers`, `classifyMatchDynamic`. O cabeçalho lista o que a lista de partidas **não** tem. Na 2.0 ganhou a paginação e os filtros: `fetchPlayerMatchesPage` (`offset`/`limit`, `hasMore`), `fetchHeroPerformance`/`mapHeroPerformance` (todos os heróis, com `lastPlayed` do `start_time`), `fetchPatchCatalog`/`mapPatchCatalog`/`patchWindows` e o filtro de patch em `patchServerQuery` + `filterRowsToPatch` — ver a regra abaixo | `App.tsx` |
 | `openDotaMatch.ts` | **O detalhe da partida.** Mapper puro `mapOpenDotaMatch` (o único mapper de partida desde a etapa 2), `isOpenDotaMatchParsed`, `fetchOpenDotaMatchDetails` e `requestOpenDotaParse` (`POST /request/{id}`), os dois últimos nos dois caminhos de rede. O cabeçalho do arquivo lista o que a OpenDota **não** tem e fica desligado | `App.tsx` |
 | `opendota.ts` | REST público, sem token. `openDotaGet(endpoint)` é **o** ponto dos dois caminhos de rede (IPC / `fetch`), `null` em falha; mais `fetchOpenDotaHeroStats` e `fetchOpenDotaPlayer` | `heroGrid/openDotaWinrates.ts` |
 | `steamResolver.ts` | `resolveSteamId`: SteamID64/32 ou vanity URL → conta | `App.tsx`, `settings/SettingsModal.tsx` |
@@ -46,6 +46,13 @@ Toda a rede do app. Nada aqui renderiza: os módulos buscam, mapeiam e cacheiam.
   saíram `stratzGql.ts` (consultas, `mapStratzMatch`, `derivePartySize`, `deriveTeamShares`,
   `ALL_TOWERS_STANDING`) e a fixture `match-parsed.json`; depois, o `buildVisionData` de
   `visionMapper.ts`.
+
+- **`?patch=` da OpenDota não conhece o patch novo logo depois da virada.** Um dia depois da 7.42,
+  `?patch=61` voltava `[]` para uma conta com partidas de 7.42, e `?patch=60` funcionava. Filtro só
+  do servidor diria "0 partidas neste patch". Por isso o patch atual vai por `?date=` (dias desde a
+  virada) e todo filtro de patch passa pelo corte local em `start_time` (`filterRowsToPatch`);
+  patch anterior vai por `?patch=<id>`. Linha sem `start_time` sai do filtro: não dá para afirmar o
+  patch dela.
 
 ## Ao sair um patch
 
