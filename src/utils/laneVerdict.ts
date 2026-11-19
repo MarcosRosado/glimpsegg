@@ -20,9 +20,10 @@ export type { LaneId, PlayerLaneAdvantage };
  * !isVictory`, e ganhar a rota e perder o jogo era impossivel de rotular. Nao reintroduzir.
  *
  * MEDIDO (`scripts/fit-lane-verdict.cjs`, ajuste em 7.41, teste em 7.42, 2026-11-19, retrato
- * congelado de 1.092 partidas): direcao igual a da STRATZ em 99,1% das rotas de 7.42 em que
- * as duas dizem que alguem venceu (431/435, IC95 97,7%–99,6%; cobertura 92,2%) e 98,7% em
- * 7.41 (1775/1799, IC95 98,0%–99,1%; cobertura 92,4%). Aceite da Fase 3 (90%, pelo
+ * congelado de 1.383 partidas, refeito depois da coleta das 15h): direcao igual a da STRATZ
+ * em 98,8% das rotas de 7.42 em que as duas dizem que alguem venceu (999/1011, IC95
+ * 97,9%–99,3%; cobertura 91,5%) e 98,7% em 7.41 (1775/1799, IC95 98,0%–99,1%; cobertura
+ * 92,4%). O primeiro ajuste com xp, com 435 rotas de teste, dava 99,1%. Aceite da Fase 3 (90%, pelo
  * limite inferior do IC95, nos dois patches) atingido — por isso o app pode dizer "Rota
  * vencida". Os limiares sairam por TAXA DE DISPARO (empate = 25% das rotas, atropelo = 10%),
  * nao para reproduzir a STRATZ: classe exata igual a dela fica em ~74%, e tudo bem.
@@ -40,7 +41,7 @@ export const LANE_VERDICT_MODEL = {
   trainPatch: '7.41',
   trainLanes: 2635,
   testPatch: '7.42',
-  testLanes: 639,
+  testLanes: 1512,
   minute: 10,
   variant: 'nwxp-head-rel',
   usesXp: true,
@@ -54,8 +55,8 @@ export const LANE_VERDICT_MODEL = {
   evenLaneOnly: true,
   test: {
     train: { agreement: 0.987, lo: 0.98, both: 1799, coverage: 0.924 },
-    test: { agreement: 0.991, lo: 0.977, both: 435, coverage: 0.922 },
-    evenTest: { agreement: 1, lo: 0.991, both: 413 },
+    test: { agreement: 0.988, lo: 0.979, both: 1011, coverage: 0.915 },
+    evenTest: { agreement: 1, lo: 0.996, both: 964 },
     unevenTrain: { agreement: 0.744, lo: 0.64, both: 82 },
   },
 } as const;

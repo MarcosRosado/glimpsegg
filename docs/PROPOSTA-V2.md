@@ -239,7 +239,7 @@ regra. Não recomendo.
 | Seções novas | **Aprovadas:** Partidas, Heróis e Conta |
 | Heróis: amostra pequena | **Decidido pela recomendação (sessão de interface):** herói com menos de 5 partidas no recorte sai marcado como "amostra pequena", como no wireframe |
 | Conta: contagem por modo | **Decidido pela recomendação:** ficou fora da primeira versão da Conta, porque `formatGameMode` sem a fila chamava o modo 1 de "All Pick Casual". Com `matchModeKey` (modo sem fila sai "All Pick", sem afirmar casual) ela pode voltar |
-| 6. Veredito de rota com xp | **Decidido: o xp entra, com o mesmo peso do patrimônio** ("o XP é tão importante quanto o patrimônio"). Remedido no mesmo dia, aceite mantido: 99,1% em 7.42 e 98,7% em 7.41 (ver a Fase 3 do plano) |
+| 6. Veredito de rota com xp | **Decidido: o xp entra, com o mesmo peso do patrimônio** ("o XP é tão importante quanto o patrimônio"). Remedido no mesmo dia, aceite mantido: 98,8% em 7.42 (1.011 rotas, depois da coleta das 15h) e 98,7% em 7.41 (ver a Fase 3 do plano) |
 
 O redesenho da interface corre numa sessão própria; esta trilha segue com o que não é tela.
 **O que andou antes do layout**, cada parte testada e commitada: as funções

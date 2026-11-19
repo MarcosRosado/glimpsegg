@@ -14,10 +14,11 @@
  *  - NAO ha composicao no tooltip ("puxado por farm"): ouro e dano sairam com peso negativo
  *    por colinearidade com abates, e explicar a nota por eles seria inventar causa.
  *
- * MEDIDO NO TESTE (197 partidas de 7.42, ajuste em 566 de 7.41, 2026-11-19 — reajuste do mesmo
- * dia; o primeiro, com 326 de treino, deu 51% em "mesmo melhor" e o resto igual):
- *   por papel   r 0,82 | erro medio 10,2 | mesmo lado do 50: 82% | mesmo melhor da partida: 49%
- *   sem papel   r 0,79 | erro medio 10,7 | mesmo lado do 50: 81% | mesmo melhor da partida: 49%
+ * MEDIDO NO TESTE (469 partidas de 7.42, ajuste em 823 de 7.41, 2026-11-19 — terceiro ajuste
+ * do dia, depois da coleta das 15h; os anteriores, com 326 e 566 de treino e 197 de teste,
+ * deram r 0,82 e 49% a 51% em "mesmo melhor"):
+ *   por papel   r 0,81 | erro medio 10,4 | mesmo lado do 50: 81% | mesmo melhor da partida: 50%
+ *   sem papel   r 0,79 | erro medio 10,9 | mesmo lado do 50: 80% | mesmo melhor da partida: 46%
  * O aceite da nota definitiva (r >= 0,85, erro <= 9, lado >= 88%, melhor >= 60%) NAO foi
  * atingido — é exatamente o que "experimental" quer dizer aqui. A escolha das oito metricas
  * foi feita olhando o conjunto de teste, entao os numeros acima sao um pouco otimistas.
@@ -45,48 +46,49 @@ export type GlintRole = 'core' | 'support';
 export const GLINT_MODEL = {
   fittedAt: '2026-11-19',
   trainPatch: '7.41',
-  trainMatches: 566,
+  trainMatches: 823,
   testPatch: '7.42',
-  testMatches: 197,
+  testMatches: 469,
   test: {
-    byRole: { r: 0.82, meanAbsError: 10.2, sameSidePct: 82, sameBestPct: 49 },
-    noRole: { r: 0.79, meanAbsError: 10.7, sameSidePct: 81, sameBestPct: 49 },
+    byRole: { r: 0.81, meanAbsError: 10.4, sameSidePct: 81, sameBestPct: 50 },
+    noRole: { r: 0.79, meanAbsError: 10.9, sameSidePct: 80, sameBestPct: 46 },
   },
   weights: {
-    core: [-3.37, -18.91, 7.06, 32.87, 36.06, 24.55, 4.03, 6.34, -1.8],
-    support: [5.66, -2.1, -2.02, 19.54, 33.13, 35.93, 4.51, 2.85, -4.21],
+    core: [-2.66, -16.94, 8.11, 33.17, 34.96, 23.99, 2.5, 6.76, -3.32],
+    support: [6.34, -0.9, -1.4, 19.16, 32.2, 35.13, 3.43, 2.71, -3.77],
     /** Sem papel: partida nao parseada nao tem `position_est`. */
-    any: [3.24, -10.75, 5.02, 25.64, 34.62, 30.36, -1.22, 3.97, -3.73],
+    any: [3.85, -8.85, 5.54, 25.26, 33.74, 29.62, -2.43, 4.18, -4.11],
   },
 } as const;
 
 /**
  * Limiares na escala do Glint, cada um com a taxa de disparo medida no teste (linhas de
  * jogador de 7.42). Sairam por QUANTIL: o Glint que dispara na mesma taxa do limiar de IMP
- * que o app usava. Somar 50 ao limiar antigo estaria errado — a regressao comprime a escala
- * (p10/p90 do Glint: 21/70; do IMP + 50: 17/76), e os extremos nunca disparariam.
+ * que o app usava — coluna "por papel" do script, a do modelo principal. Somar 50 ao limiar
+ * antigo estaria errado — a regressao comprime a escala (p10/p50/p90 do Glint: 22/45/69), e
+ * os extremos nunca disparariam.
  */
 export const GLINT_THRESHOLDS = {
   /** 0,4% — era IMP >= 50. */
-  extremeHigh: 87,
-  /** 4,6% — era IMP >= 35. */
-  elite: 76,
-  /** 8,0% — era IMP >= 30 (o criterio de atropelo da lista). */
+  extremeHigh: 85,
+  /** 4,3% — era IMP >= 35. */
+  elite: 75,
+  /** 7,6% — era IMP >= 30 (o criterio de atropelo da lista). */
   stomp: 72,
-  /** 11,4% — era IMP >= 25. */
+  /** 11,2% — era IMP >= 25. */
   strong: 68,
   /** 22,3% — era IMP >= 15. */
   good: 61,
   /** 35,1% — era IMP >= 5 (o piso de "impacto alto" da lista). */
-  impact: 53,
-  /** 44% ficam acima — era IMP >= 0. Nao é 50: a mediana medida é 45. */
-  neutral: 48,
+  impact: 54,
+  /** 43,8% ficam acima — era IMP >= 0. Nao é 50: a mediana medida é 45. */
+  neutral: 49,
   /** 42,4% — era IMP <= -10. */
   poor: 41,
-  /** 19,4% — era IMP <= -25. */
-  weak: 28,
+  /** 19,7% — era IMP <= -25. */
+  weak: 29,
   /** 0,9% — era IMP <= -50. */
-  extremeLow: 7,
+  extremeLow: 8,
 } as const;
 
 /**

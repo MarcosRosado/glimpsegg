@@ -174,8 +174,8 @@ duas, com o mesmo peso — o xp entrou por **decisão do dono** ("o XP é tão i
 patrimônio"), não por ganhar no dado. Limiares fixados por **taxa de disparo** (empate = 25% das
 rotas, atropelo = 10%). "Quem estava na rota" é o campo geográfico `lane` da OpenDota (1 bot,
 2 mid, 3 top), sem conversão safe/off; patrimônio ou xp faltando em qualquer jogador da rota a
-deixa sem medida. Aceite medido contra a STRATZ: direção igual em 99,1% das rotas de 7.42 em que
-as duas dizem que alguém venceu (IC95 97,7–99,6%, n=435), 98,7% em 7.41. **Rota desigual** (2v1,
+deixa sem medida. Aceite medido contra a STRATZ: direção igual em 98,8% das rotas de 7.42 em que
+as duas dizem que alguém venceu (IC95 97,9–99,3%, n=1.011), 98,7% em 7.41. **Rota desigual** (2v1,
 1v2) não passou (74,4% no treino) e nunca vira "Rota vencida": sai `UNKNOWN` com "Vantagem aos
 10 min" e as diferenças **por herói** ao lado (`laneAdvantage.kind = 'ADVANTAGE'`), com o lado
 dado pelo score da regra. O veredito mostra a própria base: o badge leva **as duas** diferenças
@@ -212,8 +212,8 @@ nele reintroduziria a mistura.
 A nota de impacto do app, de 0 a 100. É uma **regressão linear sobre oito percentis da OpenDota**
 (onde o jogador ficou em cada estatística entre partidas do mesmo herói — partida inteira, todos
 os ranques), ajustada para reproduzir o IMP da STRATZ + 50 em partidas de 7.41 e testada em 7.42:
-r 0,82, erro médio 10,2, mesmo lado em 82%, mesmo melhor da partida em 49% (reajuste com 566
-partidas de treino; o primeiro, com 326, deu 51%). Isso está **abaixo**
+r 0,81, erro médio 10,4, mesmo lado em 81%, mesmo melhor da partida em 50% (terceiro ajuste,
+com 823 partidas de treino e 469 de teste; os anteriores, com 197 de teste, davam r 0,82). Isso está **abaixo**
 do aceite da Fase 4 do plano — é o que "experimental" quer dizer, e o rótulo não é enfeite:
 
 - **Todo número de Glint sai com a procedência.** O `GlintBadge` (`components/ui/`) carrega o
