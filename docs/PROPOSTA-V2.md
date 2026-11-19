@@ -229,14 +229,18 @@ regra. Não recomendo.
 
 | Ponto | Decisão |
 | --- | --- |
-| 1. Moldura | **Aberto.** O dono responde sobre o artefato de wireframes (moldura, hierarquia do Início, abas da partida analisada, telas de Heróis e Conta). Nenhuma interface nova é codada antes disso |
-| 2. Partida não analisada | **Decidido: recorte menor.** A tela diz claramente que o replay não foi analisado e mostra só o que já está disponível, **sem** as seções que dependem de análise — a linha do "modo placar" do §3.4 |
+| 1. Moldura | **Decidido (sobre os wireframes): combinação de A e C.** Barra lateral com Início, Partidas, Heróis, Conta e Hero grid, **recolhível num trilho de ícones e aberta por padrão**. O estado aberta/recolhida é lembrado por usuário (conveniência local, com try/catch) |
+| 2. Partida não analisada | **Decidido: recorte menor.** A tela diz claramente que o replay não foi analisado e mostra só o que já está disponível, **sem** as seções que dependem de análise — a linha do "modo placar" do §3.4. Saem também dessa tela, confirmado pelo dono: o comparativo de times, a lista completa de "quem liderou" e o "melhor de cada posição" |
 | 3. Escopo | **Decidido: o recorte do §4.** Entram as seções novas (Partidas, Heróis e Conta) e as cinco métricas (conversão de luta, tempo morto no pior momento, uso de item ativo, eficiência de rota, momento de virada). Outras métricas do §4 entram se se mostrarem pertinentes durante o desenvolvimento, cada uma pelo critério de lá: janela e unidade declaradas, procedência na tela, taxa de disparo medida e teste na fixture real |
 | 4. Confrontos por faixa | **Fora da 2.0**, como recomendado — não foram citados no escopo |
 | 5. Publicação | **Decidido: a recomendação do §7 (opção a).** A versão vira 2.0.0 e chega ao usuário pelo auto-update normal: o passo de versão passa a respeitar um `major.minor` maior no `package.json`, e as notas saem de `docs/release-notes/v<versão>.md` quando o arquivo existe. O `version` só vai para `2.0.0` no commit final da 2.0, junto com as notas |
+| Início | **Decidido: opção A.** Última partida no topo (com o estado do replay e o botão de pedir análise ali mesmo), depois forma e tendência, depois heróis, atividade e companheiros |
+| Partida analisada | **Decidido: opção A.** Abas Resumo · Meu jogo · Lutas · Visão · Coaching, com o seletor de jogador fixo no cabeçalho. Abre em **Meu jogo** quando a partida é da conta configurada, e em **Resumo** nos outros casos |
+| Seções novas | **Aprovadas:** Partidas, Heróis e Conta |
 | 6. Veredito de rota com xp | **Decidido: o xp entra, com o mesmo peso do patrimônio** ("o XP é tão importante quanto o patrimônio"). Remedido no mesmo dia, aceite mantido: 99,1% em 7.42 e 98,7% em 7.41 (ver a Fase 3 do plano) |
 
-**O que pode andar antes do layout**, desde que cada parte entre testada e commitada: as funções
+O redesenho da interface corre numa sessão própria; esta trilha segue com o que não é tela.
+**O que andou antes do layout**, cada parte testada e commitada: as funções
 puras das métricas novas em `src/utils/` (teste nas fixtures reais, taxa de disparo medida nos
 pares), a paginação da lista de partidas (`offset`), `start_time` na projeção da lista completa
 com o filtro `?patch=`, e os renomes com migração do config (§6).
