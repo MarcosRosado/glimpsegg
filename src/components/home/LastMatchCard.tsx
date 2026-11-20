@@ -70,7 +70,6 @@ export const LastMatchCard: React.FC<LastMatchCardProps> = ({ match, onOpen, onO
             <button
               type="button"
               onClick={() => onOpenAndRequestParse(match.matchId)}
-              title={`${t('lastMatchUnlocks')} ${t('parseQuotaNote')}`}
               className="inline-flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-400/20"
             >
               <FileSearch className="w-4 h-4 text-amber-300" aria-hidden />
