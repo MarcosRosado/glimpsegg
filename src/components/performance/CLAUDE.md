@@ -7,7 +7,7 @@ A aba "Meu jogo" (`MY_GAME`) da partida analisada: o jogo de um jogador, escolhi
 
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
-| `PlayerPerformanceTab.tsx` | A aba inteira: cabeçalho do jogador (KDA, Glint, participação, fatias), timer de itens e inventário final, radar de 5 eixos, fase de lane (veredito com as duas diferenças, patrimônio e xp, e a eficiência de rota), combate, economia, ordem de skills e objetivos | `App.tsx` |
+| `PlayerPerformanceTab.tsx` | A aba inteira: cabeçalho do jogador (KDA, Glint, participação, fatias), timer de itens e inventário final, radar de 5 eixos, fase de lane (veredito com as duas diferenças, patrimônio e xp, e a eficiência de lane), combate (com o dano em torres, que era o cartão "Objetivos") e economia, lado a lado, e ordem de skills | `App.tsx` |
 | `ItemUsageList.tsx` | Uso de item ativo (`utils/matchMetrics/itemUsage.ts`), dentro do cartão de itens | `PlayerPerformanceTab.tsx` |
 | `DeathCostCard.tsx` | "Mortes que custaram objetivos" (`utils/matchMetrics/deathCost.ts`): só as mortes em que o time perdeu objetivo, com a pior em destaque | `PlayerPerformanceTab.tsx` |
 

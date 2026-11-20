@@ -531,8 +531,9 @@ export const WardMinimapTab: React.FC<WardMinimapTabProps> = ({ player, match })
         )}
       </div>
 
-      {/* KPIs e logs */}
-      <div className="space-y-4">
+      {/* KPIs e logs. A coluna estica até a altura do mapa e a linha do tempo ocupa o resto:
+          com altura fixa de 300 px ela terminava ~90 px antes do cartão do mapa. */}
+      <div className="flex flex-col gap-4">
         {isEstimated && (
           <div className="glass-card rounded-xl p-3 border border-amber-500/25 bg-amber-950/20 flex items-start gap-2">
             <Info className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
@@ -597,12 +598,15 @@ export const WardMinimapTab: React.FC<WardMinimapTabProps> = ({ player, match })
         )}
 
         {/* Linha do tempo */}
-        <div className="glass-card rounded-2xl p-4 border border-slate-800 bg-[#111724]">
+        <div className="glass-card rounded-2xl p-4 border border-slate-800 bg-[#111724] flex-1 flex flex-col">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200 mb-2 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>{t('visionTimelineEvents')}</span>
           </h4>
-          <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 text-xs font-mono">
+          {/* O wrapper relativo contribui só com o min-h para a altura da linha da grade; a
+              lista absoluta preenche o que sobrar, sem esticar a grade até o fim do log. */}
+          <div className="relative flex-1 min-h-[300px]">
+          <div className="absolute inset-0 space-y-1.5 overflow-y-auto pr-1 text-xs font-mono">
             {scoped
               .slice()
               .sort((a, b) => a.spawnTime - b.spawnTime)
@@ -644,6 +648,7 @@ export const WardMinimapTab: React.FC<WardMinimapTabProps> = ({ player, match })
                   </button>
                 );
               })}
+          </div>
           </div>
         </div>
       </div>

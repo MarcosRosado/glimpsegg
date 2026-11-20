@@ -26,7 +26,7 @@ import { formatGlint, getGlintColor } from '../../utils/glint';
 import { useGlintHint } from '../ui/GlintBadge';
 import { handleHeroImageError, handleItemImageError, handleAbilityImageError } from '../../utils/imageFallback';
 import { getHeroAbilities } from '../../constants/abilities';
-import { Swords, Target, Clock, Zap, Trophy, Coins, Layers, Timer } from 'lucide-react';
+import { Swords, Target, Clock, Zap, Coins, Layers, Timer } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { EstimateChip } from '../ui/EstimateChip';
 import { laneEfficiency } from '../../utils/matchMetrics/laneEfficiency';
@@ -158,8 +158,8 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
           </div>
         </div>
 
-        {/* Tactical Key Metric Pills */}
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Os KPIs em grade 2x2: em flex-wrap quebravam 3+1, com o quarto sozinho embaixo. */}
+        <div className="grid grid-cols-2 gap-3 shrink-0">
           {/* Glint experimental. Sem nota, a pilula some — nunca "0". */}
           {typeof player.glint === 'number' && (
             <div
@@ -610,7 +610,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
 
           {/* Metricas reais. Sairam daqui: dano mitigado (= 42% do recebido) e "stun
               aplicado" (= base por role + assists*1.8) — nenhum dos dois tem fonte. */}
-          <div className="grid grid-cols-2 gap-3 font-mono text-xs">
+          <div className={`grid ${combatStats.damageReceived !== null ? 'grid-cols-3' : 'grid-cols-2'} gap-3 font-mono text-xs`}>
             {/* Dano recebido some quando não veio (a OpenDota não mede sem o relatório de dano). */}
             {combatStats.damageReceived !== null && (
               <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
@@ -625,6 +625,13 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               <div className="text-sm font-black text-emerald-400 mt-0.5">
                 {combatStats.healingProvided.toLocaleString(language)}
               </div>
+            </div>
+            {/* Dano em torres veio do antigo cartão "Objetivos", que só tinha ele e o dano em
+                heróis (este já está no cabeçalho deste cartão): sozinho, ocupava uma linha
+                inteira com dois números. */}
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+              <div className="text-[10px] text-slate-400">{t('towerDamage')}</div>
+              <div className="text-sm font-black text-amber-300 mt-0.5">{player.towerDamage.toLocaleString(language)}</div>
             </div>
           </div>
         </div>
@@ -776,30 +783,6 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
       </div>
       )}
 
-      {/* 6. Strategic Objectives & Map Pressure */}
-      <div className="glass-card rounded-2xl p-5 border border-slate-800/80 bg-[#0b101a] shadow-xl">
-        <div className="flex items-center gap-2 mb-3">
-          <Trophy className="w-4 h-4 text-amber-400" />
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-            {t('objectivesTitle')}
-          </h4>
-        </div>
-
-        {/* Roshan, Tormentor e buyback sairam: vinham de `duracao / 900`,
-            `duracao >= 1200` e `mortes >= 4`. A GET_MATCH_DETAILS_QUERY nao pede
-            nenhum desses eventos, entao nao havia valor honesto a exibir. Dano em
-            estrutura é medido. */}
-        <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <div className="text-[10px] text-slate-400">{t('towerDamage')}</div>
-            <div className="text-base font-black text-emerald-400 mt-0.5">{player.towerDamage.toLocaleString(language)}</div>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <div className="text-[10px] text-slate-400">{t('heroDamageFull')}</div>
-            <div className="text-base font-black text-rose-400 mt-0.5">{player.heroDamage.toLocaleString(language)}</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

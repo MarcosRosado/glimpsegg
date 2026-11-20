@@ -93,7 +93,7 @@ const InsightCard: React.FC<{
     : { border: 'border-amber-500/25', bg: 'bg-amber-950/20', title: 'text-amber-300', badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30' };
 
   return (
-    <div className={`glass-card rounded-xl p-4 border ${accent.border} ${accent.bg}`}>
+    <div className={`glass-card rounded-xl p-4 border flex flex-col ${accent.border} ${accent.bg}`}>
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -116,9 +116,10 @@ const InsightCard: React.FC<{
         <RefIcons insight={insight} />
       </div>
 
-      <p className="text-xs text-slate-300 leading-relaxed">{t(text.body, params)}</p>
+      <p className="text-xs text-slate-300 leading-relaxed mb-3">{t(text.body, params)}</p>
 
-      <div className="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-800/80 flex-wrap">
+      {/* mt-auto: na grade, cartões da mesma linha têm a mesma altura e o rodapé fica alinhado. */}
+      <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-slate-800/80 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           {text.stat && (
             <span className="text-[11px] font-mono font-bold text-slate-200">
@@ -194,55 +195,48 @@ export const CoachingInsightsTab: React.FC<CoachingInsightsTabProps> = ({
       {/* O aviso de partida nao parseada que morava aqui saiu na 2.0: sem analise a partida
           abre no "modo placar", que nao tem a aba Coaching. */}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Pontos fortes */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <CheckCircle className="w-4 h-4 text-emerald-400" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-              {t('strengthsTitle')}
-            </h4>
-          </div>
-          {insights.strengths.length === 0 ? (
-            <div className="glass-card rounded-xl p-4 border border-slate-800 bg-slate-900/40">
-              <p className="text-xs text-slate-400">{t('coachNoStrengths')}</p>
-            </div>
-          ) : (
-            insights.strengths.map((insight) => (
-              <InsightCard
-                key={insight.ruleId}
-                insight={insight}
-                kind="STRENGTH"
-                bracketLabel={bracketLabel}
-              />
-            ))
-          )}
+      {/* Forças e melhorias em blocos de largura inteira, cada um com os cartões em grade de 2.
+          Lado a lado, as colunas tinham alturas sem relação (1 força contra 4 melhorias deixava
+          meia tela vazia, medido em 2026-11-20). */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 px-1">
+          <CheckCircle className="w-4 h-4 text-emerald-400" />
+          <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+            {t('strengthsTitle')}
+          </h4>
         </div>
+        {insights.strengths.length === 0 ? (
+          <div className="glass-card rounded-xl p-4 border border-slate-800 bg-slate-900/40">
+            <p className="text-xs text-slate-400">{t('coachNoStrengths')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+            {insights.strengths.map((insight) => (
+              <InsightCard key={insight.ruleId} insight={insight} kind="STRENGTH" bracketLabel={bracketLabel} />
+            ))}
+          </div>
+        )}
+      </section>
 
-        {/* Melhorias */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-              {t('weaknessesTitle')}
-            </h4>
-          </div>
-          {insights.improvements.length === 0 ? (
-            <div className="glass-card rounded-xl p-4 border border-emerald-500/20 bg-emerald-950/20">
-              <p className="text-xs text-emerald-300">{t('noMajorWeaknesses')}</p>
-            </div>
-          ) : (
-            insights.improvements.map((insight) => (
-              <InsightCard
-                key={insight.ruleId}
-                insight={insight}
-                kind="IMPROVEMENT"
-                bracketLabel={bracketLabel}
-              />
-            ))
-          )}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 px-1">
+          <AlertTriangle className="w-4 h-4 text-amber-400" />
+          <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400">
+            {t('weaknessesTitle')}
+          </h4>
         </div>
-      </div>
+        {insights.improvements.length === 0 ? (
+          <div className="glass-card rounded-xl p-4 border border-emerald-500/20 bg-emerald-950/20">
+            <p className="text-xs text-emerald-300">{t('noMajorWeaknesses')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+            {insights.improvements.map((insight) => (
+              <InsightCard key={insight.ruleId} insight={insight} kind="IMPROVEMENT" bracketLabel={bracketLabel} />
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* O que esta FORA desta versao, dito na tela em vez de silencio (§5 da proposta da
           2.0): build e confrontos vinham de agregados da STRATZ que a OpenDota nao tem em

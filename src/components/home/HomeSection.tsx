@@ -16,7 +16,8 @@ import { useTrendMatches } from './useTrendMatches';
  *   em Partidas).
  * - Lateral, por relevância: forma (com a linha de Glint no lugar do antigo painel de largura
  *   inteira, que foi para a Conta), o anel de heróis (volta o anel da 1.0, agora por herói e
- *   winrate — posição a lista não traz), companheiros e atividade.
+ *   winrate — posição a lista não traz) e companheiros.
+ * - A atividade fica embaixo das recentes, na principal, para as duas colunas terminarem perto.
  *
  * Saíram daqui: os "Heróis principais" da carreira (a seção Heróis já é isso, com período) e o
  * cartão "Tendências" com as barras de Glint por partida, que repetia o gráfico.
@@ -37,6 +38,9 @@ export const HomeSection: React.FC<{
       <div className="lg:col-span-7 xl:col-span-8 space-y-6 min-w-0">
         {lastMatch && <LastMatchCard match={lastMatch} onOpen={onOpenMatch} onOpenAndRequestParse={onOpenAndRequestParse} />}
         <RecentMatchesCard matches={p.recentMatches} onOpenMatch={onOpenMatch} onSeeAll={onSeeAllMatches} />
+        {/* A atividade é um gráfico largo de 30 barras: cabe melhor aqui que na lateral, e a
+            principal terminava ~800 px antes da lateral (medido em 1440 px, 2026-11-20). */}
+        {p.activityDays && p.activityDays.length > 0 && <ActivityHeatmap activityDays={p.activityDays} />}
       </div>
 
       <div className="lg:col-span-5 xl:col-span-4 space-y-6 min-w-0">
@@ -50,7 +54,6 @@ export const HomeSection: React.FC<{
           onOpenHeroMatches={onOpenHeroMatches}
         />
         {p.peers && p.peers.length > 0 && <TeammatesCard peers={p.peers} onOpenPeer={onOpenPeer} />}
-        {p.activityDays && p.activityDays.length > 0 && <ActivityHeatmap activityDays={p.activityDays} />}
       </div>
     </div>
   );

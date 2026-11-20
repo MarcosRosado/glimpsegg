@@ -199,12 +199,25 @@ function groupByPlayer(superlatives: MatchAward[]): SuperlativeGroup[] {
   return groups;
 }
 
+/**
+ * Colunas pela quantidade de itens: grade fixa de 4 com 3 prêmios, ou de 2 com um líder só,
+ * deixava um buraco do tamanho de um cartão (2026-11-20). Literais, para o Tailwind enxergar.
+ */
+const GRID_COLS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-1 sm:grid-cols-3',
+};
+const gridColsFor = (n: number) => GRID_COLS[n] ?? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
+
 const SuperlativeRow: React.FC<{
   group: SuperlativeGroup;
   t: Translate;
   onSelect: (playerSlot: number) => void;
   selected: number;
-}> = ({ group, t, onSelect, selected }) => {
+  /** Sozinho na linha: os selos vão lado a lado em vez de empilhados. */
+  wide?: boolean;
+}> = ({ group, t, onSelect, selected, wide = false }) => {
   const { language } = useLanguage();
   const hero = getHero(group.heroId);
   const isSelected = selected === group.playerSlot;
@@ -228,7 +241,7 @@ const SuperlativeRow: React.FC<{
         {/* Uma linha por categoria: selo + o numero JA COM a metrica. O formato antigo
             era "Sufocador · Lifestealer · 27" — tres informacoes soltas, e o 27 sem
             dizer 27 de que. */}
-        <span className="block space-y-0.5 mt-1">
+        <span className={wide ? 'flex flex-wrap gap-x-5 gap-y-1 mt-1' : 'block space-y-0.5 mt-1'}>
           {group.awards.map((a) => (
             <span key={a.id} className="flex items-center gap-1.5 min-w-0">
               <AwardBadge id={a.id} t={t} small />
@@ -308,7 +321,7 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
               {t('awardsRoles')}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className={`grid ${gridColsFor(awards.length)} gap-2`}>
               {awards.map((a) => (
                 <AwardRow key={a.id} award={a} t={t} onSelect={onSelectPlayer} selected={selectedPlayerSlot} />
               ))}
@@ -324,17 +337,23 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
             {/* Agrupado por jogador: quando um carry leva cinco superlativos — acontece,
                 e é a historia da partida — o card mostra um heroi com cinco selos em vez
                 de cinco cartoes do mesmo heroi. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {groupByPlayer(superlatives).map((group) => (
-                <SuperlativeRow
-                  key={group.playerSlot}
-                  group={group}
-                  t={t}
-                  onSelect={onSelectPlayer}
-                  selected={selectedPlayerSlot}
-                />
-              ))}
-            </div>
+            {(() => {
+              const groups = groupByPlayer(superlatives);
+              return (
+                <div className={`grid ${gridColsFor(Math.min(groups.length, 3))} gap-2`}>
+                  {groups.map((group) => (
+                    <SuperlativeRow
+                      key={group.playerSlot}
+                      group={group}
+                      t={t}
+                      onSelect={onSelectPlayer}
+                      selected={selectedPlayerSlot}
+                      wide={groups.length === 1}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 

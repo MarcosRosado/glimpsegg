@@ -10,7 +10,8 @@ import { cn } from '../../utils/cn';
 import { GlintBadge } from '../ui/GlintBadge';
 
 /** Quantas linhas o Início mostra. O resto, com filtros, está em Partidas. */
-const ROWS = 15;
+// 18: com a atividade embaixo, é o que alinha o fim das duas colunas em 1440 px.
+const ROWS = 18;
 
 /**
  * As partidas mais recentes no Início, numa linha cada: a coluna principal da 1.0 era a lista
