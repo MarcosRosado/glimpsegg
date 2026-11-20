@@ -377,7 +377,7 @@ afrouxadas** — com `strict: false` são praticamente a única rede de tipos di
   nas duas locales, e nenhuma chave órfã em `src/`. O guard de órfã varre `collectSources('src')`, e
   desde que a suíte saiu para `tests/` os próprios testes ficaram **fora** desse escopo: antes, chave
   citada só num teste passava no guard; agora não passa mais. A mudança de pasta apertou o gate de
-  graça — hoje são zero órfãs entre as 775 chaves.
+  graça — hoje são zero órfãs entre as 950 chaves.
 
 ## Ícones e marca
 

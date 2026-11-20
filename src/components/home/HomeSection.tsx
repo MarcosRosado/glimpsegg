@@ -55,16 +55,18 @@ export const HomeSection: React.FC<{
   const trend = useTrendMatches(p.steamAccountId, p.recentMatches);
   const lastMatch = p.recentMatches[0] ?? null;
 
-  // Companheiros buscados de novo pelo cartão, presos à conta: outra conta na tela descarta.
-  const [peersRetry, setPeersRetry] = useState<{ key: string; loading: boolean; peers: PeerTeammate[] | null } | null>(null);
-  const retryOwn = peersRetry && peersRetry.key === p.steamAccountId ? peersRetry : null;
+  // Companheiros buscados de novo pelo cartão, presos ao PERFIL de onde o clique saiu (por
+  // referência, não pelo id): o "atualizar" ou outra conta trazem perfil novo e descartam o
+  // retry — senão um retry que falhou cobriria os companheiros que o perfil novo trouxe.
+  const [peersRetry, setPeersRetry] = useState<{ from: PlayerProfileSummary; loading: boolean; peers: PeerTeammate[] | null } | null>(null);
+  const retryOwn = peersRetry && peersRetry.from === p ? peersRetry : null;
   const peers = retryOwn?.peers ?? p.peers;
   const peersFailed = retryOwn ? !retryOwn.loading && retryOwn.peers === null : !!p.peersFailed;
   const retryPeers = () => {
-    const key = p.steamAccountId;
-    setPeersRetry({ key, loading: true, peers: null });
-    void fetchPlayerPeers(key).then((fresh) =>
-      setPeersRetry((cur) => (cur && cur.key === key ? { key, loading: false, peers: fresh } : cur)),
+    const from = p;
+    setPeersRetry({ from, loading: true, peers: null });
+    void fetchPlayerPeers(from.steamAccountId).then((fresh) =>
+      setPeersRetry((cur) => (cur && cur.from === from ? { from, loading: false, peers: fresh } : cur)),
     );
   };
 

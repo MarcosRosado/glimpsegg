@@ -46,7 +46,9 @@ export const MatchesSection: React.FC<{
   const [patch, setPatch] = useState<PatchWindow | null>(initialPatch);
   const [matches, setMatches] = useState<PlayerMatchSummary[]>(initialMatches);
   const [hasMore, setHasMore] = useState(initialMatches.length >= RECENT_MATCHES_LIMIT);
-  const [loading, setLoading] = useState(false);
+  // Com a lista do perfil faltando, a seção abre já buscando: começar em `false` mostrava um
+  // quadro de "nenhuma partida" antes do efeito disparar a busca.
+  const [loading, setLoading] = useState(initialMatchesFailed);
   const [failed, setFailed] = useState(false);
   // Resposta de um filtro antigo que chega depois da troca não pode sobrescrever a lista nova.
   const runRef = useRef(0);
