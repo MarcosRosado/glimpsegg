@@ -426,7 +426,9 @@ function MainAppContent() {
         setSelectedMatch(null);
         if (ok) showToast(t('profileLoaded', { name: res.personaname || res.steamAccountId }));
       } else {
-        showToast(res.error || t('playerNotFound'));
+        // `res.error` é texto técnico em inglês (do resolver ou do main): nunca vai para a tela.
+        if (res.error) console.warn('Steam ID resolve failed:', res.error);
+        showToast(t('playerNotFound'));
       }
     } catch (err) {
       showToast(t('playerSearchError'));

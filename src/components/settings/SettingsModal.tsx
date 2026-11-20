@@ -437,10 +437,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         if (res.success && res.steamAccountId) {
           finalSteamId = res.steamAccountId;
         } else {
-          setResolveError(res.error || t('steamIdResolveError'));
+          // `res.error` é técnico e em inglês: fica no console, a tela diz o texto traduzido.
+          if (res.error) console.warn('Steam ID resolve failed:', res.error);
+          setResolveError(t('steamIdResolveError'));
           // A mensagem nasce numa aba que pode nao estar aberta. Sem trazer o foco para ca,
           // o Salvar simplesmente nao faria nada visivel.
-          setActiveTab(firstTabWithError({ steamId: res.error || t('steamIdResolveError') }) ?? 'ACCOUNT');
+          setActiveTab(firstTabWithError({ steamId: t('steamIdResolveError') }) ?? 'ACCOUNT');
           setIsSaving(false);
           return;
         }
