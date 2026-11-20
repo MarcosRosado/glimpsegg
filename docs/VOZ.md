@@ -143,12 +143,11 @@ Mesma voz, escrita por quem joga em inglês, nunca tradução literal do pt-BR. 
 7. **Quem mais cita o texto antigo?** `grep -rn` do rótulo antigo em `tests/`, nos `CLAUDE.md`,
    nos `docs/` e nos dois README. Texto de tela citado literalmente diverge em silêncio.
 
-## Reescrita em andamento
+## A reescrita de 2026-11-20
 
-O dicionário inteiro está sendo reescrito por tela, nas duas línguas, um commit por tela, nesta
-ordem: Início e modo placar → Resumo da partida → Meu jogo → Lutas e Visão → Coaching → Conta,
-Heróis e Partidas → hero grid e configurações. Até terminar, o texto antigo convive com o novo.
-Ao reescrever uma tela, procure também texto que ficou para trás: os tooltips dos prêmios de papel
-ainda dizem "IMP", que saiu do app em 2026-11-19 (hoje a nota é o Glint), e os de melhor core e
-melhor suporte dizem "com folga sobre o segundo", mas esses dois slots são fixos e saem de
-`pickByScore` sem margem (`utils/awardEngine.ts`).
+O dicionário inteiro foi reescrito nesta voz, nas duas línguas, em oito lotes por tela (Início e
+modo placar, Resumo e Lutas, Meu jogo, Visão, Coaching, Conta/Heróis/Partidas, moldura e
+onboarding, hero grid). Cada lote conferiu o texto contra o código, e uns 40 textos diziam algo
+que o código não faz: prêmios citando o IMP e uma margem que não existe, a régua de "dewardada
+cedo", "COMEBACK" sem déficit medido, regras de coaching prometendo mais do que mediam. Texto novo
+segue este guia desde a primeira versão, sem esperar outra rodada de reescrita.

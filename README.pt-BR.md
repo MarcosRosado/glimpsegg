@@ -29,9 +29,9 @@ Uma barra lateral com cinco seções — **Início**, **Partidas**, **Heróis**,
 **Layout espelho** — que recolhe num trilho de ícones.
 
 **Início** — duas colunas. Na principal, a sua última partida, com o estado do replay e o botão
-"Analisar replay" ali mesmo, e as partidas anteriores. Na lateral, forma recente com a
-linha do Glint, um anel com os heróis das últimas 25 ou 100 partidas colorido pelo winrate,
-companheiros (clique num deles para abrir a conta) e atividade.
+"Analisar replay" ali mesmo, as partidas anteriores e a sua atividade nos últimos 30 dias. Na
+lateral, forma recente com a linha do Glint, um anel com os heróis das últimas 25 ou 100 partidas
+colorido pelo winrate e companheiros (clique num deles para abrir a conta).
 
 **Partidas, Heróis, Conta**
 - Lista de partidas que carrega além das 40 primeiras, com filtro de período e de patch
@@ -71,7 +71,7 @@ mostram. As telas de hero grid usam um **layout fictício** agrupado pelos quatr
 Dota entrega por padrão: o grid é um arquivo local, então não existe "o grid de outro jogador" para
 exibir.
 
-**Início** — a última partida e as anteriores; ao lado, forma recente, o anel de heróis, companheiros e atividade.
+**Início** — a última partida, as anteriores e a atividade; ao lado, forma recente, o anel de heróis e companheiros.
 
 ![Início](docs/screenshots/home.pt-BR.png)
 

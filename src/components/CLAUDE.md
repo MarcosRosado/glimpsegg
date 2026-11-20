@@ -15,7 +15,7 @@ o que precisa ser verificado vira função pura em `utils/`.
 | `filters/` | `PeriodPatchFilter.tsx` — período (30 dias, 3 meses, 1 ano, tudo) e patch, compartilhado por Partidas e Heróis, mais `usePatchWindows` e `toMatchFilters`. Só monta o filtro: quem contorna o `?patch=` que não conhece o patch novo é o serviço | — |
 | `heroes/` | A seção Heróis: lista por período e patch e o painel do herói escolhido | [ver](heroes/CLAUDE.md) |
 | `heroGrid/` | Painel e réplica do layout espelho de heróis | [ver](heroGrid/CLAUDE.md) |
-| `home/` | O Início em duas colunas: última partida e as recentes na principal; forma, anel de heróis, companheiros e atividade na lateral | [ver](home/CLAUDE.md) |
+| `home/` | O Início em duas colunas: última partida, as recentes e a atividade na principal; forma, anel de heróis e companheiros na lateral | [ver](home/CLAUDE.md) |
 | `layout/` | A moldura: `Sidebar` (seções) e `Navbar` (topo) | [ver](layout/CLAUDE.md) |
 | `matches/` | `MatchesSection.tsx` — seção Partidas: o `MatchList` com período, patch e herói no servidor (o clique em Heróis traz período e patch junto) e "carregar mais" além das 40. O offset conta páginas da lista crua (o corte local por patch encurta páginas); falha de rede mostra erro com "tentar de novo", nunca "fim da lista" | — |
 | `match/` | Cabeçalho, abas, seletor de jogador, modo placar e a aba Resumo da partida | [ver](match/CLAUDE.md) |

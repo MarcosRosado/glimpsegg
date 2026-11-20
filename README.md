@@ -30,9 +30,9 @@ A sidebar with five sections — **Home**, **Matches**, **Heroes**, **Account** 
 grid** — that collapses into an icon rail.
 
 **Home** — two columns. The main one has your last match, with its replay status and the
-"Analyze replay" button right there, and the matches before it. The side one has recent form with
-a Glint line, a ring of the heroes in your last 25 or 100 matches colored by win rate, teammates
-(click one to open their account) and activity.
+"Analyze replay" button right there, the matches before it and your activity over the last 30
+days. The side one has recent form with a Glint line, a ring of the heroes in your last 25 or 100
+matches colored by winrate and teammates (click one to open their account).
 
 **Matches, Heroes, Account**
 - Match list that loads past the first 40, filtered by period and patch
@@ -73,7 +73,7 @@ The hero grid screens use a **fictitious layout** grouped by the four attributes
 it by default: a hero grid is a local file, so there is no such thing as another player's grid to
 show.
 
-**Home** — the last match and the ones before it; recent form, the hero ring, teammates and activity on the side.
+**Home** — the last match, the ones before it and activity; recent form, the hero ring and teammates on the side.
 
 ![Home](docs/screenshots/home.png)
 
