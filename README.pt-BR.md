@@ -36,15 +36,15 @@ companheiros (clique num deles para abrir a conta) e atividade.
 **Partidas, Heróis, Conta**
 - Lista de partidas que carrega além das 40 primeiras, com filtro de período e de patch
 - O seu desempenho em cada herói, por período e patch, com o herói escolhido e as últimas partidas dele ao lado da lista
-- A evolução do Glint, do winrate e do farm, e os totais da carreira (cada um com a própria amostra), recordes e divisão por patch, fila, rota e lado
+- A evolução do Glint, do winrate e do farm, e os totais da carreira (cada um com a própria amostra), recordes e divisão por patch, fila, lane e lado
 
 **Análise de partida** — o estado do replay decide o layout
 - **Ainda não analisada:** a partida abre como placar, diz isso e oferece pedir a análise. A
   OpenDota analisa replay a pedido, então este é o caso comum.
 - **Analisada:** cinco abas com um seletor de jogador só. As suas partidas abrem em Meu jogo.
   - `RESUMO` — destaques, vantagem de ouro/xp, momento de virada, placar
-  - `MEU JOGO` — veredito de rota (patrimônio **e** xp aos 10 min, os dois à vista), eficiência
-    de rota, tempo dos itens e uso de item ativo, o custo das suas mortes, radar
+  - `MEU JOGO` — veredito de lane (net worth **e** XP aos 10 min, os dois à vista), eficiência
+    de lane, tempo dos itens e uso de item ativo, o custo das suas mortes, radar
   - `LUTAS` — o que cada luta custou a cada lado e quais objetivos caíram depois dela
   - `VISÃO` — wards reais no minimapa, com tempo de vida, autor, dewards e cobertura
   - `COACHING` — diagnóstico determinístico; todo card diz de onde vem o número
@@ -112,7 +112,7 @@ escolhido ao lado da lista; menos de 5 partidas sai marcado como amostra pequena
 ![Seção Heróis](docs/screenshots/heroes.pt-BR.png)
 
 **Conta** — a evolução do Glint, do winrate e do farm, totais da carreira com a amostra de cada
-linha, fila e ranque, recordes e contagens.
+linha, fila e rank, recordes e contagens.
 
 ![Seção Conta](docs/screenshots/account.pt-BR.png)
 

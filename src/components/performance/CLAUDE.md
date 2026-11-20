@@ -7,14 +7,14 @@ A aba "Meu jogo" (`MY_GAME`) da partida analisada: o jogo de um jogador, escolhi
 
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
-| `PlayerPerformanceTab.tsx` | A aba inteira: cabeçalho do jogador (KDA, Glint, participação, fatias), timer de itens e inventário final, radar de 5 eixos, fase de rotas (veredito com as duas diferenças, patrimônio e xp, e a eficiência de rota), combate, economia, ordem de skills e objetivos | `App.tsx` |
+| `PlayerPerformanceTab.tsx` | A aba inteira: cabeçalho do jogador (KDA, Glint, participação, fatias), timer de itens e inventário final, radar de 5 eixos, fase de lane (veredito com as duas diferenças, patrimônio e xp, e a eficiência de rota), combate, economia, ordem de skills e objetivos | `App.tsx` |
 | `ItemUsageList.tsx` | Uso de item ativo (`utils/matchMetrics/itemUsage.ts`), dentro do cartão de itens | `PlayerPerformanceTab.tsx` |
 | `DeathCostCard.tsx` | "Mortes que custaram objetivos" (`utils/matchMetrics/deathCost.ts`): só as mortes em que o time perdeu objetivo, com a pior em destaque | `PlayerPerformanceTab.tsx` |
 
 ## Regras locais
 
 - **Três números aqui comparam contra constante fixa e saem com `EstimateChip`**: o alvo do timer
-  de itens (`ITEM_BENCHMARKS`), o radar (`ROLE_BASELINES`) e a eficiência de rota (ouro aos 10 min
+  de itens (`ITEM_BENCHMARKS`), o radar (`ROLE_BASELINES`) e a eficiência de lane (ouro aos 10 min
   ÷ 4.948, referência fixa da OpenDota — não é "contra a média", e pode passar de 100%). A
   referência de last hits aos 10 min (`baseline.cs10Min`) leva asterisco e o mesmo aviso no
   `title`. Tirar o selo é regressão de doutrina.

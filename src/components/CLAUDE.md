@@ -7,11 +7,11 @@ o que precisa ser verificado vira função pura em `utils/`.
 
 | Pasta | O que é | CLAUDE.md |
 | --- | --- | --- |
-| `account/` | A seção Conta: evolução, totais, recordes, contagens e fila/ranque | [ver](account/CLAUDE.md) |
+| `account/` | A seção Conta: evolução, totais, recordes, contagens e fila/rank | [ver](account/CLAUDE.md) |
 | `auth/` | `OnboardingModal.tsx` — primeira execução: escolhe idioma e informa a conta Steam (ID ou link do perfil, via `resolveSteamId`), com confirmação da conta resolvida antes de salvar (nome e foto do perfil público via `withAccountProfile`, Steam e depois OpenDota; sem perfil ou com a consulta falhando, o cartão avisa e mostra só o ID). Sem token. No modo `guide`, é a ajuda "como encontrar sua conta" | — |
 | `brand/` | Marca in-app: monograma e wordmark | [ver](brand/CLAUDE.md) |
 | `coaching/` | `CoachingInsightsTab.tsx` — aba `COACHING`. Renderiza `CoachingInsight[]` com chip de procedência. A recomendação de build está **escondida** desde 2026-11-19 (vinha da STRATZ; ver o comentário no componente e a Fase 5 de `docs/PLANO-OPENDOTA.md`), e desde a 2.0 a aba diz isso numa nota ("Fora desta versão") em vez de silêncio | — |
-| `dashboard/` | Os cards de perfil que Início, Partidas e Conta reaproveitam: lista de partidas, forma, evolução, fila e ranque, atividade, companheiros | [ver](dashboard/CLAUDE.md) |
+| `dashboard/` | Os cards de perfil que Início, Partidas e Conta reaproveitam: lista de partidas, forma, evolução, fila e rank, atividade, companheiros | [ver](dashboard/CLAUDE.md) |
 | `filters/` | `PeriodPatchFilter.tsx` — período (30 dias, 3 meses, 1 ano, tudo) e patch, compartilhado por Partidas e Heróis, mais `usePatchWindows` e `toMatchFilters`. Só monta o filtro: quem contorna o `?patch=` que não conhece o patch novo é o serviço | — |
 | `heroes/` | A seção Heróis: lista por período e patch e o painel do herói escolhido | [ver](heroes/CLAUDE.md) |
 | `heroGrid/` | Painel e réplica do layout espelho de heróis | [ver](heroGrid/CLAUDE.md) |

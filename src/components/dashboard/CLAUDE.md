@@ -13,7 +13,7 @@ Os cards de perfil que as seções da 2.0 reaproveitam: Início, Partidas e Cont
 | `RecentFormCard.tsx` | O cartão "Forma" da coluna lateral do Início: sequência dos últimos jogos, Glint médio das partidas com nota, KDA e GPM (estes vieram da antiga `StatRail`), cada um com a amostra no tooltip, e a **linha de Glint** das últimas 25 partidas com nota (o que sobrou no Início do gráfico de evolução, que foi para a Conta). Blocos com rótulo em cima e valor embaixo: lado a lado, na coluna lateral, o KDA atropelava o vizinho | `home/HomeSection.tsx` |
 | `PerformanceTrendChart.tsx` | Evolução de Glint/winrate/GPM com média móvel (`recharts`), com `compact` (altura menor). A métrica de Glint (botão e gráfico) some quando nenhuma partida da janela tem nota | `account/AccountSection.tsx` |
 | `ActivityHeatmap.tsx` | Heatmap de 30 dias, partidas/dia com winrate. Cabeçalho sempre empilhado: o card mora na coluna lateral | `home/HomeSection.tsx` |
-| `QueueRankCard.tsx` | "Fila e ranque": winrate da janela com delta, histórico de rota (some sem veredito), rank médio, fila solo/grupo, não classificado e distribuição de medalhas. Era a metade `part="account"` do `TrendsCard` (antes `StratzTrendsCard`); a outra metade — sunburst de posições, que a lista nunca alimentou, e as barras de Glint por partida — foi apagada em 2026-11-19, quando saiu do Início | `account/AccountSection.tsx` |
+| `QueueRankCard.tsx` | "Fila e rank": winrate da janela com delta, histórico de lanes (some sem veredito), rank médio, fila solo/grupo, não ranqueadas e distribuição de medalhas. Era a metade `part="account"` do `TrendsCard` (antes `StratzTrendsCard`); a outra metade — sunburst de posições, que a lista nunca alimentou, e as barras de Glint por partida — foi apagada em 2026-11-19, quando saiu do Início | `account/AccountSection.tsx` |
 | `TeammatesCard.tsx` | Top companheiros com winrate junto; o clique abre a conta do companheiro (`onOpenPeer`) — na 1.0 a linha parecia clicável e não fazia nada. Duas linhas por companheiro (nome e partidas; barra de winrate), porque mora na coluna lateral e as três colunas fixas cortavam o nome. Era `StratzTeammatesCard` até a 2.0 | `home/HomeSection.tsx` |
 
 ## Glint e o que a lista não traz (desde 2026-11-19)
@@ -42,9 +42,9 @@ experimental, de 0 a 100.
     herói), filtro de posição e o "Pos N" da linha — `role` vem `'UNKNOWN'`. A
     versão anterior jogava posição desconhecida em `POSITION_1`; agrupar por `lane` sob rótulo de
     posição seria o mesmo erro com outro nome;
-  - badge e histórico de rota — `laneResult` vem `'UNKNOWN'` **mesmo em partida parseada**, então
+  - badge e histórico de lanes — `laneResult` vem `'UNKNOWN'` **mesmo em partida parseada**, então
     o texto "nenhuma partida parseada" seria falso e o KPI some;
-  - tags `MVP`/`Top Sup`/`Melhor Core`/`Sem torres perdidas`/participação em abates/fatia de
+  - tags `MVP`/`Melhor suporte`/`Melhor core`/`Sem torres perdidas`/participação em abates/fatia de
     dano/ouro em mãos — `award`, `keptAllTowers`, `killParticipationPct`, `damageSharePct` e
     `unspentGold` não vêm. Os atalhos que davam `MVP` e `Top Sup` por nota foram **removidos**, não
     convertidos: prêmio é afirmação sobre os dez jogadores. Não recriar por heurística.
