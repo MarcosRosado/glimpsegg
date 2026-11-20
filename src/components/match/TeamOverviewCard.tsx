@@ -136,6 +136,7 @@ const AwardRow: React.FC<{
   selected: number;
 }> = ({ award, t, onSelect, selected }) => {
   const { language } = useLanguage();
+  const glintHint = useGlintHint();
   const hero = getHero(award.heroId);
   const isSelected = selected === award.playerSlot;
   return (
@@ -159,10 +160,15 @@ const AwardRow: React.FC<{
           <AwardBadge id={award.id} t={t} />
         </span>
         {/* Por que ele levou o premio. `basis` = as categorias que ele liderou; sem
-            elas, o criterio foi o IMP e e o IMP que aparece. "1 superlativo" nao
+            elas, o criterio foi a nota (Glint) e é ela que aparece. "1 superlativo" nao
             informava nada — "Carrasco" diz que ele fez mais abates.
             Corta em duas: a lista inteira ja esta logo abaixo, com os numeros. */}
-        <span className="block text-[10px] font-mono text-slate-400 truncate mt-0.5">
+        {/* Quando a linha mostra a nota ("Glint 62"), ela leva a procedência no hover, como
+            todo número de Glint. Faltava aqui e sobrava no "melhor de cada posição". */}
+        <span
+          className="block text-[10px] font-mono text-slate-400 truncate mt-0.5"
+          title={award.basis && award.basis.length > 0 ? undefined : award.unit === 'GLINT' ? glintHint : undefined}
+        >
           {award.basis && award.basis.length > 0 ? (
             <>
               {award.basis.slice(0, 2).map((id) => t(AWARD_LABEL[id])).join(' • ')}

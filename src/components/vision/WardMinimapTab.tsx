@@ -8,7 +8,7 @@ import {
   MAP_CELL_SPAN,
   MAP_IMAGE_INSET,
   MAP_LANDMARKS,
-  OBSERVER_DURATION_SEC,
+  WARD_DURATION_SEC,
   WARD_VISION_CELLS,
 } from '../../constants/mapGeometry';
 import { formatMatchClock } from '../../utils/dotaFormatters';
@@ -135,9 +135,13 @@ export const WardMinimapTab: React.FC<WardMinimapTabProps> = ({ player, match })
   const avgLifetime = myObs.length
     ? Math.round(myObs.reduce((s, w) => s + w.lifetimeSeconds, 0) / myObs.length)
     : 0;
+  // Metade da duração DO TIPO, como `computePlayerVisionStats`: com a do observer (360 s)
+  // valendo também para sentry, o card e o coaching contavam "cedo" com réguas diferentes.
   const lostEarly = myWards.filter(
-    (w) => w.wasDestroyed && w.lifetimeSeconds < OBSERVER_DURATION_SEC * 0.5,
+    (w) => w.wasDestroyed && w.lifetimeSeconds < WARD_DURATION_SEC[w.type] * 0.5,
   ).length;
+  // A média inclui observer sem linha de saída, cujo fim é estimado: aí o card diz isso.
+  const avgLifetimeEstimated = myObs.some((w) => w.expiryInferred);
 
   const teammates = useMemo(
     () => match.players.filter((p) => p.isRadiant === player.isRadiant),
@@ -570,7 +574,7 @@ export const WardMinimapTab: React.FC<WardMinimapTabProps> = ({ player, match })
           <Kpi
             label={t('visionKpiAvgLifetime')}
             value={avgLifetime > 0 ? `${avgLifetime}s` : '—'}
-            hint={isEstimated ? t('wardLifetimeEstimated') : undefined}
+            hint={isEstimated || avgLifetimeEstimated ? t('wardLifetimeEstimated') : undefined}
           />
           <Kpi
             label={t('visionKpiWardsLostEarly')}

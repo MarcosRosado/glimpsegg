@@ -60,7 +60,9 @@ export const visionRules: InsightRule[] = [
           per10: Math.round(per10 * 10) / 10,
           benchPer10: bench,
         },
-        source: 'MATCH_ONLY',
+        // O 5,5 por 10 min é constante fixa de suporte, não dado desta partida: sai como
+        // estimativa. Com MATCH_ONLY o chip dizia "Desta partida" ao lado de uma régua fixa.
+        source: 'ROLE_BASELINE',
       };
     },
   },
