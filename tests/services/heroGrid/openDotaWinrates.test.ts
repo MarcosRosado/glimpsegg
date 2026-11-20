@@ -153,7 +153,7 @@ describe('mapHeroStatsToWinrates — I-13: bracketIsPlayerSpecific', () => {
 
   it('UNCALIBRATED cai em media geral e nao é player-specific', () => {
     // `/api/heroStats` nao publica bucket de nao calibrado, entao o bracket cai em 1..8 —
-    // e a UI nao pode chamar isso de "no seu ranque".
+    // e a UI nao pode chamar isso de "no seu rank".
     const out = mapHeroStatsToWinrates([syntheticRow(1)], 'UNCALIBRATED', PATCH);
     expect(out[0].bracketIsPlayerSpecific).toBe(false);
     expect(out[0].matchCount).toBe(3600);

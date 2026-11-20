@@ -29,7 +29,7 @@ A decisão do *que* escrever mora em `src/utils/heroGrid/`; o I/O, em `electron/
   uma falha inventada pela própria UI.
 - **O winrate é o GERAL do herói**, e a tela é obrigada a dizer isso: não há como inferir a
   função de um grupo pelo nome, então a ordem do grupo de suportes não é "melhores suportes".
-  Com `bracketIsPlayerSpecific === false` a tela diz "média geral", nunca "no seu ranque".
+  Com `bracketIsPlayerSpecific === false` a tela diz "média geral", nunca "no seu rank".
 - **O espelho é gerado** — editar à mão é trabalho perdido na sincronização seguinte, e a tela
   avisa antes.
 - `labels.ts` é `Record<enum, TranslationKey>` **com literais explícitos**. Chave montada em

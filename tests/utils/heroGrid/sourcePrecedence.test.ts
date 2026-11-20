@@ -394,7 +394,7 @@ describe('ranque de referencia e honestidade do rotulo (T061 — FR-020, I-13)',
   });
 
   it('FR-020: fonte com segmentacao restrita derruba o bracket pedido para ALL, rotulado', () => {
-    // Uma fonte que só publica a media geral: pedir Divine nao pode virar "no seu ranque".
+    // Uma fonte que só publica a media geral: pedir Divine nao pode virar "no seu rank".
     const result = resolveMetaWinrates({
       openDota: ok([row(1)]),
       patch: PATCH,
@@ -406,7 +406,7 @@ describe('ranque de referencia e honestidade do rotulo (T061 — FR-020, I-13)',
     expect(result.byHeroId.get(1)?.bracketIsPlayerSpecific).toBe(false);
   });
 
-  it('perfil sem ranque ⇒ ALL com flag false (media geral, nunca "no seu ranque")', () => {
+  it('perfil sem rank ⇒ ALL com flag false (media geral, nunca "no seu rank")', () => {
     const result = resolveMetaWinrates({
       openDota: ok([row(1)]),
       patch: PATCH,
@@ -552,7 +552,7 @@ describe('tier da conta configurada', () => {
     }
   });
 
-  it('o null resultante degrada para media geral, nunca para "no seu ranque"', () => {
+  it('o null resultante degrada para media geral, nunca para "no seu rank"', () => {
     // A ponta do contrato: o que a funcao devolve alimenta `resolveMetaBracket`, e o
     // caminho de outra conta TEM de terminar em `isPlayerSpecific: false`.
     const tier = configuredProfileTier({

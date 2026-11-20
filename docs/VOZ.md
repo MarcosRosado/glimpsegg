@@ -94,7 +94,7 @@ motivo.
 | Título de seção ou cartão | 6 palavras | "Destaques da partida" |
 | Estado, aviso, vazio | 1 frase, ~100 | "Analisando o replay. A tela atualiza sozinha." |
 | Tooltip | 2 frases, ~140 | "Mais kills, com 30% de folga sobre o segundo." |
-| Coaching (manchete + corpo) | manchete de 5 palavras, corpo ~160 | "Lane perdida" + "Atrás em NW e XP aos 10 min. Se a lane não segura, rode ou vá farmar a jungle." |
+| Coaching (manchete + corpo) | manchete de 5 palavras, corpo ~160 | "Lane perdida" + "Aos 10 min, seu lado da lane estava atrás na média de NW e XP. Se a lane não segura, rode ou vá farmar a jungle." |
 
 ## Tiques proibidos
 
@@ -125,7 +125,7 @@ Mesma voz, escrita por quem joga em inglês, nunca tradução literal do pt-BR. 
 
 | Antes | Depois |
 | --- | --- |
-| Você fechou os 10 primeiros minutos com a rota dominada em patrimônio e xp. Vantagem de rota é a alavanca mais barata do jogo — repetir esse padrão vale mais que qualquer item. | Lane dominada: à frente em NW e XP aos 10 min. |
+| Você fechou os 10 primeiros minutos com a rota dominada em patrimônio e xp. Vantagem de rota é a alavanca mais barata do jogo — repetir esse padrão vale mais que qualquer item. | Lane dominada: aos 10 min, seu lado da lane estava bem à frente na média de NW e XP. |
 | {cs} creeps aos 10 minutos contra a referência de {benchCs} ({pct}% abaixo). Trabalhe agro de creep, puxada para o creep de longo alcance e evite trocas quando a wave está sob a torre. | {cs} last hits aos 10 min, {pct}% abaixo da referência ({benchCs}). Segure a wave fora da torre e use o agro dos creeps. |
 | O replay desta partida ainda não foi analisado pela OpenDota, então não existem eventos de ward para mostrar. Nenhum dado foi inventado para preencher o mapa. | Sem wards: replay não analisado. |
 | Recomendação de build, confrontos por herói e coaching minuto a minuto contra a média do herói não aparecem aqui. Eles dependiam de agregados que a OpenDota não tem em volume suficiente… | Build recomendada e matchups voltam numa próxima versão. |

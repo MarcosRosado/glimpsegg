@@ -161,7 +161,7 @@ Boa parte do desenho do projeto existe para isso. Três mecanismos, todos tipado
    número de comparação carrega procedência e `sampleSize`, e a UI renderiza isso como chip.
    `ROLE_BASELINE` é constante estática e **precisa** aparecer rotulado como estimativa.
 3. **`ResolvedBracket.isPlayerSpecific`** (`utils/rankBracket.ts`) — quando o bracket cai em `ALL`,
-   a UI não pode dizer "no seu ranque"; tem de dizer "média geral". É regra de honestidade.
+   a UI não pode dizer "no seu rank"; tem de dizer "média geral". É regra de honestidade.
 
 Quando faltar dado, as saídas legítimas são esconder a seção ou marcar a procedência. Preencher
 lacuna com estimativa não rotulada é regressão, mesmo que a tela fique mais bonita. Precisar de uma

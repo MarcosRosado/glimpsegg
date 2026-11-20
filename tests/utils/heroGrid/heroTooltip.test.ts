@@ -91,7 +91,7 @@ describe('FR-014 — winrate nunca aparece sozinho', () => {
   });
 
   it('o ranque qualifica só o numero do META', () => {
-    // No pessoal, "no seu ranque" sugeriria um recorte que nao foi feito.
+    // No pessoal, "no seu rank" sugeriria um recorte que nao foi feito.
     expect(keys(build(score(), 'META_ONLY'))).toContain('coachBracketYours');
     expect(keys(build(score(), 'PERSONAL_ONLY'))).not.toContain('coachBracketYours');
   });

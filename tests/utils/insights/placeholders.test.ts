@@ -77,7 +77,7 @@ function rawHits(m: MatchDetails): CoachingInsight[] {
 }
 
 /** Params que a CAMADA DE RENDER injeta, nao o motor. Ver CoachingInsightsTab. */
-const RENDER_PARAMS = { bracket: 'no seu ranque' };
+const RENDER_PARAMS = { bracket: 'no seu rank' };
 
 /** Reproduz a substituicao do t() em LanguageContext. */
 function fill(template: string, params: Record<string, string | number>): string {
