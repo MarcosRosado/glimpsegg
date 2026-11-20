@@ -41,11 +41,16 @@ cumpre:
 
 | Exigência | Como fica curto |
 | --- | --- |
-| Glint é **experimental** e sai com procedência | Selo "experimental" e tooltip de uma ou duas frases com o teste: "Nota experimental, 0 a 100, pelos seus percentis no herói. Acompanha o antigo IMP (r 0,81 em 469 partidas)." |
+| Glint é **experimental** e sai com procedência | Selo "experimental" e tooltip com o teste, o recorte e o centro: "Nota experimental de 0 a 100, pelos seus percentis no herói (todos os ranks). Centro perto de 45. Acompanha o antigo IMP: r 0,81 em 469 partidas." É a exceção declarada ao teto de tooltip: nenhuma dessas três partes pode sair |
 | `ROLE_BASELINE` é **estimativa** | Chip "estimativa", sem parágrafo |
 | Bracket `ALL` não é "no seu rank" | "média geral" ou "no seu rank", e nada mais |
 | Dado ausente | Esconda a seção. Se o vazio confundir, uma linha: "Sem wards: replay não analisado." |
-| Veredito de lane mostra a própria base | O badge leva a diferença de NW e XP. O tooltip diz a regra em uma frase e a concordância em outra |
+| Veredito de lane mostra a própria base | O badge leva a diferença de NW e XP. O tooltip diz a regra em uma frase e a concordância em outra, com os placeholders e o recorte ("nas lanes em que as duas apontam um vencedor"), sem arredondar 98,8% para 99% |
+| Hero grid ordena por winrate **geral** | A negação fica, porque é o aviso que a tela deve: "Ordem por winrate geral do herói, não por função." |
+| Hero grid escreve no arquivo do jogador | "Nada foi escrito" é o resultado da operação, não autodefesa, e fica. Vale para adiar, abortar e bloquear a gravação |
+
+Nas telas cujo assunto **é** o app (privacidade, configurações, sincronização do espelho, "há N
+dias sem sincronizar"), a regra 1 não se aplica. Valem só frase curta e nada de método.
 
 Se a regra de honestidade só se cumpre com texto longo, o lugar desse texto é um "Como
 calculamos" aberto a pedido, não a tela principal.
@@ -75,7 +80,7 @@ Termo do jogo fica no original, como a comunidade fala. Português onde o portug
 | partida, jogo | match, game | — |
 | patch | patch | versão do jogo |
 
-"Glint" é nome próprio e não se traduz. Os veredictos de lane seguem o glossário: Lane dominada,
+"Glint" é nome próprio e não se traduz. Os vereditos de lane seguem o glossário: Lane dominada,
 Lane vencida, Lane equilibrada, Lane perdida, Lane atropelada.
 
 ## Tamanho por tipo de texto
@@ -132,6 +137,11 @@ Mesma voz, escrita por quem joga em inglês, nunca tradução literal do pt-BR. 
 3. Fala do jogo ou do app?
 4. Tem travessão, "não é X, é Y" ou frase de efeito?
 5. A versão en-US foi escrita, não traduzida?
+6. **O critério bate com o código?** Encurtar não é só cortar. Antes de reescrever um tooltip
+   que descreve regra (margem de prêmio, limiar, janela), confira contra o motor. Texto curto e
+   errado é pior que longo e certo.
+7. **Quem mais cita o texto antigo?** `grep -rn` do rótulo antigo em `tests/`, nos `CLAUDE.md`,
+   nos `docs/` e nos dois README. Texto de tela citado literalmente diverge em silêncio.
 
 ## Reescrita em andamento
 
@@ -139,4 +149,6 @@ O dicionário inteiro está sendo reescrito por tela, nas duas línguas, um comm
 ordem: Início e modo placar → Resumo da partida → Meu jogo → Lutas e Visão → Coaching → Conta,
 Heróis e Partidas → hero grid e configurações. Até terminar, o texto antigo convive com o novo.
 Ao reescrever uma tela, procure também texto que ficou para trás: os tooltips dos prêmios de papel
-ainda dizem "IMP", que saiu do app em 2026-11-19 (hoje a nota é o Glint).
+ainda dizem "IMP", que saiu do app em 2026-11-19 (hoje a nota é o Glint), e os de melhor core e
+melhor suporte dizem "com folga sobre o segundo", mas esses dois slots são fixos e saem de
+`pickByScore` sem margem (`utils/awardEngine.ts`).
