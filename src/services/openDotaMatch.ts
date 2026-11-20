@@ -535,6 +535,19 @@ function buildLaningStats(
   };
 }
 
+/**
+ * A OpenDota devolve um ESBOÇO de partida que acabou de terminar e ainda não foi ingerida:
+ * 10 jogadores com `hero_id: 0`, `duration: 0`, placar 0 a 0 e um `radiant_win` qualquer
+ * (visto em 2026-11-20 na 9097641988, dois minutos depois do fim). Mapeado, virava uma tela
+ * com "Dire venceu", "Player 0" e "Hero #0", com cara de medição. Sem duração ou sem herói
+ * nenhum não há partida: quem busca devolve `null` e a tela avisa.
+ */
+export function isOpenDotaMatchUsable(m: any): boolean {
+  if (!m || !Array.isArray(m.players) || m.players.length === 0) return false;
+  if (!(num(m.duration) > 0)) return false;
+  return m.players.some((p: any) => num(p?.hero_id) > 0);
+}
+
 /** Partida parseada na OpenDota tem `version` (a versao do parser); sem parse ele é null. */
 export function isOpenDotaMatchParsed(m: any): boolean {
   return m?.version !== null && m?.version !== undefined;
@@ -721,8 +734,9 @@ export async function fetchOpenDotaMatchDetails(matchId: string): Promise<MatchD
   if (isNaN(numericId) || numericId <= 0) return null;
   try {
     const raw = await fetchOpenDotaMatchRaw(numericId);
-    // Id inexistente volta 200 com `{ error }` em algumas rotas; sem jogadores nao ha partida.
-    if (!raw || !Array.isArray(raw.players) || raw.players.length === 0) return null;
+    // Id inexistente volta 200 com `{ error }` em algumas rotas; sem jogadores nao ha partida,
+    // e o esboço de partida recém-terminada também não é partida (`isOpenDotaMatchUsable`).
+    if (!isOpenDotaMatchUsable(raw)) return null;
     return mapOpenDotaMatch(raw);
   } catch (err) {
     console.warn('OpenDota match fetch failed:', err);

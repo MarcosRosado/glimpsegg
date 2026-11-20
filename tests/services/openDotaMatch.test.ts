@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isOpenDotaMatchParsed, mapOpenDotaMatch } from '../../src/services/openDotaMatch';
+import { isOpenDotaMatchParsed, isOpenDotaMatchUsable, mapOpenDotaMatch } from '../../src/services/openDotaMatch';
 import fixture from '../../src/services/__fixtures__/match-parsed-opendota.json';
 import unevenFixture from '../../src/services/__fixtures__/match-uneven-lane-opendota.json';
 import { cumulativeLast, sumAll, sumDeltas } from '../../src/utils/insights/timeSeries';
@@ -502,5 +502,32 @@ describe('mapOpenDotaMatch — rota desigual na fixture real', () => {
       m.players.flatMap((p) => evaluateRules(buildInsightContext(p, m, { threat: null, build: null })).map((h) => h.ruleId)),
     );
     for (const id of ['farmingStacksHigh', 'fightKpHigh', 'visionCoverageLow', 'laningLaneLost']) expect(ids.has(id), id).toBe(true);
+  });
+});
+
+describe('isOpenDotaMatchUsable — esboço de partida recém-terminada não é partida', () => {
+  it('a partida real da fixture é utilizável', () => {
+    expect(isOpenDotaMatchUsable(raw)).toBe(true);
+  });
+
+  it('duração 0 e herói 0 em todos (o esboço que a OpenDota devolve) não é', () => {
+    // Derivado da fixture real, zerando só o que o esboço zera — nada inventado.
+    const stub = {
+      ...raw,
+      duration: 0,
+      radiant_score: 0,
+      dire_score: 0,
+      version: null,
+      players: raw.players.map((p: any) => ({ ...p, hero_id: 0, kills: 0, deaths: 0, assists: 0 })),
+    };
+    expect(isOpenDotaMatchUsable(stub)).toBe(false);
+    expect(isOpenDotaMatchUsable({ ...raw, duration: 0 })).toBe(false);
+    expect(isOpenDotaMatchUsable({ ...raw, players: raw.players.map((p: any) => ({ ...p, hero_id: 0 })) })).toBe(false);
+  });
+
+  it('sem jogadores, ou resposta de erro, não é', () => {
+    expect(isOpenDotaMatchUsable({ error: 'Not Found' })).toBe(false);
+    expect(isOpenDotaMatchUsable(null)).toBe(false);
+    expect(isOpenDotaMatchUsable({ ...raw, players: [] })).toBe(false);
   });
 });
