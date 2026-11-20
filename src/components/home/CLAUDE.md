@@ -31,6 +31,13 @@ disposição da 1.0: **coluna principal larga com as partidas, coluna lateral de
 - O "Analisar replay" daqui só **abre** a partida com `requestParse`; quem pede é o `App.tsx`, no
   mesmo fluxo do cartão do modo placar. Cada pedido conta como 10 chamadas: nunca dispara sem
   clique.
+- **Chamada que falhou não some com o cartão** (2026-11-20). `recentMatchesFailed` (a lista de
+  partidas não veio com o perfil) troca os cartões que vivem dela — recentes, atividade, forma,
+  anel — pelo título e o erro, com "tentar de novo" que recarrega o perfil; antes pareciam conta
+  sem partidas, com 30 dias zerados na atividade. `peersFailed` faz o mesmo com os companheiros,
+  e o "tentar de novo" deles chama só `fetchPlayerPeers`. Lista que veio **vazia** segue a regra
+  de cada cartão (some). O Início não ganhou skeleton por cartão: o perfil chega numa leva só
+  (`Promise.all`) e o `HomeSkeleton` cobre a espera.
 - Saíram do Início em 2026-11-19: o gráfico de evolução de largura inteira (foi para a Conta), os
   "Heróis principais" da carreira (a seção Heróis cobre, com período) e o cartão "Tendências" com
   barras de Glint por partida (repetia o gráfico).

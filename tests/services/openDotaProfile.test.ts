@@ -49,6 +49,30 @@ describe('mapOpenDotaProfile', () => {
     expect(empty.winRate).toBe(0);
     expect(empty.recentMatches).toEqual([]);
     expect(empty.peers).toBeUndefined();
+    // Lista vazia que VEIO não é falha: nenhum cartão mostra erro.
+    expect(empty.recentMatchesFailed).toBeUndefined();
+    expect(empty.peersFailed).toBeUndefined();
+    expect(empty.activityDays).toHaveLength(30);
+  });
+
+  it('chamada que falhou (null) sai marcada, nunca como conta vazia', () => {
+    const failed = mapOpenDotaProfile(
+      { player: { profile: { account_id: 5 } }, wl: {}, matches: null, heroMatches: [], peers: null },
+      {},
+      NOW,
+    )!;
+    expect(failed.recentMatchesFailed).toBe(true);
+    expect(failed.peersFailed).toBe(true);
+    expect(failed.recentMatches).toEqual([]);
+    expect(failed.peers).toBeUndefined();
+    // 30 dias zerados afirmariam que a conta não jogou.
+    expect(failed.activityDays).toBeUndefined();
+  });
+
+  it('companheiros vazios que vieram: sem cartão, sem erro', () => {
+    const none = mapOpenDotaProfile({ player: { profile: { account_id: 5 } }, wl: {}, matches: [], heroMatches: [], peers: [] }, {}, NOW)!;
+    expect(none.peers).toBeUndefined();
+    expect(none.peersFailed).toBeUndefined();
   });
 
   it('herois mais jogados: contados na lista completa, com KDA do agregado', () => {

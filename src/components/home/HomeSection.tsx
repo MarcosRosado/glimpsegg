@@ -1,5 +1,8 @@
-import React from 'react';
-import type { PlayerProfileSummary } from '../../types/dota';
+import React, { useState } from 'react';
+import type { PeerTeammate, PlayerProfileSummary } from '../../types/dota';
+import { fetchPlayerPeers } from '../../services/openDotaProfile';
+import { useLanguage } from '../../context/LanguageContext';
+import { LoadErrorCard } from '../ui/LoadError';
 import { RecentFormCard } from '../dashboard/RecentFormCard';
 import { ActivityHeatmap } from '../dashboard/ActivityHeatmap';
 import { TeammatesCard } from '../dashboard/TeammatesCard';
@@ -21,6 +24,12 @@ import { useTrendMatches } from './useTrendMatches';
  *
  * Saíram daqui: os "Heróis principais" da carreira (a seção Heróis já é isso, com período) e o
  * cartão "Tendências" com as barras de Glint por partida, que repetia o gráfico.
+ *
+ * **Chamada que falhou não some com o cartão.** Sem a lista de partidas (`recentMatchesFailed`),
+ * os cartões que vivem dela mostram o título e o erro, com "tentar de novo" (recarrega o perfil:
+ * a lista entra na mesma leva); sem os companheiros (`peersFailed`), o cartão deles tenta de
+ * novo só a chamada dele. Antes os dois casos pareciam conta sem partidas ou sem companheiros —
+ * e a atividade mostrava 30 dias zerados. Lista que veio vazia segue a regra de cada cartão.
  */
 export const HomeSection: React.FC<{
   profile: PlayerProfileSummary;
@@ -29,9 +38,68 @@ export const HomeSection: React.FC<{
   onOpenHeroMatches: (heroId: number) => void;
   onOpenPeer: (accountId: string) => void;
   onSeeAllMatches: () => void;
-}> = ({ profile: p, onOpenMatch, onOpenAndRequestParse, onOpenHeroMatches, onOpenPeer, onSeeAllMatches }) => {
+  /** "Tentar de novo" dos cartões que vivem da lista de partidas: recarrega o perfil. */
+  onReloadProfile: () => void;
+  reloadingProfile: boolean;
+}> = ({
+  profile: p,
+  onOpenMatch,
+  onOpenAndRequestParse,
+  onOpenHeroMatches,
+  onOpenPeer,
+  onSeeAllMatches,
+  onReloadProfile,
+  reloadingProfile,
+}) => {
+  const { t } = useLanguage();
   const trend = useTrendMatches(p.steamAccountId, p.recentMatches);
   const lastMatch = p.recentMatches[0] ?? null;
+
+  // Companheiros buscados de novo pelo cartão, presos à conta: outra conta na tela descarta.
+  const [peersRetry, setPeersRetry] = useState<{ key: string; loading: boolean; peers: PeerTeammate[] | null } | null>(null);
+  const retryOwn = peersRetry && peersRetry.key === p.steamAccountId ? peersRetry : null;
+  const peers = retryOwn?.peers ?? p.peers;
+  const peersFailed = retryOwn ? !retryOwn.loading && retryOwn.peers === null : !!p.peersFailed;
+  const retryPeers = () => {
+    const key = p.steamAccountId;
+    setPeersRetry({ key, loading: true, peers: null });
+    void fetchPlayerPeers(key).then((fresh) =>
+      setPeersRetry((cur) => (cur && cur.key === key ? { key, loading: false, peers: fresh } : cur)),
+    );
+  };
+
+  const peersCard = () => {
+    if (peersFailed || retryOwn?.loading) {
+      return (
+        <LoadErrorCard
+          title={t('teammatesCardTitle')}
+          message={t('teammatesLoadError')}
+          onRetry={retryPeers}
+          retrying={!!retryOwn?.loading}
+        />
+      );
+    }
+    return peers && peers.length > 0 ? <TeammatesCard peers={peers} onOpenPeer={onOpenPeer} /> : null;
+  };
+
+  if (p.recentMatchesFailed) {
+    const matchesError = (title: string) => (
+      <LoadErrorCard title={title} message={t('homeMatchesLoadError')} onRetry={onReloadProfile} retrying={reloadingProfile} />
+    );
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="lg:col-span-7 xl:col-span-8 space-y-6 min-w-0">
+          {matchesError(t('homeRecentMatchesTitle'))}
+          {matchesError(t('dailyActivityTitle'))}
+        </div>
+        <div className="lg:col-span-5 xl:col-span-4 space-y-6 min-w-0">
+          {matchesError(t('recentForm'))}
+          {matchesError(t('heroShareTitle'))}
+          {peersCard()}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -53,7 +121,7 @@ export const HomeSection: React.FC<{
           onRequestMore={trend.requestMore}
           onOpenHeroMatches={onOpenHeroMatches}
         />
-        {p.peers && p.peers.length > 0 && <TeammatesCard peers={p.peers} onOpenPeer={onOpenPeer} />}
+        {peersCard()}
       </div>
     </div>
   );

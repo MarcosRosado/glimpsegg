@@ -709,6 +709,7 @@ function MainAppContent() {
             initialDays={(matchesPreset.days ?? null) as 30 | 90 | 365 | null}
             initialPatch={matchesPreset.patch ?? null}
             initialMatches={p.recentMatches}
+            initialMatchesFailed={!!p.recentMatchesFailed}
             heroFilterId={heroFilterId}
             onClearHeroFilter={() => setHeroFilterId(null)}
             onSelectMatch={(id) => void handleSelectMatch(id)}
@@ -731,6 +732,8 @@ function MainAppContent() {
           <AccountSection
             profile={p}
             onOpenMatch={(id) => void handleSelectMatch(id)}
+            onReloadProfile={() => void loadProfileData(p.steamAccountId)}
+            reloadingProfile={isLoading}
             header={
               <ProfileHeader
                 profile={p}
@@ -762,6 +765,8 @@ function MainAppContent() {
               setHeroFilterId(null);
               navigate('MATCHES');
             }}
+            onReloadProfile={() => void loadProfileData(p.steamAccountId)}
+            reloadingProfile={isLoading}
           />
         );
     }

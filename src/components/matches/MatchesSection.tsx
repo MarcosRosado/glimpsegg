@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { PatchWindow, PlayerMatchSummary } from '../../types/dota';
 import { fetchPlayerMatchesPage, RECENT_MATCHES_LIMIT } from '../../services/openDotaProfile';
 import { useLanguage } from '../../context/LanguageContext';
 import { MatchList } from '../dashboard/MatchList';
 import { Skeleton, SkeletonCard, SkeletonRows } from '../ui/Skeleton';
+import { LoadErrorCard, LoadErrorNotice } from '../ui/LoadError';
 import { PeriodPatchFilter, toMatchFilters, usePatchWindows, type PeriodDays } from '../filters/PeriodPatchFilter';
 
 /**
@@ -13,18 +14,32 @@ import { PeriodPatchFilter, toMatchFilters, usePatchWindows, type PeriodDays } f
  * continua no `MatchList`, sobre o que já foi carregado.
  *
  * Sem filtro, a primeira página é a do perfil (já baixada): não se paga a mesma chamada duas
- * vezes. Falha de rede (`null`) mostra o erro com "tentar de novo" — nunca vira "fim da lista".
+ * vezes — a menos que ela tenha falhado no perfil (`initialMatchesFailed`): aí a seção busca a
+ * página sozinha, em vez de mostrar a lista vazia como "nenhuma partida". Falha de rede (`null`)
+ * mostra o erro com "tentar de novo" — nunca vira "fim da lista"; sem nada na tela, o erro fica
+ * no lugar do cartão da lista.
  */
 export const MatchesSection: React.FC<{
   steamAccountId: string;
   initialMatches: PlayerMatchSummary[];
+  /** A lista do perfil falhou: `initialMatches` vazio não quer dizer conta sem partidas. */
+  initialMatchesFailed?: boolean;
   onSelectMatch: (matchId: string) => void;
   heroFilterId: number | null;
   onClearHeroFilter: () => void;
   /** Período e patch de partida — o clique num herói da seção Heróis traz os filtros de lá. */
   initialDays?: PeriodDays;
   initialPatch?: PatchWindow | null;
-}> = ({ steamAccountId, initialMatches, onSelectMatch, heroFilterId, onClearHeroFilter, initialDays = null, initialPatch = null }) => {
+}> = ({
+  steamAccountId,
+  initialMatches,
+  initialMatchesFailed = false,
+  onSelectMatch,
+  heroFilterId,
+  onClearHeroFilter,
+  initialDays = null,
+  initialPatch = null,
+}) => {
   const { t } = useLanguage();
   const windows = usePatchWindows();
   const [days, setDays] = useState<PeriodDays>(initialDays);
@@ -38,7 +53,7 @@ export const MatchesSection: React.FC<{
 
   // Herói também vai ao servidor (`hero_id`): filtrar só as 40 carregadas deixava a lista vazia
   // para herói jogado há mais tempo, e o "carregar mais" não paginava dentro dele.
-  const unfiltered = !days && !patch && heroFilterId === null;
+  const unfiltered = !days && !patch && heroFilterId === null && !initialMatchesFailed;
   // Páginas já trazidas do servidor. O offset é o da lista CRUA: com patch, o corte local pode
   // encurtar uma página, então contar itens exibidos daria o offset errado.
   const pagesLoaded = useRef(1);
@@ -78,7 +93,7 @@ export const MatchesSection: React.FC<{
     }
     void loadPage(0, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [steamAccountId, days, patch, heroFilterId, initialMatches]);
+  }, [steamAccountId, days, patch, heroFilterId, initialMatches, initialMatchesFailed]);
 
   const loadMore = () => void loadPage(pagesLoaded.current, false);
   const retry = () => void loadPage(lastRequest.current.page, lastRequest.current.replace);
@@ -87,25 +102,17 @@ export const MatchesSection: React.FC<{
     <div className="space-y-4">
       <PeriodPatchFilter days={days} onDaysChange={setDays} patch={patch} onPatchChange={setPatch} windows={windows} />
 
-      {failed && (
-        <div role="alert" className="flex items-center gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
-          <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
-          <span className="flex-1">{t('matchesLoadError')}</span>
-          <button
-            type="button"
-            onClick={retry}
-            className="rounded-lg border border-rose-400/40 px-3 py-1.5 font-bold hover:bg-rose-500/20"
-          >
-            {t('parseRetryButton')}
-          </button>
-        </div>
-      )}
+      {/* Com lista na tela (o "carregar mais" ou a troca de filtro que falhou), o aviso vai em
+          cima dela; sem nada, o erro ocupa o lugar do cartão. */}
+      {failed && matches.length > 0 && <LoadErrorNotice message={t('matchesLoadError')} onRetry={retry} />}
 
       {loading && matches.length === 0 ? (
         <SkeletonCard>
           <Skeleton className="h-5 w-56 mb-5" />
           <SkeletonRows rows={8} />
         </SkeletonCard>
+      ) : failed && matches.length === 0 ? (
+        <LoadErrorCard title={t('navMatches')} message={t('matchesLoadError')} onRetry={retry} />
       ) : (
         <MatchList
           matches={matches}

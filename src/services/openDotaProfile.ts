@@ -247,11 +247,15 @@ export function mapOpenDotaPlayerMatch(
 export interface OpenDotaProfileRaw {
   player: any;
   wl: any;
-  /** As partidas recentes, com todos os campos de `MATCH_FIELDS`. */
-  matches: any[];
+  /**
+   * As partidas recentes, com todos os campos de `MATCH_FIELDS`. `null` = a chamada FALHOU (o
+   * que `openDotaGet` devolve): vira `recentMatchesFailed`, nunca "conta sem partidas".
+   */
+  matches: any[] | null;
   /** A lista completa, so com heroi, KDA, lado e resultado. Alimenta os herois mais jogados. */
   heroMatches: any[];
-  peers?: any[];
+  /** `null` = a chamada falhou (`peersFailed`); ausente ou `[]` = sem companheiros. */
+  peers?: any[] | null;
 }
 
 /**
@@ -364,6 +368,7 @@ export function mapOpenDotaProfile(
   // Conta inexistente ou privada volta sem `profile`: nao ha perfil para mostrar.
   if (!accountId) return null;
 
+  const recentMatchesFailed = raw.matches === null;
   const recentMatches = (Array.isArray(raw.matches) ? raw.matches : []).map((m) => mapOpenDotaPlayerMatch(m, tables));
   const win = num(raw?.wl?.win);
   const lose = num(raw?.wl?.lose);
@@ -389,7 +394,11 @@ export function mapOpenDotaProfile(
     recentMatches,
     mostPlayedHeroes,
     peers: peers.length > 0 ? peers : undefined,
-    activityDays: buildActivityDays(recentMatches, now),
+    // Os cartões do Início que dependem dessas listas mostram o erro em vez de sumir.
+    ...(recentMatchesFailed ? { recentMatchesFailed: true } : {}),
+    ...(raw.peers === null ? { peersFailed: true } : {}),
+    // Sem a lista, 30 dias zerados afirmariam que a conta não jogou.
+    activityDays: recentMatchesFailed ? undefined : buildActivityDays(recentMatches, now),
   };
 }
 
@@ -423,14 +432,20 @@ async function fetchBenchmarkTables(heroIds: number[]): Promise<Record<number, H
   return out;
 }
 
-export async function fetchPlayerPeers(steamAccountId: string): Promise<PeerTeammate[]> {
-  return mapOpenDotaPeers(await openDotaGet<any[]>(`players/${steamAccountId}/peers`));
+/** Companheiros da conta, para o "tentar de novo" do cartão. `null` em falha, `[]` sem companheiro. */
+export async function fetchPlayerPeers(steamAccountId: string): Promise<PeerTeammate[] | null> {
+  const numericId = parseInt(steamAccountId, 10);
+  if (isNaN(numericId) || numericId <= 0) return null;
+  const raw = await openDotaGet<any[]>(`players/${numericId}/peers`);
+  return Array.isArray(raw) ? mapOpenDotaPeers(raw) : null;
 }
 
 /**
  * Busca e monta o perfil. `null` em qualquer falha do perfil em si (conta inexistente,
  * privada, rede) — quem chama mostra o erro; nao existe perfil de demonstracao. As partes
- * acessorias (herois, companheiros, tabelas) degradam para vazio sem derrubar o perfil.
+ * acessorias nao derrubam o perfil: partidas recentes e companheiros que falham saem marcados
+ * (`recentMatchesFailed`, `peersFailed`) e o cartao deles mostra o erro; herois e tabelas de
+ * percentil degradam para vazio (o Glint some da linha).
  */
 export async function fetchPlayerProfile(steamAccountId: string): Promise<PlayerProfileSummary | null> {
   const numericId = parseInt(steamAccountId, 10);
@@ -444,9 +459,12 @@ export async function fetchPlayerProfile(steamAccountId: string): Promise<Player
       openDotaGet<any[]>(`players/${numericId}/peers`),
     ]);
     if (!player?.profile) return null;
-    const list = Array.isArray(matches) ? matches : [];
-    const tables = await fetchBenchmarkTables(list.map((m) => num(m?.hero_id)));
-    return mapOpenDotaProfile({ player, wl, matches: list, heroMatches: heroMatches ?? [], peers: peers ?? [] }, tables);
+    const list = Array.isArray(matches) ? matches : null;
+    const tables = await fetchBenchmarkTables((list ?? []).map((m) => num(m?.hero_id)));
+    return mapOpenDotaProfile(
+      { player, wl, matches: list, heroMatches: heroMatches ?? [], peers: Array.isArray(peers) ? peers : null },
+      tables,
+    );
   } catch (err) {
     console.warn('OpenDota profile fetch failed:', err);
     return null;

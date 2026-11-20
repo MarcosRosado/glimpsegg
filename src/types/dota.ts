@@ -674,6 +674,13 @@ export interface PlayerProfileSummary {
     avgImp: number | null;
   }>;
   peers?: PeerTeammate[];
+  /**
+   * A chamada da lista de partidas recentes falhou: `recentMatches` vem vazio, mas não é conta
+   * sem partidas. Os cartões do Início mostram o erro em vez de sumir.
+   */
+  recentMatchesFailed?: boolean;
+  /** A chamada de companheiros falhou (`peers` ausente não diz "sem companheiros"). */
+  peersFailed?: boolean;
   activityDays?: ActivityDay[];
 }
 

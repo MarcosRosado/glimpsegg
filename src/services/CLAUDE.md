@@ -25,6 +25,10 @@ Toda a rede do app. Nada aqui renderiza: os módulos buscam, mapeiam e cacheiam.
   `hero_id: 0`, `duration: 0` e placar 0 a 0 antes de ingerir a partida. `isOpenDotaMatchUsable`
   barra isso em `fetchOpenDotaMatchDetails` (vira `null` e o aviso de falha); antes a tela abria
   com "Dire venceu", "Player 0" e "Hero #0".
+- **Falha parcial do perfil sai marcada, não vazia.** Em `fetchPlayerProfile`, a lista de
+  partidas recentes e os companheiros que voltam `null` viram `recentMatchesFailed` /
+  `peersFailed` (e `activityDays` ausente), não `[]`: lista vazia dizia "conta sem partidas".
+  `fetchPlayerPeers` devolve `null` em falha pelo mesmo motivo.
 - **Falha devolve `null` ou lista vazia, nunca dado fabricado.** `mockData.ts` foi removido de
   propósito. A UI mostra toast; não existe fallback inventado.
 - A disponibilidade é calculada **uma vez**, dentro de `mapOpenDotaMatch`. Nunca é adivinhada

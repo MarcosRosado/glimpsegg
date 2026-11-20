@@ -29,7 +29,9 @@ principal com a última partida e as recentes, coluna lateral de cartões pequen
 **Carregamento tem forma.** Primeira carga mostra skeleton (`ui/Skeleton.tsx`) no formato do que
 vai chegar: `MatchSkeleton` ao abrir partida (`loadingMatchId`; recarga da mesma partida não troca
 a tela), `HomeSkeleton` enquanto o perfil chega, e linhas nas seções. Recarga com dado na tela
-segue com `opacity-60`. Falha mostra aviso com "tentar de novo", nunca área em branco.
+segue com `opacity-60`. Falha mostra aviso com "tentar de novo", nunca área em branco — e o
+**cartão fica**, com o título e o erro dentro (`ui/LoadError.tsx`): cartão que sumia na falha
+deixava a tela igual à de uma conta sem dado.
 
 **"Não carregou" não é "sem conta".** Perfil que não chega com conta salva vira
 `profileLoadFailedFor` e o aviso "Não foi possível carregar o perfil" (tentar de novo,

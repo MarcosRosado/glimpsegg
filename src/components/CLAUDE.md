@@ -17,7 +17,7 @@ o que precisa ser verificado vira função pura em `utils/`.
 | `heroGrid/` | Painel e réplica do layout espelho de heróis | [ver](heroGrid/CLAUDE.md) |
 | `home/` | O Início em duas colunas: última partida, as recentes e a atividade na principal; forma, anel de heróis e companheiros na lateral | [ver](home/CLAUDE.md) |
 | `layout/` | A moldura: `Sidebar` (seções) e `Navbar` (topo) | [ver](layout/CLAUDE.md) |
-| `matches/` | `MatchesSection.tsx` — seção Partidas: o `MatchList` com período, patch e herói no servidor (o clique em Heróis traz período e patch junto) e "carregar mais" além das 40. O offset conta páginas da lista crua (o corte local por patch encurta páginas); falha de rede mostra erro com "tentar de novo", nunca "fim da lista" | — |
+| `matches/` | `MatchesSection.tsx` — seção Partidas: o `MatchList` com período, patch e herói no servidor (o clique em Heróis traz período e patch junto) e "carregar mais" além das 40. O offset conta páginas da lista crua (o corte local por patch encurta páginas); falha de rede mostra erro com "tentar de novo", nunca "fim da lista"; sem nada na tela, o erro ocupa o lugar do cartão da lista, e a lista do perfil que falhou (`initialMatchesFailed`) faz a seção buscar a página sozinha em vez de mostrar "nenhuma partida" | — |
 | `match/` | Cabeçalho, abas, seletor de jogador, modo placar e a aba Resumo da partida | [ver](match/CLAUDE.md) |
 | `performance/` | A aba "Meu jogo": desempenho de um jogador, uso de item ativo e tempo morto | [ver](performance/CLAUDE.md) |
 | `search/` | `SearchPlayerModal.tsx` — busca (Ctrl+K) de conta **ou partida** (`classifySearchInput`; o número ambíguo ganha a opção "abrir como partida"), histórico e favoritos | — |

@@ -18,6 +18,8 @@ A seção Heróis (`AppSection` `HEROES`), montada pelo `App.tsx`.
 - **Sem Glint médio na lista.** A lista completa de partidas não traz os insumos da nota, e média
   de uma parte das partidas sob o rótulo do herói inteiro seria número sem procedência. No painel,
   GPM e Glint médios são **só das partidas listadas**, e o rótulo diz quantas.
+- Primeira carga que falha mostra o cartão com o erro no lugar da lista (antes só sobrava o
+  aviso no topo); falha com a lista na tela deixa o aviso em cima dela.
 - Herói escolhido que sai da lista (outro período, busca) cai no primeiro da ordem atual.
 
 ## Ao sair um patch

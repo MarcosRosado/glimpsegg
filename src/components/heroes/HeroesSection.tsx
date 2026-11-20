@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Search, Swords } from 'lucide-react';
+import { Search, Swords } from 'lucide-react';
 import type { HeroPerformance, PatchWindow, PlayerMatchFilters } from '../../types/dota';
 import { fetchHeroPerformance } from '../../services/openDotaProfile';
 import { getHero, NEW_HERO_IDS } from '../../constants/heroes';
@@ -8,6 +8,7 @@ import { timeAgoText } from '../../utils/dotaFormatters';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
 import { Skeleton, SkeletonCard, SkeletonRows } from '../ui/Skeleton';
+import { LoadErrorCard, LoadErrorNotice } from '../ui/LoadError';
 import { HeroDetailPanel } from './HeroDetailPanel';
 import { PeriodPatchFilter, toMatchFilters, usePatchWindows, type PeriodDays } from '../filters/PeriodPatchFilter';
 
@@ -115,17 +116,13 @@ export const HeroesSection: React.FC<{
 
       <PeriodPatchFilter days={days} onDaysChange={setDays} patch={patch} onPatchChange={setPatch} windows={windows} />
 
-      {failed && (
-        <div role="alert" className="flex items-center gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
-          <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
-          <span className="flex-1">{t('heroesLoadError')}</span>
-          <button type="button" onClick={() => void load()} className="rounded-lg border border-rose-400/40 px-3 py-1.5 font-bold hover:bg-rose-500/20">
-            {t('parseRetryButton')}
-          </button>
-        </div>
-      )}
+      {/* Com a lista na tela (troca de filtro que falhou), o aviso vai em cima dela; sem nada,
+          o erro ocupa o lugar do cartão. */}
+      {failed && rows && <LoadErrorNotice message={t('heroesLoadError')} onRetry={() => void load()} />}
 
-      {loading && !rows ? (
+      {failed && !rows ? (
+        <LoadErrorCard title={t('navHeroes')} message={t('heroesLoadError')} onRetry={() => void load()} />
+      ) : loading && !rows ? (
         <SkeletonCard className="p-4">
           <Skeleton className="h-3 w-40 mb-5" />
           <SkeletonRows rows={8} />

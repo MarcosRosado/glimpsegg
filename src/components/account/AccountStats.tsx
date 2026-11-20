@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Sigma, Medal, PieChart, AlertTriangle } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Sigma, Medal, PieChart } from 'lucide-react';
 import {
   fetchAccountCounts,
   fetchAccountRecords,
@@ -18,7 +18,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { cn } from '../../utils/cn';
 import { EstimateChip } from '../ui/EstimateChip';
-import { Skeleton, SkeletonCard, SkeletonRows } from '../ui/Skeleton';
+import { Skeleton, SkeletonCard } from '../ui/Skeleton';
+import { LoadErrorCard } from '../ui/LoadError';
 
 /** Rótulo de cada campo de totais/recordes. Literais: o teste de chave órfã precisa enxergá-los. */
 const FIELD_LABEL: Record<AccountTotalField, TranslationKey> = {
@@ -59,7 +60,15 @@ const LANE_ROLE_LABEL: Record<string, TranslationKey> = {
   '4': 'acctLaneJungle',
 };
 
-function useAsync<T>(fn: () => Promise<T | null>, deps: unknown[]): { data: T | null; loading: boolean; failed: boolean } {
+/**
+ * Uma chamada com estado próprio e o próprio "tentar de novo". O contador era um só para os três
+ * blocos: tentar de novo os totais apagava também os recordes que já estavam na tela.
+ */
+function useAsync<T>(
+  fn: () => Promise<T | null>,
+  deps: unknown[],
+): { data: T | null; loading: boolean; failed: boolean; retry: () => void } {
+  const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<{ data: T | null; loading: boolean; failed: boolean }>({ data: null, loading: true, failed: false });
   useEffect(() => {
     let alive = true;
@@ -71,8 +80,9 @@ function useAsync<T>(fn: () => Promise<T | null>, deps: unknown[]): { data: T | 
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  return state;
+  }, [...deps, attempt]);
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  return { ...state, retry };
 }
 
 const Card: React.FC<{ icon: React.ReactNode; title: string; hint?: string; children: React.ReactNode; className?: string }> = ({
@@ -102,9 +112,12 @@ const Card: React.FC<{ icon: React.ReactNode; title: string; hint?: string; chil
  *   modo sai por `matchModeKey` SEM a fila (a contagem por modo não traz o lobby): "All Pick",
  *   nunca "casual" ou "ranqueado" no chute. Modo sem rótulo conhecido fica de fora.
  *
- * Cada bloco some sozinho se a chamada dele falhar — os outros seguem — e um aviso com
- * "tentar de novo" diz que faltou algo. Sem o aviso, a falha das três chamadas (o caso comum
- * sob limite de uso da OpenDota) deixava a seção em branco, igual a uma conta sem dado.
+ * Cada bloco tem o próprio estado: skeleton enquanto a chamada dele não volta, e o cartão com
+ * a mensagem e "tentar de novo" se ela falhar — os outros seguem. Antes o skeleton era um só
+ * (sumia quando o primeiro bloco chegava, e os outros apareciam do nada) e o bloco que falhava
+ * sumia, com um aviso geral no topo; a falha das três chamadas (o caso comum sob limite de uso
+ * da OpenDota) deixava a seção quase em branco, igual a uma conta sem dado. Bloco que carregou
+ * e veio vazio continua fora: aí não há o que mostrar, e não é erro.
  */
 export const AccountStats: React.FC<{
   steamAccountId: string;
@@ -113,10 +126,9 @@ export const AccountStats: React.FC<{
   aside?: React.ReactNode;
 }> = ({ steamAccountId, onOpenMatch, aside }) => {
   const { t, language } = useLanguage();
-  const [attempt, setAttempt] = useState(0);
-  const totals = useAsync<AccountTotal[]>(() => fetchAccountTotals(steamAccountId), [steamAccountId, attempt]);
-  const records = useAsync<AccountRecord[]>(() => fetchAccountRecords(steamAccountId), [steamAccountId, attempt]);
-  const counts = useAsync<AccountCounts>(() => fetchAccountCounts(steamAccountId), [steamAccountId, attempt]);
+  const totals = useAsync<AccountTotal[]>(() => fetchAccountTotals(steamAccountId), [steamAccountId]);
+  const records = useAsync<AccountRecord[]>(() => fetchAccountRecords(steamAccountId), [steamAccountId]);
+  const counts = useAsync<AccountCounts>(() => fetchAccountCounts(steamAccountId), [steamAccountId]);
   const patches = useAsync(() => fetchPatchCatalog(), []);
 
   const fmt = (n: number, digits = 0) => n.toLocaleString(language, { maximumFractionDigits: digits });
@@ -131,9 +143,6 @@ export const AccountStats: React.FC<{
   };
   const patchName = (key: string) => patches.data?.find((p) => String(p.id) === key)?.name ?? null;
 
-  const anyLoading = totals.loading || records.loading || counts.loading;
-  const nothing = !totals.data?.length && !records.data?.length && !counts.data;
-
   const countRow = (label: string, e: AccountCountEntry) => (
     <li key={label} className="flex items-center justify-between gap-3 text-xs" title={t('acctCountHint', { games: fmt(e.games), wins: fmt(e.wins) })}>
       <span className="text-slate-300 truncate">{label}</span>
@@ -145,35 +154,6 @@ export const AccountStats: React.FC<{
       </span>
     </li>
   );
-
-  const anyFailed = !anyLoading && (totals.failed || records.failed || counts.failed);
-
-  if (anyLoading && nothing) {
-    return (
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-        <SkeletonCard>
-          <Skeleton className="h-3.5 w-40 mb-5" />
-          {Array.from({ length: 12 }, (_, i) => (
-            <div key={i} className="flex items-center justify-between gap-4 py-1.5">
-              <Skeleton className="h-3 w-28" />
-              <div className="flex gap-6">
-                <Skeleton className="h-3 w-12" />
-                <Skeleton className="h-3 w-14" />
-                <Skeleton className="h-3 w-10" />
-              </div>
-            </div>
-          ))}
-        </SkeletonCard>
-        <div className="space-y-6 min-w-0">
-          {aside}
-          <SkeletonCard>
-            <Skeleton className="h-3.5 w-32 mb-5" />
-            <SkeletonRows rows={5} />
-          </SkeletonCard>
-        </div>
-      </div>
-    );
-  }
 
   const hasTotals = !!totals.data?.some((row) => row.matches > 0);
   const totalsCard = hasTotals ? (
@@ -291,42 +271,104 @@ export const AccountStats: React.FC<{
     </Card>
   ) : null;
 
+  // Cada bloco: skeleton na carga, cartão com erro na falha, o cartão com dado, ou nada quando
+  // a chamada voltou vazia (conta sem dado não é erro).
+  const totalsIcon = <Sigma className="w-4 h-4 text-cyan-400" aria-hidden />;
+  const totalsSlot = totals.loading ? (
+    <SkeletonCard>
+      <Skeleton className="h-3.5 w-40 mb-5" />
+      {Array.from({ length: 12 }, (_, i) => (
+        <div key={i} className="flex items-center justify-between gap-4 py-1.5">
+          <Skeleton className="h-3 w-28" />
+          <div className="flex gap-6">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-3 w-14" />
+            <Skeleton className="h-3 w-10" />
+          </div>
+        </div>
+      ))}
+    </SkeletonCard>
+  ) : totals.failed ? (
+    <LoadErrorCard icon={totalsIcon} title={t('acctTotalsTitle')} message={t('acctTotalsLoadError')} onRetry={totals.retry} />
+  ) : (
+    totalsCard
+  );
+  const recordsSlot = records.loading ? (
+    <SkeletonCard>
+      <Skeleton className="h-3.5 w-32 mb-5" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {Array.from({ length: 6 }, (_, i) => (
+          <Skeleton key={i} className="h-[58px]" />
+        ))}
+      </div>
+    </SkeletonCard>
+  ) : records.failed ? (
+    <LoadErrorCard
+      icon={<Medal className="w-4 h-4 text-amber-400" aria-hidden />}
+      title={t('acctRecordsTitle')}
+      message={t('acctRecordsLoadError')}
+      onRetry={records.retry}
+    />
+  ) : (
+    recordsCard
+  );
+  const countsSlot = counts.loading ? (
+    <SkeletonCard>
+      <Skeleton className="h-3.5 w-36 mb-5" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-2.5 w-20 mb-1" />
+            {Array.from({ length: 3 }, (_, j) => (
+              <div key={j} className="flex justify-between gap-3">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-14" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </SkeletonCard>
+  ) : counts.failed ? (
+    <LoadErrorCard
+      icon={<PieChart className="w-4 h-4 text-violet-400" aria-hidden />}
+      title={t('acctCountsTitle')}
+      message={t('acctCountsLoadError')}
+      onRetry={counts.retry}
+    />
+  ) : (
+    countsCard
+  );
+
   return (
     <div className="space-y-6">
-    {anyFailed && (
-      <div role="alert" className="flex items-center gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
-        <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
-        <span className="flex-1">{t('acctLoadError')}</span>
-        <button type="button" onClick={() => setAttempt((n) => n + 1)} className="rounded-lg border border-rose-400/40 px-3 py-1.5 font-bold hover:bg-rose-500/20">
-          {t('parseRetryButton')}
-        </button>
-      </div>
-    )}
-    {hasTotals ? (
+    {hasTotals || totals.loading ? (
       /* Totais (24 linhas) de um lado; fila e recordes do outro, que somam quase a mesma
          altura. As contagens descem para a largura inteira, com as quatro listas lado a lado.
          Medido em 1440 px (2026-11-20): com as contagens à direita sobravam ~300 px à
          esquerda; embaixo dos totais, ~400 px à direita. */
       <>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-          <div className="min-w-0">{totalsCard}</div>
+          <div className="min-w-0">{totalsSlot}</div>
           <div className="space-y-6 min-w-0">
             {aside}
-            {recordsCard}
+            {recordsSlot}
           </div>
         </div>
-        {countsCard}
+        {countsSlot}
       </>
     ) : (
       /* Sem totais (a `/totals` falha com frequência sob a OpenDota lenta, ou conta sem dado), a
          coluna esquerda ficava inteira vazia. Fila e recordes lado a lado, contagens na largura
-         inteira. */
+         inteira; o cartão de erro dos totais, quando a chamada falhou, vai no topo, na largura
+         inteira — numa coluna sozinho, deixava meia tela vazia embaixo dele. */
       <>
+        {totalsSlot}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
           <div className="min-w-0">{aside}</div>
-          <div className="min-w-0">{recordsCard}</div>
+          <div className="min-w-0">{recordsSlot}</div>
         </div>
-        {countsCard}
+        {countsSlot}
       </>
     )}
     </div>
