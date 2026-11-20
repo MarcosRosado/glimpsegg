@@ -155,7 +155,7 @@ describe('MVP sai de fato medido, nao da nota', () => {
     expect(mvp!.playerSlot).toBe(128); // o carry do Dire (indice 5 do elenco sintetico)
     // `basis` diz EM QUE ele liderou. Sem isso o cartao mostraria "Glint 40" (o numero
     // que justamente nao foi o criterio) ou "1 superlativo" — que tambem nao informa
-    // nada. Com basis, a linha vira "Carrasco • Fazendeiro": as categorias lideradas.
+    // nada. Com basis, a linha vira "Carrasco • Bolso cheio": as categorias lideradas.
     expect(mvp!.basis).toBeDefined();
     expect(mvp!.basis).toContain('MOST_KILLS');
     expect(mvp!.basis!.length).toBeGreaterThan(0);

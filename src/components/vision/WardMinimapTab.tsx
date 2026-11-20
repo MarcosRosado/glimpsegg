@@ -496,7 +496,7 @@ export const WardMinimapTab: React.FC<WardMinimapTabProps> = ({ player, match })
               </span>
             </span>
             <span className="text-[11px] text-slate-400">
-              {alive.length} {t('activeVision')}
+              {t('activeVision', { count: alive.length })}
               {coverage > 0 && ` · ${coverage}% ${t('visionKpiMapCoverage').toLowerCase()}`}
             </span>
           </div>
