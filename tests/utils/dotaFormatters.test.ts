@@ -59,6 +59,9 @@ describe('matchModeKey / lobbyTypeKey — o motor escolhe a chave, a tela traduz
   it('All Pick (1) so é ranqueado com a fila 7; sem fila, nao afirma nem ranqueado nem casual', () => {
     expect(matchModeKey(1, 7)!.key).toBe('gameModeAllPickRanked');
     expect(matchModeKey(1, 0)!.key).toBe('gameModeAllPick');
+    // 0 é "nenhum modo" no Dota: some, como o modo vazio, em vez de virar "Modo #0".
+    expect(matchModeKey(0)).toBeNull();
+    expect(matchModeKey('0', 7)).toBeNull();
     expect(matchModeKey(1)!.key).toBe('gameModeAllPick');
   });
 

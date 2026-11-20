@@ -92,6 +92,9 @@ export function matchModeKey(rawMode: string | number | null | undefined, rawLob
   if (rawMode === null || rawMode === undefined || rawMode === '') return null;
   const mode = String(rawMode).toUpperCase().trim();
   const lobby = rawLobby === null || rawLobby === undefined ? '' : String(rawLobby).toUpperCase().trim();
+  // 0 é o "nenhum" do Dota (DOTA_GAMEMODE_NONE), comum em partida antiga: não é um modo, então
+  // a célula some como no modo vazio. Antes saía "Modo 0" na contagem por modo da Conta.
+  if (mode === '0' || mode === 'NONE') return null;
   if (mode === '22' || mode === 'ALL_PICK_RANKED' || mode === 'RANKED ALL PICK') return { key: 'gameModeAllPickRanked' };
   if (mode === '1' || mode === 'ALL_PICK') {
     if (lobby === '7' || lobby === 'RANKED' || lobby === 'LOBBY_TYPE_RANKED') return { key: 'gameModeAllPickRanked' };

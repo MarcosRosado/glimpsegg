@@ -245,8 +245,8 @@ export const AccountStats: React.FC<{
   ) : null;
   const countsCard = counts.data ? (
     <Card icon={<PieChart className="w-4 h-4 text-violet-400" aria-hidden />} title={t('acctCountsTitle')} hint={t('acctCountsHint')}>
-      {/* Na largura inteira (sem totais), as quatro listas cabem lado a lado. */}
-      <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4', !hasTotals && 'xl:grid-cols-4')}>
+      {/* Sempre na largura inteira: as quatro listas cabem lado a lado. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-4">
         {counts.data.is_radiant.length > 0 && (
           <div>
             <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">{t('acctBySide')}</div>
@@ -303,16 +303,20 @@ export const AccountStats: React.FC<{
       </div>
     )}
     {hasTotals ? (
-      /* Totais (24 linhas) de um lado; fila, recordes e contagens do outro. Medido nos dois
-         arranjos: com as contagens embaixo dos totais, a esquerda passava a direita em ~400 px. */
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-        <div className="min-w-0">{totalsCard}</div>
-        <div className="space-y-6 min-w-0">
-          {aside}
-          {recordsCard}
-          {countsCard}
+      /* Totais (24 linhas) de um lado; fila e recordes do outro, que somam quase a mesma
+         altura. As contagens descem para a largura inteira, com as quatro listas lado a lado.
+         Medido em 1440 px (2026-11-20): com as contagens à direita sobravam ~300 px à
+         esquerda; embaixo dos totais, ~400 px à direita. */
+      <>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+          <div className="min-w-0">{totalsCard}</div>
+          <div className="space-y-6 min-w-0">
+            {aside}
+            {recordsCard}
+          </div>
         </div>
-      </div>
+        {countsCard}
+      </>
     ) : (
       /* Sem totais (a `/totals` falha com frequência sob a OpenDota lenta, ou conta sem dado), a
          coluna esquerda ficava inteira vazia. Fila e recordes lado a lado, contagens na largura
