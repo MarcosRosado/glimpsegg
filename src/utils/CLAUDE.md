@@ -45,7 +45,7 @@ em `tests/utils/`, espelhando esta pasta — ver [../../tests/CLAUDE.md](../../t
 - **Glint nunca sem rótulo de experimental, e nunca `0` no lugar de `null`.** Limiar novo sai por
   quantil do script de ajuste, não somando 50 a um limiar de IMP — a escala é comprimida.
 - **Veredito de rota só de dado dos 10 primeiros minutos de quem estava na rota** (`laneVerdict.ts`).
-  Rota sem medida fica `UNKNOWN` e a UI **omite** a seção; rota desigual nunca vira "Rota vencida"
+  Rota sem medida fica `UNKNOWN` e a UI **omite** a seção; rota desigual nunca vira "Lane vencida"
   (não passou no aceite) — nada de deduzir rota de Glint, mortes ou vitória. Limiar novo sai do
   script de ajuste, por taxa de disparo, e se o aceite cair muda o rótulo, não o limiar.
 - Nada aqui importa de `components/`. A dependência só vai no sentido UI → utils; onde uma tabela

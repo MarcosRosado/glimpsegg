@@ -9,7 +9,7 @@ A aba "Meu jogo" (`MY_GAME`) da partida analisada: o jogo de um jogador, escolhi
 | --- | --- | --- |
 | `PlayerPerformanceTab.tsx` | A aba inteira: cabeçalho do jogador (KDA, Glint, participação, fatias), timer de itens e inventário final, radar de 5 eixos, fase de rotas (veredito com as duas diferenças, patrimônio e xp, e a eficiência de rota), combate, economia, ordem de skills e objetivos | `App.tsx` |
 | `ItemUsageList.tsx` | Uso de item ativo (`utils/matchMetrics/itemUsage.ts`), dentro do cartão de itens | `PlayerPerformanceTab.tsx` |
-| `DeathCostCard.tsx` | Tempo morto no pior momento (`utils/matchMetrics/deathCost.ts`): só as mortes em que o time perdeu objetivo, com a pior em destaque | `PlayerPerformanceTab.tsx` |
+| `DeathCostCard.tsx` | "Mortes que custaram objetivos" (`utils/matchMetrics/deathCost.ts`): só as mortes em que o time perdeu objetivo, com a pior em destaque | `PlayerPerformanceTab.tsx` |
 
 ## Regras locais
 

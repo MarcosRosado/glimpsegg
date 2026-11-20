@@ -48,8 +48,8 @@ export function isLaneLoss(result: PlayerLaneResult): boolean {
  *  - Rota pareada com veredito: o rotulo do veredito e as diferencas de patrimonio E de xp DA
  *    ROTA aos 10 min ao lado ("+1,2k de patrimonio · +800 de xp") — o veredito mostra a
  *    propria base (Fase 3), e a base sao as duas: mostrar so o ouro deixaria "ouro a frente"
- *    ao lado de "Rota perdida" quando o xp decidiu.
- *  - Rota desigual: nunca "Rota vencida". Sai "Vantagem/Desvantagem aos 10 min" com as
+ *    ao lado de "Lane perdida" quando o xp decidiu.
+ *  - Rota desigual: nunca "Lane vencida". Sai "Vantagem/Desvantagem aos 10 min" com as
  *    diferencas POR HEROI, que é o que a regra compara (`utils/laneVerdict.ts`), e o lado sai
  *    do score da regra — nao do ouro sozinho.
  *  - Sem medida (partida nao parseada, serie curta, lado vazio): `null`. Nada de "Rota

@@ -112,12 +112,12 @@ describe('laneVerdictView — o que a tela mostra para a rota', () => {
     expect(laneVerdictView(stats('TIE', verdictAdv(150)))!.tone).toBe('neutral');
   });
 
-  it('a view leva as DUAS diferencas: ouro a frente com "Rota perdida" fica explicado pelo xp', () => {
+  it('a view leva as DUAS diferencas: ouro a frente com "Lane perdida" fica explicado pelo xp', () => {
     const v = laneVerdictView(stats('LOST', verdictAdv(300, -1500, -0.12)))!;
     expect(v).toMatchObject({ networthDiff: 300, xpDiff: -1500, tone: 'negative' });
   });
 
-  it('rota desigual nunca vira "Rota vencida"', () => {
+  it('rota desigual nunca vira "Lane vencida"', () => {
     const v = laneVerdictView(stats('UNKNOWN', unevenAdv(400)))!;
     expect(v.kind).toBe('ADVANTAGE');
     expect(v.labelKey).toBe('laneAdvantageAhead');
@@ -128,7 +128,7 @@ describe('laneVerdictView — o que a tela mostra para a rota', () => {
     expect(laneVerdictView(stats('UNKNOWN', unevenAdv(200, -900, -0.08)))!.labelKey).toBe('laneAdvantageBehind');
   });
 
-  it('sem medida a secao some — nada de "Rota indefinida" no lugar do badge', () => {
+  it('sem medida a secao some — nada de "Lane indefinida" no lugar do badge', () => {
     expect(laneVerdictView(undefined)).toBeNull();
     expect(laneVerdictView(stats('UNKNOWN', null))).toBeNull();
     expect(laneVerdictView(stats('UNKNOWN', undefined))).toBeNull();

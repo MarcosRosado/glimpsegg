@@ -176,10 +176,10 @@ rotas, atropelo = 10%). "Quem estava na rota" é o campo geográfico `lane` da O
 2 mid, 3 top), sem conversão safe/off; patrimônio ou xp faltando em qualquer jogador da rota a
 deixa sem medida. Aceite medido contra a STRATZ: direção igual em 98,8% das rotas de 7.42 em que
 as duas dizem que alguém venceu (IC95 97,9–99,3%, n=1.011), 98,7% em 7.41. **Rota desigual** (2v1,
-1v2) não passou (74,4% no treino) e nunca vira "Rota vencida": sai `UNKNOWN` com "Vantagem aos
+1v2) não passou (74,4% no treino) e nunca vira "Lane vencida": sai `UNKNOWN` com "Vantagem aos
 10 min" e as diferenças **por herói** ao lado (`laneAdvantage.kind = 'ADVANTAGE'`), com o lado
 dado pelo score da regra. O veredito mostra a própria base: o badge leva **as duas** diferenças
-da rota (patrimônio e xp — só o ouro deixaria "ouro à frente" ao lado de "Rota perdida" quando o
+da rota (patrimônio e xp — só o ouro deixaria "ouro à frente" ao lado de "Lane perdida" quando o
 xp decidiu) e o tooltip, a regra e a concordância. Limiar sai de
 `scripts/fit-lane-verdict.cjs`, nunca do olho — e o script confere, rota a rota, que a função
 do app reproduz a regra medida. IMP, KDA, mortes, last hits e vitória/derrota medem a

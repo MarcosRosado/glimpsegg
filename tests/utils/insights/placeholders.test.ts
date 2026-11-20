@@ -60,7 +60,7 @@ const enriched: MatchDetails = (() => {
     ...dmg,
     players: dmg.players.map((p, i) => {
       if (i < 3) return { ...p, deathEvents: flaggedDeaths };
-      // Rota dominada e partida de poucas mortes: nenhuma das duas fixtures reais tem.
+      // Lane dominada e partida de poucas mortes: nenhuma das duas fixtures reais tem.
       if (i === 3) return { ...p, laningStats: { ...p.laningStats!, laneResult: 'STOMP_WON' as const } };
       if (i === 4) return { ...p, deaths: 1 };
       return p;

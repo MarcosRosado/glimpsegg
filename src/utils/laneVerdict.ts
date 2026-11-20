@@ -185,7 +185,7 @@ export function resolvePlayerLaneResult(
 /**
  * O que a tela mostra ao lado do badge, do ponto de vista do jogador: as DUAS diferencas que
  * a regra compara, patrimonio e xp. Mostrar so o ouro deixaria "ouro à frente" ao lado de
- * "Rota perdida" quando o xp decidiu. Em rota pareada a diferenca é a da ROTA (soma de cada
+ * "Lane perdida" quando o xp decidiu. Em rota pareada a diferenca é a da ROTA (soma de cada
  * lado). Em rota desigual é POR HEROI: a soma poderia ter sinal contrario (dois contra um) e
  * desmentir o rotulo. `score` é o da regra, do lado do jogador — o sinal que decide
  * "a frente/atras" quando nao ha veredito.
