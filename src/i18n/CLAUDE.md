@@ -15,6 +15,9 @@ vazia, mesmos placeholders nas duas locales e o guard de chave órfã, que conti
 
 ## Regras locais
 
+- **A voz do texto mora em [`docs/VOZ.md`](../../docs/VOZ.md)**: glossário das duas línguas,
+  teto de tamanho por tipo de texto e os tiques proibidos. Os gates daqui garantem que a chave
+  existe nas duas línguas; se o texto soa como Dota, só o guia diz.
 - **Nunca montar chave em runtime** (`t(\`prefixo${x}\`)`). Tabela de chave dinâmica é
   `Record<..., TranslationKey>` com literais explícitos. O guard de órfã só enxerga arquivos
   `.ts`/`.tsx` e **literais** entre aspas, então chave concatenada aparece como órfã e o teste

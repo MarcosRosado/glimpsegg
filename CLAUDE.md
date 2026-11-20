@@ -351,6 +351,10 @@ componentes — e usa `wilson.ts` para não deixar amostra pequena virar recomen
 
 ## i18n
 
+**Como o texto soa** está em [`docs/VOZ.md`](docs/VOZ.md): jargão da comunidade (lane, net worth,
+last hits, pos 1–5), frase curta, falar do jogo e não do app. Texto novo passa pelo glossário e
+pelo teto de tamanho de lá.
+
 `src/i18n/translations.ts` guarda `pt-BR` e `en-US` num único objeto `as const`, com
 `TranslationKey = keyof typeof translations['pt-BR']`. O `t(key, params)` do `LanguageContext`
 substitui `{nome}` por valor.
