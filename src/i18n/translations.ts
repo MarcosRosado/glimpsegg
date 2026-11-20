@@ -74,6 +74,11 @@ export const translations = {
     metricWinrate: 'Winrate acumulado',
     metricGpm: 'GPM',
     rollingAvg: 'Média móvel',
+    windowAverage: 'Média da janela',
+    updateOnlyPackaged: 'Atualização automática só no app instalado.',
+    updateDevEnvironment: 'Versão de desenvolvimento: sem atualizações.',
+    laneRoaming: 'Roaming',
+    abilityLevelAt: '{ability} (nível {level}) aos {time}',
 
     // Daily Activity
     dailyActivityTitle: 'Atividade (30 dias)',
@@ -1113,6 +1118,11 @@ export const translations = {
     metricWinrate: 'Cumulative winrate',
     metricGpm: 'GPM',
     rollingAvg: 'Rolling average',
+    windowAverage: 'Window average',
+    updateOnlyPackaged: 'Auto-update only works in the installed app.',
+    updateDevEnvironment: 'Development build: no updates.',
+    laneRoaming: 'Roaming',
+    abilityLevelAt: '{ability} (level {level}) at {time}',
 
     // Daily Activity
     dailyActivityTitle: 'Activity (30 days)',

@@ -114,14 +114,15 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ ma
               {t('trendsTitle')}
             </h3>
             <span className="text-[11px] text-slate-400 font-mono">
-              {t('rollingAvg')}:{' '}
+              {/* É a média simples da janela; "média móvel" é a linha tracejada do gráfico. */}
+              {t('windowAverage')}:{' '}
               {metric === 'GLINT' && (
                 <span title={glintHint} className="cursor-help">
                   {t('glintAvgOfRated', { value: formatGlint(avgMetricValue), count: ratedGlints.length })}
                 </span>
               )}
-              {metric === 'WINRATE' && `${avgMetricValue}% WR`}
-              {metric === 'GPM' && `${avgMetricValue} Avg GPM`}
+              {metric === 'WINRATE' && `${avgMetricValue}% ${t('winRate')}`}
+              {metric === 'GPM' && `${avgMetricValue} ${t('gpmShort')}`}
             </span>
           </div>
         </div>
@@ -247,7 +248,7 @@ export const PerformanceTrendChart: React.FC<PerformanceTrendChartProps> = ({ ma
                         </div>
                       )}
                       <div className="text-slate-400 text-[10px]">
-                        GPM / XPM: {d.goldPerMinute} / {d.experiencePerMinute}
+                        {t('gpmXpm')}: {d.goldPerMinute} / {d.experiencePerMinute}
                       </div>
                     </div>
                   );

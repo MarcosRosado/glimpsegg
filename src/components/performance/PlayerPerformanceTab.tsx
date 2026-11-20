@@ -8,7 +8,8 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { MatchDetails, MatchPlayer } from '../../types/dota';
+import type { Lane, MatchDetails, MatchPlayer } from '../../types/dota';
+import type { TranslationKey } from '../../i18n/translations';
 import { laneVerdictView, type LaneVerdictView } from '../../utils/laneResult';
 import { LANE_VERDICT_MODEL } from '../../utils/laneVerdict';
 import { getHero } from '../../constants/heroes';
@@ -37,6 +38,16 @@ interface PlayerPerformanceTabProps {
   player: MatchPlayer;
   match: MatchDetails;
 }
+
+/** Rótulo da lane jogada (campo geográfico). `UNKNOWN` não tem rótulo: o chip some. */
+const LANE_LABEL: Record<Lane, TranslationKey | null> = {
+  SAFE: 'acctLaneSafe',
+  MID: 'acctLaneMid',
+  OFF: 'acctLaneOff',
+  JUNGLE: 'acctLaneJungle',
+  ROAMING: 'laneRoaming',
+  UNKNOWN: null,
+};
 
 export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ player, match }) => {
   const { t, language } = useLanguage();
@@ -136,9 +147,12 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
               <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-mono">
                 {baseline.roleName}
               </span>
-              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 font-mono">
-                {player.lane} Lane
-              </span>
+              {/* Lane sem medida some (nada de "UNKNOWN Lane"); o rótulo vem do dicionário. */}
+              {LANE_LABEL[player.lane] && (
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 font-mono">
+                  {t(LANE_LABEL[player.lane]!)}
+                </span>
+              )}
             </div>
 
             <div className="text-xs text-slate-300 flex items-center gap-3 mt-1.5 font-mono flex-wrap">
@@ -733,7 +747,7 @@ export const PlayerPerformanceTab: React.FC<PlayerPerformanceTabProps> = ({ play
                     ? 'bg-purple-500/10 border-purple-500/40 hover:border-purple-400 hover:bg-purple-500/20'
                     : 'bg-slate-900/80 border-slate-800/90 hover:border-cyan-500/40 hover:bg-slate-800/80'
                 }`}
-                title={`${ab.displayName} (Nível ${ab.level}) aos ${formatDuration(ab.timeSec)}`}
+                title={t('abilityLevelAt', { ability: ab.displayName, level: ab.level, time: formatDuration(ab.timeSec) })}
               >
                 {/* Level number on top */}
                 <span className="text-[9px] font-mono font-bold text-slate-400 leading-none mb-1">

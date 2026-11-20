@@ -401,7 +401,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleCheckUpdates = async () => {
     if (!window.api?.updater?.check) {
-      setUpdateStatusText('Auto-update disponível apenas na versão empacotada.');
+      setUpdateStatusText(t('updateOnlyPackaged'));
       return;
     }
 
@@ -411,7 +411,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     try {
       const res = await window.api.updater.check();
       if (res?.dev) {
-        setUpdateStatusText('Ambiente de desenvolvimento (sem updates)');
+        setUpdateStatusText(t('updateDevEnvironment'));
       } else if (res?.updateInfo) {
         setUpdateStatusText(`${t('updateAvailable').replace('{version}', res.updateInfo.version)}`);
       } else {
