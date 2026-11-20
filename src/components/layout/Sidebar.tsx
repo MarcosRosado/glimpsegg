@@ -200,9 +200,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onNavigate={onNavigate}
             id="HERO_GRID"
             icon={LayoutGrid}
-            label={t('heroGridTabTitle')}
+            // "Sincronização do grid" não cabe na barra e aparecia cortado; o título da tela fica.
+            label={t('navHeroGrid')}
             disabled={!!heroGridDisabledReason}
-            hint={heroGridDisabledReason ? `${t('heroGridTabTitle')} — ${heroGridDisabledReason}` : undefined}
+            hint={heroGridDisabledReason ? `${t('navHeroGrid')}: ${heroGridDisabledReason}` : undefined}
           />
         </>
       )}
