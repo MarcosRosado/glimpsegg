@@ -29,8 +29,8 @@ is neither STRATZ's IMP nor claimed to match it.
 A sidebar with five sections — **Home**, **Matches**, **Heroes**, **Account** and the **Hero
 grid** — that collapses into an icon rail.
 
-**Home** — two columns. The main one has your last match, with its replay status and the "Request
-replay analysis" button right there, and the matches before it. The side one has recent form with
+**Home** — two columns. The main one has your last match, with its replay status and the
+"Analyze replay" button right there, and the matches before it. The side one has recent form with
 a Glint line, a ring of the heroes in your last 25 or 100 matches colored by win rate, teammates
 (click one to open their account) and activity.
 

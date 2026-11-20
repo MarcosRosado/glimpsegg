@@ -121,7 +121,7 @@ sai da regra própria de `utils/laneVerdict.ts`.
 
 **Partida não parseada é o caso comum.** A STRATZ parseava sozinha; a OpenDota parseia a pedido.
 Sem parse a partida abre só com o placar (`availability.parsePending`), no "modo placar", e o
-`ParseRequestCard` oferece "Pedir análise do replay". O pedido sai **só no clique** — cada um conta como 10 chamadas
+`ParseRequestCard` oferece "Analisar replay". O pedido sai **só no clique** — cada um conta como 10 chamadas
 no limite da OpenDota — e a espera consulta a **partida**, não o job (`GET /request/{jobId}`
 devolve `null` tanto para "terminou" quanto para "não existe"), com recuo e teto de ~5 minutos.
 

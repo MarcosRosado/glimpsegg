@@ -97,7 +97,7 @@ function MainAppContent() {
    */
   const [section, setSection] = useState<AppSection>('HOME');
   const [heroGridView, setHeroGridView] = useState<HeroGridView>('PANEL');
-  /** Partida aberta pelo "Pedir análise" do Início: o pedido sai assim que ela abrir. */
+  /** Partida aberta pelo "Analisar replay" do Início: o pedido sai assim que ela abrir. */
   const [pendingParseFor, setPendingParseFor] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
@@ -369,7 +369,7 @@ function MainAppContent() {
 
   /**
    * Abre uma partida. `keepView` (atualizar a partida aberta) mantém aba e jogador;
-   * `requestParse` (o "Pedir análise" do Início) dispara o pedido assim que ela abrir — e só
+   * `requestParse` (o "Analisar replay" do Início) dispara o pedido assim que ela abrir — e só
    * se ela de fato estiver sem análise.
    */
   const handleSelectMatch = async (

@@ -9,7 +9,7 @@ disposição da 1.0: **coluna principal larga com as partidas, coluna lateral de
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
 | `HomeSection.tsx` | Monta as duas colunas. Principal: `LastMatchCard` e `RecentMatchesCard`. Lateral, por relevância: `RecentFormCard` (com a linha de Glint), `HeroShareCard`, `TeammatesCard`, `ActivityHeatmap` | `App.tsx` |
-| `LastMatchCard.tsx` | A última partida numa faixa: herói, resultado, KDA, GPM, duração, Glint, "Abrir partida" e, com `isParsed === false`, o "Pedir análise" com o aviso numa linha abaixo | `HomeSection.tsx` |
+| `LastMatchCard.tsx` | A última partida numa faixa: herói, resultado, KDA, GPM, duração, Glint, "Abrir partida" e, com `isParsed === false`, o "Analisar replay" com o aviso numa linha abaixo | `HomeSection.tsx` |
 | `RecentMatchesCard.tsx` | As 15 partidas seguintes, uma linha cada (herói, resultado, KDA, GPM, Glint, itens, quando) e "Ver todas" para Partidas. Tags e filtros ficam em Partidas | `HomeSection.tsx` |
 | `HeroShareCard.tsx` | O anel lateral: heróis das últimas 25 (ou 100) partidas, fatia = partidas, **cor = winrate** numa escala divergente (vermelho, cinza no meio, verde; satura em 25 pontos), cinza abaixo de `HERO_SHARE_MIN_SAMPLE`. Retrato na fatia que comporta, centro com o total ou o herói em foco, legenda em lista com o número exato. Agregação em `utils/heroShare.ts` | `HomeSection.tsx` |
 | `HomeSkeleton.tsx` | As duas colunas enquanto o perfil chega (antes aparecia o convite "configure sua conta") | `App.tsx` |
@@ -28,7 +28,7 @@ disposição da 1.0: **coluna principal larga com as partidas, coluna lateral de
   cota da OpenDota a cada conta vista. Partida nova no perfil (o "atualizar") descarta o que veio.
 - **`isParsed` ausente não afirma nada.** O cartão só diz "replay não analisado" com
   `isParsed === false`.
-- O "Pedir análise" daqui só **abre** a partida com `requestParse`; quem pede é o `App.tsx`, no
+- O "Analisar replay" daqui só **abre** a partida com `requestParse`; quem pede é o `App.tsx`, no
   mesmo fluxo do cartão do modo placar. Cada pedido conta como 10 chamadas: nunca dispara sem
   clique.
 - Saíram do Início em 2026-11-19: o gráfico de evolução de largura inteira (foi para a Conta), os

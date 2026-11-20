@@ -8,7 +8,7 @@ montados pelo `App.tsx` quando há `selectedMatch`.
 | Arquivo | Papel |
 | --- | --- |
 | `MatchHeader.tsx` | Cabeçalho: placar, duração, modo e fila por `matchModeKey` (some sem modo; nunca o chute "All Pick Ranqueado") e o veredito de forma da partida (`analysisOutcome`, que a OpenDota não tem — some quando nulo) |
-| `ParseRequestCard.tsx` | O cartão do **modo placar**: o que a análise libera (só o que de fato aparece depois), o botão "Pedir análise do replay" e o estado da espera numa linha ao lado dele. Não fala de cota, fila nem recuo: o processo de API é transparente para o jogador. Guarda `ParseState` e `PARSE_POLL_DELAYS_MS` (recuo e teto). Substituiu o `ParsePendingBanner`, que ficava por cima da tela analisada |
+| `ParseRequestCard.tsx` | O cartão do **modo placar**: o que a análise libera (só o que de fato aparece depois), o botão "Analisar replay" e o estado da espera numa linha ao lado dele. Não fala de cota, fila nem recuo: o processo de API é transparente para o jogador. Guarda `ParseState` e `PARSE_POLL_DELAYS_MS` (recuo e teto). Substituiu o `ParsePendingBanner`, que ficava por cima da tela analisada |
 | `MatchTabs.tsx` | A fileira de abas da partida analisada. Recebe só as abas que existem: aba sem dado não aparece desabilitada |
 | `MatchPlayerPicker.tsx` | O seletor de jogador único, fixo ao lado das abas (`<select>` nativo, agrupado por lado, "(você)" na conta configurada) |
 | `TeamOverviewCard.tsx` | Pódio de destaques (MVP, melhor core, melhor suporte, superlativos), melhor por posição e comparativo entre times. `variant="scoreboard"` mostra só os destaques de papel |

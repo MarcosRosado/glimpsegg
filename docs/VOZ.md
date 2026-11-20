@@ -90,7 +90,7 @@ motivo.
 
 | Tipo | Teto | Exemplo |
 | --- | --- | --- |
-| Rótulo, aba, botão, chip | 3 palavras | "Pedir análise", "Meu jogo" |
+| Rótulo, aba, botão, chip | 3 palavras | "Analisar replay", "Meu jogo" |
 | Título de seção ou cartão | 6 palavras | "Destaques da partida" |
 | Estado, aviso, vazio | 1 frase, ~100 | "Analisando o replay. A tela atualiza sozinha." |
 | Tooltip | 2 frases, ~140 | "Mais kills, com 30% de folga sobre o segundo." |

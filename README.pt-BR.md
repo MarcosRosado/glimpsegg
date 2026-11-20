@@ -29,7 +29,7 @@ Uma barra lateral com cinco seções — **Início**, **Partidas**, **Heróis**,
 **Layout espelho** — que recolhe num trilho de ícones.
 
 **Início** — duas colunas. Na principal, a sua última partida, com o estado do replay e o botão
-"Pedir análise do replay" ali mesmo, e as partidas anteriores. Na lateral, forma recente com a
+"Analisar replay" ali mesmo, e as partidas anteriores. Na lateral, forma recente com a
 linha do Glint, um anel com os heróis das últimas 25 ou 100 partidas colorido pelo winrate,
 companheiros (clique num deles para abrir a conta) e atividade.
 
