@@ -3,7 +3,7 @@ import { Zap, Star, Skull } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   GLINT_MODEL,
-  GLINT_THRESHOLDS,
+  GLINT_MEDIAN,
   formatGlint,
   getGlintBadgeStyle,
   getGlintIconKind,
@@ -28,7 +28,7 @@ export function useGlintHint(): string {
     r: fmt(GLINT_MODEL.test.noRole.r),
     error: fmt(GLINT_MODEL.test.noRole.meanAbsError),
     matches: GLINT_MODEL.testMatches,
-    center: GLINT_THRESHOLDS.neutral,
+    center: GLINT_MEDIAN,
   });
 }
 

@@ -68,6 +68,12 @@ export const GLINT_MODEL = {
  * antigo estaria errado — a regressao comprime a escala (p10/p50/p90 do Glint: 22/45/69), e
  * os extremos nunca disparariam.
  */
+/**
+ * Mediana medida do Glint, o "centro" que o tooltip cita. Não é `GLINT_THRESHOLDS.neutral`
+ * (49, o equivalente a IMP 0): a mediana do IMP é negativa, e o tooltip usava o 49 como centro.
+ */
+export const GLINT_MEDIAN = 45;
+
 export const GLINT_THRESHOLDS = {
   /** 0,4% — era IMP >= 50. */
   extremeHigh: 85,
