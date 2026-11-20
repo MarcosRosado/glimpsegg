@@ -11,8 +11,10 @@ A seção Heróis (`AppSection` `HEROES`), montada pelo `App.tsx`.
 
 ## Regras locais
 
-- **Período padrão "Tudo".** Com 3 meses, quem joga pouco abria a seção com uma linha só (dono,
-  2026-11-19).
+- **Período padrão de 30 dias** (dono, 2026-11-20). Foi "Tudo" por um dia, porque com 3 meses
+  quem joga pouco abria a seção com uma linha só. Mas "Tudo" puxa o histórico inteiro: medido numa
+  conta de 6.286 partidas, a seção levou 91 s para assentar. Quem joga pouco pode abrir vazio, e o
+  aviso de vazio aponta para o filtro.
 - **Sem Glint médio na lista.** A lista completa de partidas não traz os insumos da nota, e média
   de uma parte das partidas sob o rótulo do herói inteiro seria número sem procedência. No painel,
   GPM e Glint médios são **só das partidas listadas**, e o rótulo diz quantas.

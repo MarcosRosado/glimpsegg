@@ -7,7 +7,7 @@ A seção Conta (`AppSection` `ACCOUNT`), montada pelo `App.tsx`.
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
 | `AccountSection.tsx` | Monta a seção: o `ProfileHeader` (recebido pronto do `App`, que conhece o hero grid), a evolução (`PerformanceTrendChart compact`) e o `AccountStats` com o `QueueRankCard` no topo da coluna direita. Usa `home/useTrendMatches` para as janelas de 50 e 100 | `App.tsx` |
-| `AccountStats.tsx` | Totais da carreira (média, soma e a **amostra de cada linha**), recordes que abrem a partida e contagens por lado, rota registrada, modo (por `matchModeKey` sem a fila: nunca "casual" no chute) e patch (`services/openDotaAccount.ts`). Duas colunas: totais à esquerda; o `aside`, recordes e contagens à direita | `AccountSection.tsx` |
+| `AccountStats.tsx` | Totais da carreira (média, soma e a **amostra de cada linha**), recordes que abrem a partida e contagens por lado, rota registrada, modo (por `matchModeKey` sem a fila: nunca "casual" no chute) e patch (`services/openDotaAccount.ts`). Duas colunas: totais à esquerda; o `aside`, recordes e contagens à direita. **Sem totais** (falha ou conta sem dado), `aside` e recordes lado a lado e as contagens na largura inteira: a coluna esquerda vazia era meia tela sem uso | `AccountSection.tsx` |
 
 ## Regras locais
 

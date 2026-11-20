@@ -37,7 +37,8 @@ const SORTS: { key: SortKey; label: 'heroesColMatches' | 'heroesColWinRate' | 'h
  *
  * Lista à esquerda e o herói escolhido à direita (`HeroDetailPanel`: as últimas partidas com ele
  * e o atalho para Partidas filtrada). Na primeira versão a seção era só a tabela, e com o
- * período padrão de 3 meses quem joga pouco via uma linha e nada mais (dono, 2026-11-19).
+ * período padrão de 3 meses quem joga pouco via uma linha e nada mais (dono, 2026-11-19). O
+ * padrão passou a "Tudo" e, em 2026-11-20, a 30 dias: "Tudo" era pesado demais.
  */
 export const HeroesSection: React.FC<{
   steamAccountId: string;
@@ -47,8 +48,10 @@ export const HeroesSection: React.FC<{
 }> = ({ steamAccountId, onOpenHeroMatches, onOpenMatch }) => {
   const { t, language } = useLanguage();
   const windows = usePatchWindows();
-  // "Tudo" por padrão: em 3 meses, quem joga pouco abria a seção com uma linha só.
-  const [days, setDays] = useState<PeriodDays>(null);
+  // 30 dias por padrão (dono, 2026-11-20): "Tudo" puxava o histórico inteiro, e numa conta
+  // com 6 mil partidas a seção levava mais de um minuto. Quem joga pouco pode abrir vazio, e o
+  // aviso de vazio fica ao lado do filtro de período.
+  const [days, setDays] = useState<PeriodDays>(30);
   const [selectedHero, setSelectedHero] = useState<number | null>(null);
   const [patch, setPatch] = useState<PatchWindow | null>(null);
   const [rows, setRows] = useState<HeroPerformance[] | null>(null);

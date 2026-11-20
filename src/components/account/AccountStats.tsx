@@ -175,6 +175,122 @@ export const AccountStats: React.FC<{
     );
   }
 
+  const hasTotals = !!totals.data?.some((row) => row.matches > 0);
+  const totalsCard = hasTotals ? (
+    <Card icon={<Sigma className="w-4 h-4 text-cyan-400" aria-hidden />} title={t('acctTotalsTitle')} hint={t('acctTotalsHint')}>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-[10px] uppercase tracking-wider text-slate-500 text-left">
+            <th className="py-1.5 pr-3 font-semibold" />
+            <th className="py-1.5 pr-3 font-semibold text-right">{t('acctAverage')}</th>
+            <th className="py-1.5 pr-3 font-semibold text-right">{t('acctTotal')}</th>
+            <th className="py-1.5 font-semibold text-right">{t('acctSample')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {/* Campo sem nenhuma partida (ex.: gem nunca comprada) some: "—" com amostra 0 não informa. */}
+          {totals.data.filter((row) => row.matches > 0).map((row) => (
+            <tr key={row.field} className="border-t border-slate-800/70">
+              <td className="py-1.5 pr-3 text-slate-300">
+                <span className="inline-flex items-center gap-1.5">
+                  {t(FIELD_LABEL[row.field])}
+                  {/* Mesma régua fixa de 4.948 de ouro aos 10 min que "Meu jogo" rotula. */}
+                  {row.field === 'lane_efficiency_pct' && <EstimateChip hint={t('acctLaneEfficiencyHint')} />}
+                </span>
+              </td>
+              <td className="py-1.5 pr-3 text-right font-mono text-slate-100">
+                {row.average !== null ? fmtValue(row.field, row.average, 'avg') : '—'}
+              </td>
+              <td className="py-1.5 pr-3 text-right font-mono text-slate-400">
+                {RATE_FIELDS.has(row.field) ? '' : fmtValue(row.field, row.sum, 'sum')}
+              </td>
+              <td className="py-1.5 text-right font-mono text-slate-500" title={t('acctSampleHint', { n: fmt(row.matches) })}>
+                {fmt(row.matches)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
+  ) : null;
+  const recordsCard = records.data && records.data.length > 0 ? (
+    <Card icon={<Medal className="w-4 h-4 text-amber-400" aria-hidden />} title={t('acctRecordsTitle')} hint={t('acctRecordsHint')}>
+      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {records.data.map((r) => {
+          const hero = getHero(r.heroId);
+          return (
+            <li key={r.field}>
+              <button
+                type="button"
+                onClick={() => onOpenMatch(r.matchId)}
+                className="w-full flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-cyan-500/40 px-2.5 py-2 text-left transition"
+              >
+                <img src={hero.avatarUrl} alt="" className="w-10 h-6 rounded object-cover border border-slate-700 shrink-0" onError={handleHeroImageError} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] uppercase tracking-wider text-slate-500">{t(FIELD_LABEL[r.field])}</span>
+                  <span className="block text-sm font-black text-slate-100 font-mono">{fmtValue(r.field, r.value, 'record')}</span>
+                  <span className="block text-[10px] text-slate-400 truncate">
+                    {hero.displayName}
+                    {r.startTime ? ` · ${timeAgoText(r.startTime, t)}` : ''}
+                    {' · '}
+                    <span className={r.won ? 'text-emerald-400' : 'text-rose-400'}>{r.won ? t('win') : t('loss')}</span>
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  ) : null;
+  const countsCard = counts.data ? (
+    <Card icon={<PieChart className="w-4 h-4 text-violet-400" aria-hidden />} title={t('acctCountsTitle')} hint={t('acctCountsHint')}>
+      {/* Na largura inteira (sem totais), as quatro listas cabem lado a lado. */}
+      <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4', !hasTotals && 'xl:grid-cols-4')}>
+        {counts.data.is_radiant.length > 0 && (
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">{t('acctBySide')}</div>
+            <ul className="space-y-1">
+              {counts.data.is_radiant.map((e) => countRow(e.key === '1' ? t('radiant') : t('dire'), e))}
+            </ul>
+          </div>
+        )}
+        {counts.data.lane_role.length > 0 && (
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5 cursor-help" title={t('acctByLaneHint')}>
+              {t('acctByLane')}
+            </div>
+            <ul className="space-y-1">
+              {counts.data.lane_role
+                .filter((e) => LANE_ROLE_LABEL[e.key])
+                .map((e) => countRow(t(LANE_ROLE_LABEL[e.key]), e))}
+            </ul>
+          </div>
+        )}
+        {counts.data.game_mode.length > 0 && (
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">{t('acctByMode')}</div>
+            <ul className="space-y-1">
+              {counts.data.game_mode
+                .map((e) => ({ e, label: matchModeKey(e.key) }))
+                .filter((x) => x.label)
+                .slice(0, 5)
+                .map(({ e, label }) => countRow(t(label!.key, label!.params), e))}
+            </ul>
+          </div>
+        )}
+        {counts.data.patch.length > 0 && (
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">{t('acctByPatch')}</div>
+            <ul className="space-y-1">
+              {counts.data.patch.slice(0, 5).map((e) => countRow(patchName(e.key) ?? t('acctPatchId', { id: e.key }), e))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </Card>
+  ) : null;
+
   return (
     <div className="space-y-6">
     {anyFailed && (
@@ -186,128 +302,29 @@ export const AccountStats: React.FC<{
         </button>
       </div>
     )}
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-      <div className="space-y-6 min-w-0">
-      {totals.data && totals.data.length > 0 && (
-        <Card icon={<Sigma className="w-4 h-4 text-cyan-400" aria-hidden />} title={t('acctTotalsTitle')} hint={t('acctTotalsHint')}>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-slate-500 text-left">
-                <th className="py-1.5 pr-3 font-semibold" />
-                <th className="py-1.5 pr-3 font-semibold text-right">{t('acctAverage')}</th>
-                <th className="py-1.5 pr-3 font-semibold text-right">{t('acctTotal')}</th>
-                <th className="py-1.5 font-semibold text-right">{t('acctSample')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Campo sem nenhuma partida (ex.: gem nunca comprada) some: "—" com amostra 0 não informa. */}
-              {totals.data.filter((row) => row.matches > 0).map((row) => (
-                <tr key={row.field} className="border-t border-slate-800/70">
-                  <td className="py-1.5 pr-3 text-slate-300">
-                    <span className="inline-flex items-center gap-1.5">
-                      {t(FIELD_LABEL[row.field])}
-                      {/* Mesma régua fixa de 4.948 de ouro aos 10 min que "Meu jogo" rotula. */}
-                      {row.field === 'lane_efficiency_pct' && <EstimateChip hint={t('acctLaneEfficiencyHint')} />}
-                    </span>
-                  </td>
-                  <td className="py-1.5 pr-3 text-right font-mono text-slate-100">
-                    {row.average !== null ? fmtValue(row.field, row.average, 'avg') : '—'}
-                  </td>
-                  <td className="py-1.5 pr-3 text-right font-mono text-slate-400">
-                    {RATE_FIELDS.has(row.field) ? '' : fmtValue(row.field, row.sum, 'sum')}
-                  </td>
-                  <td className="py-1.5 text-right font-mono text-slate-500" title={t('acctSampleHint', { n: fmt(row.matches) })}>
-                    {fmt(row.matches)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
+    {hasTotals ? (
+      /* Totais (24 linhas) de um lado; fila, recordes e contagens do outro. Medido nos dois
+         arranjos: com as contagens embaixo dos totais, a esquerda passava a direita em ~400 px. */
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        <div className="min-w-0">{totalsCard}</div>
+        <div className="space-y-6 min-w-0">
+          {aside}
+          {recordsCard}
+          {countsCard}
+        </div>
       </div>
-      <div className="space-y-6 min-w-0">
-        {aside}
-
-      {records.data && records.data.length > 0 && (
-        <Card icon={<Medal className="w-4 h-4 text-amber-400" aria-hidden />} title={t('acctRecordsTitle')} hint={t('acctRecordsHint')}>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {records.data.map((r) => {
-              const hero = getHero(r.heroId);
-              return (
-                <li key={r.field}>
-                  <button
-                    type="button"
-                    onClick={() => onOpenMatch(r.matchId)}
-                    className="w-full flex items-center gap-2.5 rounded-lg border border-slate-800 bg-slate-900/60 hover:border-cyan-500/40 px-2.5 py-2 text-left transition"
-                  >
-                    <img src={hero.avatarUrl} alt="" className="w-10 h-6 rounded object-cover border border-slate-700 shrink-0" onError={handleHeroImageError} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[10px] uppercase tracking-wider text-slate-500">{t(FIELD_LABEL[r.field])}</span>
-                      <span className="block text-sm font-black text-slate-100 font-mono">{fmtValue(r.field, r.value, 'record')}</span>
-                      <span className="block text-[10px] text-slate-400 truncate">
-                        {hero.displayName}
-                        {r.startTime ? ` · ${timeAgoText(r.startTime, t)}` : ''}
-                        {' · '}
-                        <span className={r.won ? 'text-emerald-400' : 'text-rose-400'}>{r.won ? t('win') : t('loss')}</span>
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-      )}
-
-      {counts.data && (
-        <Card icon={<PieChart className="w-4 h-4 text-violet-400" aria-hidden />} title={t('acctCountsTitle')} hint={t('acctCountsHint')}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-            {counts.data.is_radiant.length > 0 && (
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">{t('acctBySide')}</div>
-                <ul className="space-y-1">
-                  {counts.data.is_radiant.map((e) => countRow(e.key === '1' ? t('radiant') : t('dire'), e))}
-                </ul>
-              </div>
-            )}
-            {counts.data.lane_role.length > 0 && (
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5 cursor-help" title={t('acctByLaneHint')}>
-                  {t('acctByLane')}
-                </div>
-                <ul className="space-y-1">
-                  {counts.data.lane_role
-                    .filter((e) => LANE_ROLE_LABEL[e.key])
-                    .map((e) => countRow(t(LANE_ROLE_LABEL[e.key]), e))}
-                </ul>
-              </div>
-            )}
-            {counts.data.game_mode.length > 0 && (
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">{t('acctByMode')}</div>
-                <ul className="space-y-1">
-                  {counts.data.game_mode
-                    .map((e) => ({ e, label: matchModeKey(e.key) }))
-                    .filter((x) => x.label)
-                    .slice(0, 5)
-                    .map(({ e, label }) => countRow(t(label!.key, label!.params), e))}
-                </ul>
-              </div>
-            )}
-            {counts.data.patch.length > 0 && (
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">{t('acctByPatch')}</div>
-                <ul className="space-y-1">
-                  {counts.data.patch.slice(0, 5).map((e) => countRow(patchName(e.key) ?? t('acctPatchId', { id: e.key }), e))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-      </div>
-    </div>
+    ) : (
+      /* Sem totais (a `/totals` falha com frequência sob a OpenDota lenta, ou conta sem dado), a
+         coluna esquerda ficava inteira vazia. Fila e recordes lado a lado, contagens na largura
+         inteira. */
+      <>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+          <div className="min-w-0">{aside}</div>
+          <div className="min-w-0">{recordsCard}</div>
+        </div>
+        {countsCard}
+      </>
+    )}
     </div>
   );
 };
