@@ -33,7 +33,7 @@ const SEEN_FILE = path.join(ROOT, 'glint-seen-2026-11-21.json');
 const MODEL_FILE = path.join(ROOT, 'impact', 'wp-model.json');
 const OFFICIAL_PATCH = 61; // 7.42
 const PATCH_NAME = { 60: '7.41', 61: '7.42' };
-const MIN_OFFICIAL = 300;
+const MIN_OFFICIAL = 500;
 const HERO_MIN_ROWS = 200;
 const BOOT = 2000;
 const PCT_KEYS = ['gold_per_min', 'xp_per_min', 'kills_per_min', 'deaths_per_min', 'assists_per_min', 'last_hits_per_min', 'denies_per_min', 'hero_damage_per_min'];
@@ -72,15 +72,25 @@ function argmaxStrict(a) {
   const idx = a.flatMap((v, i) => (v === m ? [i] : []));
   return idx.length === 1 ? idx[0] : -1;
 }
-/** IC95 por bootstrap da media de diferencas pareadas (semente fixa: a saida é reprodutivel). */
-function bootCI(diffs) {
+/**
+ * IC95 por bootstrap da media de diferencas pareadas por time, reamostrando PARTIDAS (os dois
+ * times de uma partida andam juntos: reamostrar times trataria como independentes dois lados
+ * do mesmo jogo e estreitaria o intervalo). Semente fixa: a saida é reprodutivel.
+ */
+function bootCI(teams, diff) {
+  const byMatch = new Map();
+  for (const t of teams) (byMatch.get(t.id) || byMatch.set(t.id, []).get(t.id)).push(diff(t));
+  const groups = [...byMatch.values()];
   let seed = 42;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
   const means = [];
   for (let b = 0; b < BOOT; b++) {
-    let s = 0;
-    for (let i = 0; i < diffs.length; i++) s += diffs[Math.floor(rnd() * diffs.length)];
-    means.push(s / diffs.length);
+    let s = 0, n = 0;
+    for (let i = 0; i < groups.length; i++) {
+      const g = groups[Math.floor(rnd() * groups.length)];
+      for (const v of g) { s += v; n++; }
+    }
+    means.push(s / n);
   }
   return [q(means, 0.025), q(means, 0.975)];
 }
@@ -209,8 +219,8 @@ function bootCI(diffs) {
     const R = res[key];
     if (!R.R5 || key === 'kda3') continue;
     const t = R.teams;
-    const [rl, rh] = bootCI(t.map((x) => x.rho - x.rhoK));
-    const [bl, bh] = bootCI(t.map((x) => x.best - x.bestK));
+    const [rl, rh] = bootCI(t, (x) => x.rho - x.rhoK);
+    const [bl, bh] = bootCI(t, (x) => x.best - x.bestK);
     R.R5.vs = { rho: [rl, rh], best: [bl, bh] };
     R.R5.pass = rl > 0 && bl > 0;
   }

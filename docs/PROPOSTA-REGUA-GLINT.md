@@ -151,7 +151,8 @@ diz se a referência por evento concorda com quem joga.
    probabilidade de vitória + atribuição, com a validação do passo 1 da §4 impressa.
 4. **Conjunto da medida oficial: partidas de 7.42 colhidas a partir de 2026-11-22.** O 7.42 em
    disco hoje já foi olhado (é onde o Glint foi testado e onde esta proposta explorou), e o
-   7.41 é o treino. Com a coleta agora só em 7.42, ~500 partidas novas devem levar poucos dias.
+   7.41 é o treino. A medida sai a partir de 500 partidas novas (o script se recusa abaixo
+   disso); com a coleta agora só em 7.42, devem levar poucos dias.
 5. **Resultado:**
    - o Glint atual passa → sai de "experimental"; o tooltip troca as métricas contra o IMP
      pelas da régua própria;
@@ -181,7 +182,7 @@ Os passos 2 e 3 da §5 estão feitos; a medida oficial espera partidas.
   `lib/impact.cjs`).
 - **`scripts/measure-glint.cjs`**: R1 a R9 para `glint`, `glint-any`, `kda3`, `media8` e `imp`.
   Medida oficial só com 7.42 fora de `.gabarito/glint-seen-2026-11-21.json` (as 2.573 partidas
-  congeladas antes da coleta de 2026-11-21) e a partir de 300 partidas; `--explore` mede tudo
+  congeladas antes da coleta de 2026-11-21) e a partir de 500 partidas; `--explore` mede tudo
   e diz no topo que não decide nada. Roda na rotina diária, depois do critério de corte.
 
 **Prévia exploratória** (`--explore`, 2.573 partidas, inclui treino e partidas já vistas — não é
@@ -200,3 +201,19 @@ abate — e ouro/min e abates são entradas do Glint. Parte do ganho do reajuste
 afinidade. É a hipótese da leitura A ("ouro e xp no momento que pesa = impacto", que é a
 premissa do modelo de probabilidade), declarada, não um defeito escondido; mas por isso R5 não
 basta sozinha, e R1 (calibração por posição) segura o reajuste de virar "nota de farm".
+
+**Conferências feitas antes de congelar a referência** (2026-11-21, antes de existir medida
+oficial — depois dela, mexer na referência seria ajuste posterior, que a §5 proíbe):
+
+- `teamfights[].players[i]` é `players[i]`: as 736.956 habilidades usadas em luta são todas do
+  jogador do mesmo índice. 44% da referência depende disso.
+- **Viés de posição em R5.** Descontar a média da posição centra a referência mas não iguala a
+  dispersão (desvio de 0,18 na posição 1 contra 0,13 nas 4 e 5). O melhor do time pela
+  referência, porém, se divide quase por igual entre as posições (22, 20, 18, 19 e 21%):
+  não há tendência a coroar core. Fica só o desconto da média — padronizar por posição diria
+  "relativo à função", e na leitura A o carry que move mais probabilidade teve mais impacto.
+
+**Como ler o veredito.** R2 e R4 passam para todas as candidatas na prévia: são guardas, não
+separam. Quem decide são R1, R3 (que reprovam a média de 8), R5 e R9. R2 sem amostra (menos de
+10 heróis com 200+ linhas) sai `n/d` e **não conta como aprovação**: o veredito espera R2 medida.
+O IC95 de R5 reamostra partidas, não times (os dois lados do mesmo jogo andam juntos).

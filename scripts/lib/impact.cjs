@@ -1,8 +1,12 @@
 /**
  * Referencia de CONTRIBUICAO para a regua propria do Glint (docs/PROPOSTA-REGUA-GLINT.md, §4):
  * probabilidade de vitoria adicionada, atribuida a quem a moveu. Nada aqui entra no app; é
- * a regua contra a qual o Glint é medido (criterio R5), e por isso NAO usa nenhuma das oito
- * entradas do Glint (percentis da OpenDota) — usaria-se para medir a si mesma.
+ * a regua contra a qual o Glint é medido (criterio R5). Nao usa os PERCENTIS que o Glint usa,
+ * mas usa os numeros crus por tras de cinco deles (ouro, xp, abates, mortes, dano em luta), e
+ * a sobreposicao é medida, nao negada: descontada a media da posicao, a contribuicao
+ * correlaciona 0,66 com a media dos percentis de abates/mortes/assistencias e 0,60 com o de
+ * ouro/min (2026-11-21). Conferido no mesmo dia: `teamfights[].players[i]` é `players[i]`
+ * (as 736.956 habilidades usadas em luta sao todas do jogador do mesmo indice).
  *
  * DUAS PECAS, cada uma com hipotese declarada:
  *
