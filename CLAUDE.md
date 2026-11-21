@@ -229,6 +229,12 @@ do aceite da Fase 4 do plano — é o que "experimental" quer dizer, e o rótulo
   do limiar de IMP que o app usava.
 - **Peso e limiar saem de `scripts/fit-glint-experimental.cjs`**, nunca do olho. Rodar de novo a
   cada lote grande de pares e colar o bloco em `GLINT_MODEL`.
+- **O alvo vai deixar de ser o IMP (D8, 2026-11-21).** O Glint não precisa imitar a STRATZ: a
+  régua própria mede impacto como contribuição para a vitória (probabilidade de vitória
+  atribuída por evento) — [`docs/PROPOSTA-REGUA-GLINT.md`](docs/PROPOSTA-REGUA-GLINT.md). Tudo
+  acima descreve o modelo **atual**, ajustado ao IMP, até o reajuste passar na régua. O que
+  fazer quando as partidas novas chegarem está no plano, seção "Glint: o que fazer quando as
+  partidas novas chegarem".
 
 No detalhe da partida os percentis vêm prontos (`players[].benchmarks`); na lista de partidas
 saem dos totais crus mais a tabela pública `GET /benchmarks?hero_id=` (uma chamada por herói, com
