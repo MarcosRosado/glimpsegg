@@ -274,6 +274,11 @@ IMP: chamar de Glint um número que não é nosso seria procedência errada.
   STRATZ como alvo auxiliar.
 - Corrigir de saída o viés medido: a fórmula atual tem mediana −15 e satura em ±50.
 
+**Revisto em 2026-11-21 (D8):** o Glint não precisa reproduzir o IMP. O aceite abaixo foi
+escrito para imitá-lo e fica como **referência histórica**, não como régua de lançamento; a
+régua própria — o que faz uma nota de impacto ser boa sem copiar a STRATZ — ainda está por
+definir.
+
 **Aceite**, contra as linhas de base medidas (r 0,68 · erro 16 · sinal 76% · melhor da partida
 5/13): r ≥ 0,85, erro médio ≤ 9 pontos (Glint contra IMP + 50, as duas escalas têm amplitude 100),
 mesmo lado do 50 em ≥ 88%, mesmo melhor da partida ≥ 60%, em partidas de 7.42 que não entraram
@@ -393,6 +398,7 @@ Fixado antes de ajustar qualquer modelo, para não escolher a régua depois do r
 | D5 | ~~A fotografia de `heroStats.stats` pode ser embarcada?~~ — **decidido em 2026-11-19: não embarcar; colher e usar só como régua interna.** | Embarcar contradiz D4 e o dado já nasce velho no 7.42. Fora do repositório e do app. Ponte: percentis da OpenDota, com coaching por minuto desligado até a Fase 2 fechar |
 | D6 | Chave paga da OpenDota no coletor? | Tira o teto de 3.000 chamadas por dia; é custo recorrente e segredo no CI |
 | D7 | ~~O que fazer com a recomendação de build se a Fase 5 não passar?~~ — **decidido na prática em 2026-11-19: escondida** até a Fase 5 | A seção não renderiza e o hook não chama a rede; `utils/buildAdvisor.ts` fica, puro e testado, para a volta |
+| D8 | ~~O Glint tem de reproduzir o IMP da STRATZ?~~ — **decidido em 2026-11-21: não.** "O Glint é uma medida nova e não precisa ser 100% compatível com a STRATZ. É importante que ela seja impactante, mas pode ser da própria forma" | O IMP deixa de ser o **alvo** e passa a ser **uma** referência de sanidade: a concordância com ele continua medida e citada, mas não é mais o que decide se o Glint sai de "experimental". O aceite da Fase 4 (r ≥ 0,85 contra IMP + 50 etc.) foi escrito para imitar o IMP e precisa de régua própria, ainda **não definida**. O que não muda: peso e limiar saem de script, procedência no tooltip, percentil faltando ⇒ `null`, sem composição inventada. Consequência prática imediata: a trilha 7.41 da coleta parou no mesmo dia — mais rótulo de IMP já não melhorava a nota |
 
 ---
 

@@ -17,7 +17,7 @@
  *   node scripts/collect-pairs.cjs --limit 20              para depois de 20 gravacoes (teste curto)
  *   node scripts/collect-pairs.cjs --no-volume             so pares; celula cheia é pulada sem custo
  *   node scripts/collect-pairs.cjs --reserve 1500          para quando o saldo do dia chegar em 1.500
- *                                                          (é como `collect-daily.sh` divide o dia entre as trilhas)
+ *                                                          (é como `collect-daily.sh` deixa a cota do app)
  *   node scripts/collect-pairs.cjs --status                tabelas de estrato, sem rede
  *
  * ESTRATOS. 5 faixas de ranque x 3 de duracao (< 25, 25–40, > 40 min), POR PATCH. Meta: 50
@@ -350,7 +350,7 @@ const argValue = (flag) => {
       const mine = [...triage.values()].filter((t) => patchOfStart(t.startDateTime) === lane).length;
       wrongPatchPages = mine === 0 ? wrongPatchPages + 1 : 0;
       if (wrongPatchPages >= 3 && lane === '7.42') {
-        console.log('a trilha 7.42 chegou ao patch anterior: nada mais a colher nela. Use --lane 7.41.');
+        console.log('a trilha 7.42 chegou ao patch anterior: nada mais a colher nela abaixo do ponto de partida.');
         index.cursors[lane] = page[page.length - 1].match_id;
         break;
       }

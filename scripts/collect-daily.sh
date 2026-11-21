@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Rotina diaria da coleta do gabarito, feita para rodar sozinha por agendador
 # (docs/COLETA-GABARITO.md, secao "Agendamento"). Faz o que o roteiro manda fazer a mao:
-# colhe 7.41, colhe 7.42, roda o aceite da Fase 1, o criterio de corte e o agregador de
+# colhe 7.42, roda o aceite da Fase 1, o criterio de corte e o agregador de
 # benchmarks, e guarda tudo em
 # .gabarito/logs/AAAA-MM-DD.log.
 #
 #   GABARITO_UNTIL=2026-12-03   ultimo dia em que a rotina ainda colhe (obrigatorio)
 #   WINDOW_MINUTES=180          teto de duracao da coleta do dia (padrao 180)
 #   UNTIL_TIME=20:57            hora local em que a coleta tem de PARAR (opcional)
-#   APP_RESERVE=500             saldo do dia que a trilha 7.42 deixa para o app (padrao 150,
+#   APP_RESERVE=500             saldo do dia que a coleta deixa para o app (padrao 150,
 #                               o minimo do coletor)
 #
 # UNTIL_TIME existe para a rotina rodar no fim do dia e gastar so a SOBRA da cota: a OpenDota
@@ -21,9 +21,12 @@
 # so escreve isso no log: coleta que roda para sempre sem ninguem olhar gasta cota de
 # terceiros e enche o disco. Para continuar, alguem tem de decidir e mudar a data.
 #
-# A cota do dia (3.000 chamadas da OpenDota) é dividida entre as duas trilhas: a 7.41 para
-# quando o saldo chega em 1.500, a 7.42 leva o resto. A 7.41 tem no maximo metade da janela
-# de tempo; a 7.42 vai ate o fim dela (com UNTIL_TIME, a hora de parada).
+# SO A TRILHA 7.42 desde 2026-11-21. A 7.41 levava metade da cota e ja nao rendia: as celulas
+# de 25-40 e 40+ estavam no teto, o Glint e o veredito de rota nao mudavam com mais treino
+# (Glint de 823 para 916 partidas: r 0,81 -> 0,82), e o que ela ainda colhia era quase so
+# volume de 7.41 (742 de volume para 106 pares no ultimo dia), curva de um patch que o app nao
+# usa. Os pares de 7.41 em disco continuam sendo o treino; colher mais e decisao, a mao, com
+# `node scripts/collect-pairs.cjs --lane 7.41`.
 # `timeout -s INT` encerra como um Ctrl+C: o coletor termina a partida atual e grava o indice.
 #
 # O token da STRATZ nao passa por aqui: o coletor o le do config do app, como sempre.
@@ -56,12 +59,8 @@ if [ -n "${UNTIL_TIME:-}" ]; then
 else
   END=$(( $(date +%s) + MAX_MIN * 60 ))
 fi
-# Segundos ate o fim da janela, nunca negativo. A 7.41 leva no maximo metade; a 7.42 vai ate o fim.
+# Segundos ate o fim da janela, nunca negativo.
 secs_left() { local s=$(( END - $(date +%s) )); [ "$s" -gt 0 ] && echo "$s" || echo 0; }
-
-HALF_S=$(( $(secs_left) / 2 ))
-echo "--- trilha 7.41 (ate $(( HALF_S / 60 )) min, ate o saldo do dia chegar em 1500) ---"
-[ "$HALF_S" -gt 0 ] && timeout -s INT -k 60 "${HALF_S}s" node scripts/collect-pairs.cjs --lane 7.41 --reserve 1500
 REST_S=$(secs_left)
 echo "--- trilha 7.42 (ate $(( REST_S / 60 )) min, ate o saldo do dia chegar em ${APP_RESERVE:-150}) ---"
 [ "$REST_S" -gt 0 ] && timeout -s INT -k 60 "${REST_S}s" node scripts/collect-pairs.cjs --reserve "${APP_RESERVE:-150}"

@@ -29,9 +29,7 @@ recusa a abrir o segundo.
 node scripts/collect-pairs.cjs --status
 
 # 2. Colher até a cota do dia acabar (para sozinho, com 150 chamadas de reserva).
-#    Enquanto a trilha 7.41 tiver célula abaixo de 50, é ela:
-node scripts/collect-pairs.cjs --lane 7.41
-#    Depois, a 7.42:
+#    Só a trilha 7.42 (a 7.41 parou em 2026-11-21 — ver "Prioridade da cota"):
 node scripts/collect-pairs.cjs
 
 # 3. Medir (offline, não gasta cota)
@@ -45,28 +43,37 @@ depois do mesmo ponto.
 
 **Prioridade da cota**, enquanto as duas APIs responderem:
 
-1. **Pares de 7.41** — é onde os modelos das Fases 3 e 4 são ajustados (§5 do plano) e é o
-   rótulo mais antigo, o primeiro que a STRATZ pode deixar de servir.
-2. **Pares de 7.42** — o conjunto de teste.
-3. **Volume** — vem de graça junto: partida que passa na triagem e cai em célula de par já cheia
+1. **Pares de 7.42** — o conjunto de teste, e as células de partida curta que faltam para o
+   aceite da Fase 1 (ele soma os dois patches).
+2. **Volume de 7.42** — vem de graça junto: partida que passa na triagem e cai em célula de par já cheia
    é gravada só com a metade OpenDota em `.gabarito/matches/`. Quando as células de par enchem,
    a cota inteira do dia vira volume, que é o que alimenta os benchmarks próprios (Fase 2).
 
+**A trilha 7.41 parou em 2026-11-21** (decisão do dono). Ela levava metade da cota e já não
+rendia: as células de 25–40 e 40+ min estavam no teto de 90; faltavam só as de menos de 25 min,
+raras (a de Herald, com 5 pares, não chegaria a 50 antes do fim da janela); o Glint e o
+veredito de rota não mudavam com mais treino (Glint de 823 para 916 partidas: r 0,81 → 0,82); e
+o que ela colhia era quase só volume de 7.41 (742 de volume para 106 pares no último dia), curva
+de um patch que o app não usa. Os 985 pares de 7.41 em disco **continuam sendo o treino** — são
+os rótulos limpos: a STRATZ marca a 7.42 como 7.41f, então o IMP dela nas partidas de 7.42
+provavelmente sai contra o 7.41. Voltar a colher 7.41 é decisão, à mão, com
+`node scripts/collect-pairs.cjs --lane 7.41`.
+
 ## Agendamento (a rotina sozinha, todo dia das 17h00 às 20h57)
 
-`scripts/collect-daily.sh` faz a rotina acima sem ninguém: colhe 7.41 até o saldo do dia chegar
-em 1.500 chamadas, colhe 7.42 com o resto, roda o aceite e o critério de corte, e grava tudo em
+`scripts/collect-daily.sh` faz a rotina acima sem ninguém: colhe 7.42 até o saldo do dia chegar
+em `APP_RESERVE`, roda o aceite e o critério de corte, e grava tudo em
 `.gabarito/logs/AAAA-MM-DD.log`. Quatro limites, todos de propósito:
 
 - **`UNTIL_TIME`** (opcional; no agendamento, `20:57`): hora local em que a coleta **para**. A
   rotina fecha o dia gastando a **sobra** da cota, logo antes de ela zerar (meia-noite UTC =
   21h): a cota fica para o app, e o que ele não usou vira coleta. O coletor já
   lê o saldo nos cabeçalhos e para na reserva; o horário existe porque, passada a virada, o saldo
-  volta a 3.000 e a coleta começaria a gastar a cota do dia seguinte. A trilha 7.41 tem no máximo
-  metade da janela; a 7.42 vai até a hora de parada. Decisão do dono em 2026-11-19, depois de um
+  volta a 3.000 e a coleta começaria a gastar a cota do dia seguinte. A trilha 7.42 vai até a
+  hora de parada. Decisão do dono em 2026-11-19, depois de um
   dia em que coleta, medições e conferência do app no mesmo IP esgotaram a cota às 17h.
 - **`APP_RESERVE`** (no agendamento, `500`; padrão 150, o mínimo do coletor): saldo do dia que
-  a trilha 7.42 deixa intocado. A coleta roda junto com o uso da noite, e 500 cobrem várias
+  a coleta deixa intocado. A coleta roda junto com o uso da noite, e 500 cobrem várias
   sessões do app (perfil ~5 chamadas mais uma tabela de percentil por herói, com cache de 7 dias;
   cada partida aberta, 1).
 - **`WINDOW_MINUTES`** (no agendamento, `240`): a maior janela aceita. Com `UNTIL_TIME`, a rotina
@@ -157,7 +164,7 @@ segundos) e **ler** a série uma vez por semana.
 | `com IMP nos 10 jogadores` caindo em relação ao total | A STRATZ está deixando de calcular IMP | Priorizar ainda mais os pares; anotar a data no §7 do plano |
 | `STRATZ HTTP 429` ou `limite de chamadas atingido` | Limite do token (o script já segura 4,5 s por par) | Esperar uma hora e retomar |
 | `OpenDota HTTP 500` avulso | Partida que a OpenDota não consegue servir | Nada: conta como `erro` e segue. Cinco seguidos param o script |
-| `a trilha 7.42 chegou ao patch anterior` | A paginação desceu até a virada | Nada a colher ali: usar `--lane 7.41` |
+| `a trilha 7.42 chegou ao patch anterior` | A paginação desceu até a virada | Acabou o que havia abaixo do ponto de partida da trilha. A 7.41 está parada de propósito (2026-11-21); partida de 7.42 mais nova que o início da trilha não é colhida — decidir antes de mexer no cursor |
 | Célula que não sai do zero por dias (partida curta, Herald/Guardian) | Raridade real em `/parsedMatches` | Ver "Células raras" abaixo |
 | `accept-phase1.cjs` com divergência nova fora de posição | Bug do mapper ou mudança de API | Investigar o par listado; **não** ajustar o mapper só para passar |
 
