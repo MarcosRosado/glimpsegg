@@ -1,7 +1,7 @@
 # scripts/
 
 Ferramentas de manutenção que rodam **fora** do app: nada aqui é importado pelo bundle. Duas
-geram artefato commitado (ícones, catálogo de itens), uma calcula a versão da release, duas são operacionais e doze são a
+geram artefato commitado (ícones, catálogo de itens), uma calcula a versão da release, duas são operacionais e catorze são a
 **medição e a coleta do plano de saída da STRATZ** de [docs/PLANO-OPENDOTA.md](../docs/PLANO-OPENDOTA.md).
 
 ## Arquivos
@@ -22,9 +22,12 @@ geram artefato commitado (ícones, catálogo de itens), uma calcula a versão da
 | `fit-lane-verdict.cjs` | `node scripts/fit-lane-verdict.cjs [--json]` | **Ajuste do veredito de rota próprio (Fase 3).** Patrimônio e xp aos 10 min de quem estava na rota, com o mesmo peso (o xp é **decisão do dono**, D1 — as variantes só de patrimônio saíram da lista); a agregação (soma ou média por herói) e a diferença (relativa ou absoluta) são escolhidas **só em 7.41**; a linha de base só-patrimônio segue impressa; limiares por taxa de disparo (empate 25%, atropelo 10%); aceite em 7.41 e 7.42 pelo limite inferior do IC95 de Wilson, com cobertura ao lado; estratos e a conferência do campo `lane`. Termina carregando `src/utils/laneVerdict.ts` pelo `runnerImport` e conferindo, rota a rota, que a função do app reproduz a regra medida. Imprime o bloco de `LANE_VERDICT_MODEL`. Offline, sem token |
 | `next-version.cjs` | chamado pelo `release.yml`; à mão: `node scripts/next-version.cjs <ultima-tag>` | **A versão da release.** Função pura `nextVersion(ultimaTag, versaoDoPackage)`: sem tag, a do `package.json`; `major.minor` do `package.json` maior que o da tag, a do `package.json`; qualquer outro caso, tag + 1 no patch, nunca regredindo. Testada em `tests/scripts/next-version.test.cjs`. Formato fora de `X.Y.Z` sai com código 1 — o passo do workflow falha em vez de chutar |
 | `fit-turning-point.cjs` | `node scripts/fit-turning-point.cjs [--json]` | **Piso de "virada"** (`TURNING_POINT_MODEL` de `src/utils/matchMetrics/turningPoint.ts`): o deficit máximo do vencedor em ouro que faz o rótulo disparar em 10% das partidas (alvo de tag do projeto), com a taxa por patch. Mede pela função do app (`runnerImport`) e confere o deficit contra o cru e contra o `comeback`/`throw` da OpenDota (negativo lá = vencedor nunca atrás = 0). Offline, sem token |
+| `build-impact-reference.cjs` | `node scripts/build-impact-reference.cjs` | **Referência de contribuição da régua do Glint** ([docs/PROPOSTA-REGUA-GLINT.md](../docs/PROPOSTA-REGUA-GLINT.md), §4). Ajusta o modelo de probabilidade de vitória (vantagem de ouro e xp por minuto) em 7.41, **valida** em 7.42 (log loss, Brier, calibração por decil) e mede a atribuição por jogador (`lib/impact.cjs`). Grava `.gabarito/impact/wp-model.json`, **derivado**. Offline, sem token |
+| `measure-glint.cjs` | `node scripts/measure-glint.cjs [--explore]` | **A régua própria do Glint** (R1–R9 da proposta) para o Glint do app (carregado pelo `runnerImport`), com e sem papel, e as linhas de base `kda3` e `media8`; IMP só relatado. Oficial: só 7.42 fora de `.gabarito/glint-seen-2026-11-21.json`, a partir de 300 partidas. `--explore` mede tudo e não decide nada. Offline, sem token |
 | `collect-daily.sh` | agendado (systemd de usuário, 17h00, `UNTIL_TIME=20:57`, `APP_RESERVE=500`) ou `GABARITO_UNTIL=AAAA-MM-DD ./scripts/collect-daily.sh` | A rotina diária inteira sem ninguém: trilha 7.42 (a 7.41 parou em 2026-11-21; os pares dela seguem como treino), aceite e critério de corte, com log em `.gabarito/logs/`. Exige data de fim e tem teto de duração; com `UNTIL_TIME` para numa hora fixa (antes da virada da cota, às 21h) e não colhe fora da janela — ver [docs/COLETA-GABARITO.md](../docs/COLETA-GABARITO.md) |
 | `benchmark-coverage.cjs` | `node scripts/benchmark-coverage.cjs [--history] [--no-log] [--min-cell N]` | **Critério de corte contínuo da Fase 2.** Sobre pares + volume: fatia das linhas de jogador em célula herói × posição (e herói × core/suporte) com 200+ linhas, por patch, e a curva própria de patrimônio e cs contra a fotografia da STRATZ. Cada execução grava uma linha em `.gabarito/coverage-log.jsonl`. Offline, sem token |
 | `lib/sources.cjs` | (importado pelos cinco que falam com a STRATZ) | Token da STRATZ, as duas APIs, introspecção e o diretório `.gabarito/` |
+| `lib/impact.cjs` | (importado pelos dois da régua do Glint) | Modelo de probabilidade de vitória e atribuição da contribuição por jogador. Hipóteses e limites no cabeçalho. **Não usa nenhuma das oito entradas do Glint** — senão a régua mediria a si mesma |
 | `build-and-deploy-local.sh` | `./scripts/build-and-deploy-local.sh` | Pipeline local de AppImage: `icons:generate` → `npm run build` → `electron-builder --linux AppImage` → instala em `~/AppImages/` no formato do Gear Lever e reescreve os atalhos `.desktop` |
 | `sanitize-git-repo.sh` | `./scripts/sanitize-git-repo.sh` | Cria um branch órfão `main` com um único commit inicial, para publicar sem histórico contendo token ou ID pessoal. Pede confirmação e reconfigura o `origin` |
 
@@ -95,6 +98,8 @@ geram artefato commitado (ícones, catálogo de itens), uma calcula a versão da
   `.gabarito/.stratz-token` (uma linha, criado à mão pelo dono do token) e, por último, a chave
   `stratzApiKey` que tenha sobrado no `stratz_app_config.json` de uma versão anterior — o app
   não a apaga, mas instalação nova não a tem.
+- **`.gabarito/glint-seen-2026-11-21.json` não se apaga nem se regrava.** É o que separa o
+  conjunto oficial da régua do Glint do que já foi olhado; sem ele, toda medida vira exploratória.
 - **Peso e limiar do Glint saem do script, nunca do olho.** `fit-glint-experimental.cjs` é a
   única fonte de `GLINT_MODEL` e `GLINT_THRESHOLDS`; a conversão de limiar é por quantil (mesma
   taxa de disparo do limiar de IMP), porque a regressão comprime a escala.

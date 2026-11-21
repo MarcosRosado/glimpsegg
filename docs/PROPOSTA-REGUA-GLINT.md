@@ -1,6 +1,6 @@
 # Proposta — a régua própria do Glint
 
-**Estado: proposta, 2026-11-21.** Nada no app muda por causa deste arquivo: `glint.ts`, limiares,
+**Estado: proposta, 2026-11-21; leitura de "impactante" decidida no mesmo dia (A, §2); scripts da régua feitos, medida oficial à espera de partidas (§7).** Nada no app muda por causa deste arquivo: `glint.ts`, limiares,
 tooltip e `fit-glint-experimental.cjs` ficam como estão até a régua ser aceita e medida.
 
 Origem: decisão **D8** de [PLANO-OPENDOTA.md](PLANO-OPENDOTA.md) — "o Glint é uma medida nova e
@@ -23,7 +23,7 @@ Números de uma passada exploratória (scripts descartáveis, não versionados) 
 | Mediana por posição 1–5 | 44 45 42 49 49 | 47 47 45 44 43 | 53 54 51 48 48 | 58 60 55 45 45 | 42 43 43 47 47 |
 | Correlação com a duração | 0,02 | — | 0,04 | 0,20–0,25 | 0,02 |
 | Diferença mediana 1º–2º da partida | 5 (p25: 2) | — | 5,8 | 5,8 | 8 |
-| 1º e 2º a menos de 1 ponto | 12% | 13% | 12% | 10% | — |
+| 1º e 2º empatados na nota arredondada (a da tela) | 6,3% | 7,3% | 6,1% | 5,1% | 4,2% |
 
 O que isso diz:
 
@@ -46,7 +46,15 @@ O que isso diz:
 6. **Estabilidade do mesmo jogador não é medível hoje**: as partidas em disco não têm
    `account_id` (anônimas). Fica fora da régua até haver fonte.
 
-## 2. A decisão que é do dono: o que "impactante" mede
+## 2. O que "impactante" mede — decidido: A
+
+**Decidido pelo dono em 2026-11-21: leitura A**, contribuição para a vitória — "acredito que a A
+seja mais impactante; para o próprio Dota o MVP sempre vem do time que venceu". Consequências:
+R6 fica só relatada (sem piso de "melhor no perdedor"), e a referência de R5 é a da §4. O MVP
+do app já sai do time vencedor (superlativos, `awardEngine`) e continua assim; o maior Glint
+pode, raramente, cair no time perdedor — Glint e MVP respondem perguntas diferentes.
+
+A comparação que levou à decisão:
 
 As duas leituras puxam a régua para lados opostos:
 
@@ -85,9 +93,9 @@ os pesos `any` (lista de partidas, partida não parseada).
 | # | Critério | Limiar proposto | Por quê | Hoje (exploratório) |
 | --- | --- | --- | --- | --- |
 | R1 | **Calibração por posição** | A mediana de cada posição cai entre o p40 e o p60 da escala inteira | Uma posição não pode nascer 10 pontos de percentil acima de outra. É o teste para algum dia poder dizer "50 = esperado" | Glint 5/5 · `any` 5/5 · média de 8: 1/5 |
-| R2 | **Calibração por herói** | ≥ 80% dos heróis com **200+** linhas com mediana entre p40 e p60 | Herói não pode dar nota sozinho. Com 40 linhas o erro da mediana (~3,6 pontos) é do tamanho da faixa, por isso o piso de 200 | Não medido com 200+ (hoje nenhum herói de 7.42 chega lá) |
+| R2 | **Calibração por herói** | ≥ 80% dos heróis com **200+** linhas com mediana entre p40 e p60 | Herói não pode dar nota sozinho. Com 40 linhas o erro da mediana (~3,6 pontos) é do tamanho da faixa, por isso o piso de 200 | Glint 98% de 51 heróis (7.41 + 7.42). Folgado para todas as candidatas: é guarda, não discrimina |
 | R3 | **Independência da duração** | \|r\| ≤ 0,10 entre nota e duração | Partida longa não pode inflar nota (é o defeito de qualquer total por minuto) | Glint 0,02 · média de 8: 0,20–0,25 |
-| R4 | **"Melhor" que se decide** | 1º e 2º da partida a menos de 1 ponto em ≤ 10% das partidas | `TOP_CORE`/`TOP_SUPPORT` são slots fixos, sem margem: empate decidido no arredondamento não é destaque | Glint 12% (falha) |
+| R4 | **"Melhor" que se decide** | 1º e 2º da partida com a mesma nota arredondada (a que a tela mostra) em ≤ 10% das partidas | `TOP_CORE`/`TOP_SUPPORT` são slots fixos, sem margem: empate decidido no arredondamento não é destaque | Glint 6,3% (a primeira versão desta tabela dizia 12%, medido na nota sem arredondar) |
 | R5 | **Concorda com a contribuição medida por evento**, dentro do mesmo time | Spearman médio dentro do time e "mesmo melhor do time" **acima** da média de 3 percentis, pelo limite inferior do IC95 | O critério de impacto propriamente dito (§4). Dentro do time, para tirar o resultado da conta | Depende da referência da §4 |
 | R6 | **Relação com o resultado** | Só relatado. Com a leitura B, piso de "melhor no perdedor" a definir | Não há taxa certa (§1, item 2) | 90,9% · 11% |
 | R7 | **IMP como sanidade** | Só relatado. Correlação abaixo de 0,5 exige explicação escrita antes de lançar | Divergir do IMP é permitido (D8); divergir sem saber por quê, não | r 0,82 · dentro do time 0,65 |
@@ -155,3 +163,40 @@ diz se a referência por evento concorda com quem joga.
 Peso e limiar saem de script, nunca do olho. Todo número de Glint sai com procedência e com o
 rótulo enquanto for experimental. Percentil faltando ⇒ `null`. Nenhuma composição no tooltip
 enquanto R9 não passar. Limiar se converte por quantil, não por soma.
+
+## 7. Estado da implementação (2026-11-21)
+
+Os passos 2 e 3 da §5 estão feitos; a medida oficial espera partidas.
+
+- **`scripts/build-impact-reference.cjs`** + **`scripts/lib/impact.cjs`**: modelo de
+  probabilidade de vitória e atribuição. **A referência passou na própria validação** (ajuste
+  em 1.847 partidas de 7.41, validação em 726 de 7.42): log loss 0,548 contra 0,561 do modelo
+  só de ouro com peso fixo e 0,693 da constante; maior desvio de calibração entre decis, 2,7
+  pontos; acerta o lado vencedor em 65% no minuto 10, 73% no 20 e 79% no 30. Na atribuição,
+  44% da variação de probabilidade cai em luta; o resíduo da linearização fora de luta é 11%
+  dela. Descontada a média da posição, a contribuição correlaciona 0,66 com a média de 3
+  percentis e 0,60 com o percentil de ouro/min — parecida com as entradas do Glint, mas não
+  igual. Uma tentativa de fechar a conta escalando cada minuto foi descartada: a razão explode
+  quando a soma linear fica perto de zero e a referência virou ruído (comentário em
+  `lib/impact.cjs`).
+- **`scripts/measure-glint.cjs`**: R1 a R9 para `glint`, `glint-any`, `kda3`, `media8` e `imp`.
+  Medida oficial só com 7.42 fora de `.gabarito/glint-seen-2026-11-21.json` (as 2.573 partidas
+  congeladas antes da coleta de 2026-11-21) e a partir de 300 partidas; `--explore` mede tudo
+  e diz no topo que não decide nada. Roda na rotina diária, depois do critério de corte.
+
+**Prévia exploratória** (`--explore`, 2.573 partidas, inclui treino e partidas já vistas — não é
+a medida): o Glint atual **passa** R1, R2, R3, R4 e R8 e **falha** R5 e R9. Em R5 ele fica
+**abaixo** da média de 3 percentis (Spearman dentro do time 0,362 contra 0,382; mesmo melhor do
+time 35% contra 41%, IC95 da diferença inteiro abaixo de zero). O IMP fica ainda mais abaixo
+(0,329; 34%).
+
+**O reajuste contra o alvo próprio** (exploratório, script descartável: os oito percentis
+ajustados à contribuição descontada da posição em 7.41, medidos em 7.42): Spearman 0,515 e mesmo
+melhor do time em 50%, contra 0,384 e 41% da média de 3 percentis. É o caminho do passo 5 da §5.
+
+**Ressalva que a medida oficial tem de carregar:** a referência credita ouro e xp ganhos fora
+de luta, e abates e mortes em luta, então ela favorece **por construção** quem farma e quem
+abate — e ouro/min e abates são entradas do Glint. Parte do ganho do reajuste é essa
+afinidade. É a hipótese da leitura A ("ouro e xp no momento que pesa = impacto", que é a
+premissa do modelo de probabilidade), declarada, não um defeito escondido; mas por isso R5 não
+basta sozinha, e R1 (calibração por posição) segura o reajuste de virar "nota de farm".

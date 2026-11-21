@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Rotina diaria da coleta do gabarito, feita para rodar sozinha por agendador
 # (docs/COLETA-GABARITO.md, secao "Agendamento"). Faz o que o roteiro manda fazer a mao:
-# colhe 7.42, roda o aceite da Fase 1, o criterio de corte e o agregador de
-# benchmarks, e guarda tudo em
+# colhe 7.42, roda o aceite da Fase 1, o criterio de corte, o agregador de benchmarks e a
+# regua do Glint, e guarda tudo em
 # .gabarito/logs/AAAA-MM-DD.log.
 #
 #   GABARITO_UNTIL=2026-12-03   ultimo dia em que a rotina ainda colhe (obrigatorio)
@@ -70,4 +70,7 @@ echo "--- criterio de corte ---"
 node scripts/benchmark-coverage.cjs
 echo "--- benchmarks proprios (derivado, regravado) ---"
 node scripts/build-benchmarks.cjs
+echo "--- regua do Glint (docs/PROPOSTA-REGUA-GLINT.md) ---"
+node scripts/build-impact-reference.cjs | sed -n '/^1\./,/^  maior desvio/p'
+node scripts/measure-glint.cjs
 echo "=== $(date '+%F %T %z') — fim ==="
