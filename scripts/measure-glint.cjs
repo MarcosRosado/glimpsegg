@@ -6,7 +6,7 @@
  *   node scripts/measure-glint.cjs --explore    o que ja foi olhado (7.41 + 7.42), EXPLORATORIO
  *   ... --model <bloco.json>   mede um CANDIDATO (pesos de `fit-glint-experimental.cjs --target
  *                              contrib --json`) com a funcao do app, no lugar do GLINT_MODEL
- *   ... --seen a.json,b.json   listas congeladas (padrao: so .gabarito/glint-seen-2026-11-21.json).
+ *   ... --seen a.json,b.json   listas congeladas (padrao, desde a v5 no app: as duas, 2026-11-21 e -22).
  *                              O oficial exclui a UNIAO delas; o --explore le so a PRIMEIRA
  *
  * O CONJUNTO OFICIAL. `.gabarito/glint-seen-2026-11-21.json` lista as 2.573 partidas que ja
@@ -20,9 +20,10 @@
  * O REAJUSTE (passo 4 do roteiro do Glint no plano). A v5 treinou na lista de 2026-11-21 e
  * esta no app desde 2026-11-22 (decisao do dono, antes da medida). A medida dela é `--seen
  * .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json` (o GLINT_MODEL do
- * app; com `--model .gabarito/glint-candidate-2026-11-22-v5.json` a saida é identica): so 7.42
- * colhido depois do SEGUNDO congelamento, a partir de 500 partidas. O modelo antigo, ajustado ao
- * IMP, se mede com `--model .gabarito/glint-imp-fit-2026-11-19.json` (padrao de --seen). Mudou o
+ * app; com `--model .gabarito/glint-candidate-2026-11-22-v5.json` a saida é identica) — é o
+ * padrao sem flag: so 7.42 colhido depois do SEGUNDO congelamento, a partir de 500 partidas. O
+ * modelo antigo, ajustado ao IMP, se mede com `--model .gabarito/glint-imp-fit-2026-11-19.json
+ * --seen .gabarito/glint-seen-2026-11-21.json` (a medida registrada antes do reajuste). Mudou o
  * modelo do app depois disso? Terceiro congelamento antes de medir de novo.
  *
  * QUEM É MEDIDO.
@@ -44,7 +45,11 @@ const { attributable, attribute } = require('./lib/impact.cjs');
 
 const ROOT = path.join(process.cwd(), '.gabarito');
 const argAfter = (flag) => { const i = process.argv.indexOf(flag); return i > 0 ? process.argv[i + 1] : undefined; };
-const SEEN_FILES = argAfter('--seen') ? argAfter('--seen').split(',').map((f) => path.resolve(f)) : [path.join(ROOT, 'glint-seen-2026-11-21.json')];
+// Padrao: as DUAS listas. Desde que a v5 é o GLINT_MODEL do app, medir sem --seen com so a primeira
+// chamaria de oficial um conjunto que inclui as 73 partidas congeladas na segunda.
+const SEEN_FILES = argAfter('--seen')
+  ? argAfter('--seen').split(',').map((f) => path.resolve(f))
+  : [path.join(ROOT, 'glint-seen-2026-11-21.json'), path.join(ROOT, 'glint-seen-2026-11-22.json')];
 const SEEN_FILE = SEEN_FILES[SEEN_FILES.length - 1];
 const MODEL_ARG = argAfter('--model');
 const MODEL_FILE = path.join(ROOT, 'impact', 'wp-model.json');

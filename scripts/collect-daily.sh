@@ -75,7 +75,7 @@ node scripts/build-impact-reference.cjs | sed -n '/^1\./,/^  maior desvio/p'
 # O modelo antigo, ajustado ao IMP (o GLINT_MODEL ate 2026-11-22), na medida registrada antes
 # do reajuste: so 7.42 de depois do PRIMEIRO congelamento. Aposentado, medido para o registro.
 echo "--- modelo antigo, ajustado ao IMP (aposentado em 2026-11-22) ---"
-node scripts/measure-glint.cjs --model .gabarito/glint-imp-fit-2026-11-19.json
+node scripts/measure-glint.cjs --model .gabarito/glint-imp-fit-2026-11-19.json --seen .gabarito/glint-seen-2026-11-21.json
 # A v5, no ar desde 2026-11-22 por decisao do dono, ANTES desta medida: so partidas de depois do
 # segundo congelamento. Sem --model de proposito: mede o GLINT_MODEL do app, que é a v5 colada
 # (a paridade com o candidato travado foi conferida na troca). Trocou o modelo do app? Novo
