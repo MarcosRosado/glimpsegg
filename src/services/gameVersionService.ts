@@ -1,4 +1,5 @@
 import { CURRENT_GAME_PATCH } from '../constants/gameVersion';
+import { openDotaGet } from './opendota';
 
 const CACHE_KEY_PATCH = 'glimpse_dota_game_patch';
 const CACHE_KEY_TIMESTAMP = 'glimpse_dota_game_patch_ts';
@@ -124,18 +125,7 @@ async function fetchFromSteamNews(): Promise<string | null> {
  * Queries OpenDota constants endpoint.
  */
 async function fetchFromOpenDota(): Promise<string | null> {
-  let patches: any[] = [];
-  if (window.api && typeof window.api.openDotaFetch === 'function') {
-    const res = await window.api.openDotaFetch<any[]>('constants/patch');
-    if (res.success && Array.isArray(res.data)) {
-      patches = res.data;
-    }
-  } else {
-    const res = await fetch('https://api.opendota.com/api/constants/patch');
-    if (res.ok) {
-      patches = await res.json();
-    }
-  }
+  const patches = await openDotaGet<any[]>('constants/patch');
 
   if (Array.isArray(patches) && patches.length > 0) {
     const names = patches.map((p: any) => p.name).filter(Boolean);

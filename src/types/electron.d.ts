@@ -109,7 +109,8 @@ export interface ElectronApi {
     set: <T = unknown>(key: keyof AppConfig | string, value: T) => Promise<boolean>;
     getAll: () => Promise<AppConfig>;
   };
-  openDotaFetch: <T = unknown>(endpoint: string) => Promise<{ success: boolean; data?: T; error?: string }>;
+  /** `status` só vem quando a OpenDota respondeu com erro HTTP; falha de rede não traz. */
+  openDotaFetch: <T = unknown>(endpoint: string) => Promise<{ success: boolean; data?: T; status?: number; error?: string }>;
   /**
    * Opcional: ausente num preload anterior a esta versao. Quem chama cai no `fetch`
    * direto, que é o mesmo ramo do caminho browser.

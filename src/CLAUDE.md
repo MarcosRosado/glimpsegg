@@ -33,6 +33,14 @@ segue com `opacity-60`. Falha mostra aviso com "tentar de novo", nunca área em 
 **cartão fica**, com o título e o erro dentro (`ui/LoadError.tsx`): cartão que sumia na falha
 deixava a tela igual à de uma conta sem dado.
 
+**OpenDota instável ou lenta tem aviso.** Faixa âmbar no topo (`openDotaNotice`, de
+`services/openDotaHealth.ts`): "instável" quando alguma rota deu 5xx, com "tentar de novo" e
+fechar (que vale até o próximo 5xx); os dois "tentar de novo" (o do aviso e o da tela de perfil
+que não carregou) limpam o registro antes, senão uma rota que a nova tentativa não chama deixaria
+o aviso preso depois de a OpenDota voltar; "demorando" quando a espera que deixa a tela sem nada (a
+abertura, o perfil sem dado anterior, a partida nova) passa de 10 s. Na abertura o mesmo texto
+sai embaixo do "Carregando". Recarga com dado na tela não conta como demora.
+
 **"Não carregou" não é "sem conta".** Perfil que não chega com conta salva vira
 `profileLoadFailedFor` e o aviso "Não foi possível carregar o perfil" (tentar de novo,
 configurações). Antes, a falha dava "Nenhum Perfil Conectado" e, na abertura do app, reabria o

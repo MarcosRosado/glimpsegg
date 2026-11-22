@@ -1,4 +1,5 @@
 import { PersonalWinrate } from '../../types/heroGrid';
+import { openDotaGet } from '../opendota';
 
 /**
  * Desempenho pessoal por heroi (contrato `meta-sources.md § 3`).
@@ -7,7 +8,7 @@ import { PersonalWinrate } from '../../types/heroGrid';
  * Alimenta o componente pessoal da nota combinada (FR-030) e a amostra por heroi que
  * FR-032 manda exibir.
  *
- * Os dois caminhos de rede, no padrao curto de `services/opendota.ts`:
+ * Os dois caminhos de rede saem de `openDotaGet` (`services/opendota.ts`):
  * `window.api.openDotaFetch` no Electron, `fetch` direto no browser (`npm run dev`).
  */
 
@@ -151,24 +152,9 @@ export async function fetchPersonalWinrates(
   if (cached) return cached;
 
   const endpoint = `players/${encodeURIComponent(id)}/heroes`;
-  let rawRows: any = null;
-
-  try {
-    if (window.api && typeof window.api.openDotaFetch === 'function') {
-      const res = await window.api.openDotaFetch<any[]>(endpoint);
-      if (res.success && Array.isArray(res.data)) {
-        rawRows = res.data;
-      }
-    } else {
-      const res = await fetch(`https://api.opendota.com/api/${endpoint}`);
-      if (res.ok) {
-        rawRows = await res.json();
-      }
-    }
-  } catch (err) {
-    console.warn('[heroGrid] OpenDota player heroes indisponivel:', err);
-    return null;
-  }
+  // `openDotaGet` cobre os dois caminhos, engole erro (vira `null`) e alimenta o aviso de
+  // instabilidade da OpenDota.
+  const rawRows: any = await openDotaGet<any[]>(endpoint);
 
   // Fonte nao respondeu de forma utilizavel. Nao cacheia: ausencia cacheada impediria a
   // proxima tentativa dentro da hora.

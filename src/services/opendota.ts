@@ -1,15 +1,23 @@
+import { reportOpenDotaResponse } from './openDotaHealth';
+
 /**
  * GET generico na OpenDota pelos dois caminhos de rede: IPC no Electron
  * (`api:opendota-fetch`), `fetch` direto no browser. `null` em qualquer falha — quem chama
  * decide se isso derruba a tela ou so esconde uma secao. Nunca devolve dado fabricado.
+ *
+ * Toda leitura da OpenDota passa por aqui, e por isso o status de cada resposta alimenta
+ * `openDotaHealth` (o aviso de instabilidade). Leitura que chame `openDotaFetch` ou `fetch`
+ * direto fica fora desse aviso.
  */
 export async function openDotaGet<T>(endpoint: string): Promise<T | null> {
   try {
     if (window.api && typeof window.api.openDotaFetch === 'function') {
       const res = await window.api.openDotaFetch<T>(endpoint);
+      reportOpenDotaResponse(endpoint, res.success, res.status);
       return res.success && res.data !== undefined ? (res.data as T) : null;
     }
     const res = await fetch(`https://api.opendota.com/api/${endpoint}`);
+    reportOpenDotaResponse(endpoint, res.ok, res.status);
     return res.ok ? ((await res.json()) as T) : null;
   } catch (err) {
     console.warn(`OpenDota ${endpoint.split('?')[0]} fetch error:`, err);
@@ -17,40 +25,12 @@ export async function openDotaGet<T>(endpoint: string): Promise<T | null> {
   }
 }
 
+/** `[]` em qualquer falha (o consumidor trata lista vazia como "fonte nao respondeu"). */
 export async function fetchOpenDotaHeroStats(): Promise<any[]> {
-  try {
-    if (window.api && typeof window.api.openDotaFetch === 'function') {
-      const res = await window.api.openDotaFetch<any[]>('heroStats');
-      if (res.success && Array.isArray(res.data)) {
-        return res.data;
-      }
-    } else {
-      const res = await fetch('https://api.opendota.com/api/heroStats');
-      if (res.ok) {
-        return await res.json();
-      }
-    }
-  } catch (err) {
-    console.warn('OpenDota heroStats fetch error:', err);
-  }
-  return [];
+  const rows = await openDotaGet<any[]>('heroStats');
+  return Array.isArray(rows) ? rows : [];
 }
 
 export async function fetchOpenDotaPlayer(accountId: string): Promise<any> {
-  try {
-    if (window.api && typeof window.api.openDotaFetch === 'function') {
-      const res = await window.api.openDotaFetch(`players/${accountId}`);
-      if (res.success && res.data) {
-        return res.data;
-      }
-    } else {
-      const res = await fetch(`https://api.opendota.com/api/players/${accountId}`);
-      if (res.ok) {
-        return await res.json();
-      }
-    }
-  } catch (err) {
-    console.warn('OpenDota player fetch error:', err);
-  }
-  return null;
+  return (await openDotaGet<any>(`players/${accountId}`)) || null;
 }

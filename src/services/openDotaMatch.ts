@@ -35,6 +35,7 @@ import {
   resolvePlayerLaneResult,
 } from '../utils/laneVerdict';
 import { computePlayerVisionStats, emptyVisionData, wardsBySlot } from './visionMapper';
+import { openDotaGet } from './opendota';
 
 /**
  * Partida da OpenDota (`GET /api/matches/{id}`) -> `MatchDetails`, Fase 1 de
@@ -720,12 +721,7 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
  * qualquer falha — quem chama mostra o erro; nao existe dado de demonstracao.
  */
 async function fetchOpenDotaMatchRaw(matchId: number): Promise<any | null> {
-  if (window.api && typeof window.api.openDotaFetch === 'function') {
-    const res = await window.api.openDotaFetch<any>(`matches/${matchId}`);
-    return res.success && res.data ? res.data : null;
-  }
-  const res = await fetch(`https://api.opendota.com/api/matches/${matchId}`);
-  return res.ok ? await res.json() : null;
+  return (await openDotaGet<any>(`matches/${matchId}`)) || null;
 }
 
 /** Busca e mapeia a partida na OpenDota. Nao exige token nenhum. */

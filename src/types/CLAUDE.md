@@ -9,7 +9,7 @@ daqui são praticamente a única rede de tipos que existe — ver *Gates* em
 | Arquivo | Papel | Consumido por |
 | --- | --- | --- |
 | `dota.ts` | Domínio da partida e do perfil: `MatchDetails`, `MatchPlayer`, `PlayerProfileSummary`, `PlayerMatchSummary`, `MatchDataAvailability`, `BenchmarkSource`, `CoachingInsight`, `VisionData`/`WardPlacement`/`VisionSource`, `Role`, `Lane`, `LaneOutcome`, `PlayerLaneResult`, `LaneId`, `PlayerLaneAdvantage`, `MatchDynamicType`, `RadarStats`, `LaningStats`, `DamageReport` | `services/`, `utils/`, `components/`, `App.tsx` |
-| `electron.d.ts` | Superfície do `window.api`: `ElectronApi` (`store`, `openDotaFetch`, `openDotaRequestParse`, `resolveSteamId`, `windowControl`, `updater`, `getPlatform`, `getVersion`, `heroGrid`), `AppConfig` e `HeroGridApi`. Traz o `declare global` que tipa `Window.api` | ambiente global — todo `window.api` do renderer |
+| `electron.d.ts` | Superfície do `window.api`: `ElectronApi` (`store`, `openDotaFetch` (com `status` no erro HTTP, para o aviso de instabilidade), `openDotaRequestParse`, `resolveSteamId`, `windowControl`, `updater`, `getPlatform`, `getVersion`, `heroGrid`), `AppConfig` e `HeroGridApi`. Traz o `declare global` que tipa `Window.api` | ambiente global — todo `window.api` do renderer |
 | `heroGrid.ts` | Formato bruto do arquivo da Valve (`HeroGridFile`, `HeroGridConfig`, `HeroGridCategory`) e os tipos da feature: `MetaWinrate`, `PersonalWinrate`, `HeroScore`, `MirrorResult`, `HeroGridPreferences`, `SyncOutcome`, `SyncState`, `HeroGridResult`, `HeroGridErrorCode` | `services/heroGrid/`, `utils/heroGrid/`, `hooks/useHeroGridSync.ts`, `components/heroGrid/` |
 
 ## Regras locais

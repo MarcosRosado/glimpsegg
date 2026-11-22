@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { BrandMark } from './components/brand/BrandMark';
 import { BrandLockup } from './components/brand/BrandLockup';
@@ -30,11 +30,18 @@ import { SearchPlayerModal } from './components/search/SearchPlayerModal';
 import { OnboardingModal } from './components/auth/OnboardingModal';
 import { MatchDetails, PlayerMatchFilters, PlayerProfileSummary, ProfileHistoryItem } from './types/dota';
 import { fetchPlayerProfile } from './services/openDotaProfile';
+import {
+  SLOW_OPENDOTA_NOTICE_MS,
+  getOpenDotaHealth,
+  openDotaNotice,
+  resetOpenDotaHealth,
+  subscribeOpenDotaHealth,
+} from './services/openDotaHealth';
 import { fetchOpenDotaMatchDetails, requestOpenDotaParse } from './services/openDotaMatch';
 import { resolveSteamId } from './services/steamResolver';
 import { configuredProfileTier } from './utils/heroGrid/sourcePrecedence';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
-import { Sparkles, DownloadCloud, UserX, AlertTriangle } from 'lucide-react';
+import { Sparkles, DownloadCloud, UserX, AlertTriangle, X } from 'lucide-react';
 
 import { useHeroGridSync } from './hooks/useHeroGridSync';
 import { MatchSkeleton } from './components/match/MatchSkeleton';
@@ -569,6 +576,43 @@ function MainAppContent() {
     setTimeout(() => setStatusMessage(null), 3500);
   };
 
+  const showMatchSkeleton = loadingMatchId !== null && selectedMatch?.id !== loadingMatchId;
+
+  /**
+   * Aviso de OpenDota instável (5xx medido) ou lenta (carregamento de tela inteira acima de
+   * `SLOW_OPENDOTA_NOTICE_MS`). Só a espera que deixa a tela sem nada conta como demora: a
+   * abertura do app, o perfil sem dado anterior e a partida nova. Recarga com dado na tela não
+   * avisa. Fechar o aviso de instabilidade vale até o próximo 5xx.
+   */
+  const openDotaHealth = useSyncExternalStore(subscribeOpenDotaHealth, getOpenDotaHealth);
+  const [dismissedOpenDotaNoticeAt, setDismissedOpenDotaNoticeAt] = useState<number | null>(null);
+  const waitingOnFirstLoad = isAppInitializing || (!profile && isLoading) || showMatchSkeleton;
+  const [slowFirstLoad, setSlowFirstLoad] = useState(false);
+  useEffect(() => {
+    if (!waitingOnFirstLoad) {
+      setSlowFirstLoad(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlowFirstLoad(true), SLOW_OPENDOTA_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [waitingOnFirstLoad]);
+  const openDotaNoticeKind = openDotaNotice(openDotaHealth, {
+    slow: slowFirstLoad && waitingOnFirstLoad,
+    dismissedAt: dismissedOpenDotaNoticeAt,
+  });
+  const openDotaNoticeText =
+    openDotaNoticeKind === 'UNSTABLE'
+      ? t('openDotaUnstableNotice')
+      : openDotaNoticeKind === 'SLOW'
+        ? t('openDotaSlowNotice')
+        : null;
+
+  const handleRefresh = () => {
+    resetOpenDotaHealth();
+    if (selectedMatch) void handleSelectMatch(selectedMatch.id, { keepView: true });
+    else if (currentSteamId || configuredSteamId) void loadProfileData(currentSteamId || configuredSteamId);
+  };
+
   const activeMatchPlayer = selectedMatch?.players.find((p) => p.playerSlot === selectedPlayerSlot) || selectedMatch?.players[0];
 
   // Trocar de seção, de partida ou de conta começa do topo: a rolagem da tela anterior
@@ -595,6 +639,11 @@ function MainAppContent() {
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             <span>{t('appInitializing')}</span>
           </div>
+          {openDotaNoticeText && (
+            <p role="status" className="max-w-xs mx-auto text-xs text-amber-300/90 animate-in fade-in duration-300">
+              {openDotaNoticeText}
+            </p>
+          )}
         </div>
       </div>
     );
@@ -610,8 +659,6 @@ function MainAppContent() {
 
   /** Partida aberta: sem análise é o "modo placar" — outra forma de tela, não um aviso por cima. */
   const isScoreboardMode = !!selectedMatch && !selectedMatch.availability.parsed;
-
-  const showMatchSkeleton = loadingMatchId !== null && selectedMatch?.id !== loadingMatchId;
 
   const renderMatch = (match: MatchDetails) => (
     <div className="space-y-5 animate-in fade-in duration-200">
@@ -801,6 +848,39 @@ function MainAppContent() {
           </div>
         )}
 
+        {openDotaNoticeText && (
+          <div
+            role="status"
+            className="bg-amber-950/60 border-b border-amber-500/40 px-4 py-2 text-xs flex items-center justify-between gap-3 text-amber-100 z-40 animate-in slide-in-from-top duration-300"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0" aria-hidden />
+              <span>{openDotaNoticeText}</span>
+            </div>
+            {openDotaNoticeKind === 'UNSTABLE' && (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  className="px-3 py-1 rounded-lg border border-amber-400/50 text-amber-100 hover:bg-amber-400/10 disabled:opacity-50 font-bold transition"
+                >
+                  {t('parseRetryButton')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDismissedOpenDotaNoticeAt(openDotaHealth.lastServerErrorAt)}
+                  aria-label={t('close')}
+                  title={t('close')}
+                  className="p-1 rounded-lg text-amber-200/80 hover:text-amber-100 hover:bg-amber-400/10 transition"
+                >
+                  <X className="w-4 h-4" aria-hidden />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <Navbar
           profile={profile}
           isLoading={isLoading}
@@ -810,10 +890,7 @@ function MainAppContent() {
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenSearch={() => setIsSearchOpen(true)}
           onReturnToConfiguredAccount={handleReturnToConfigured}
-          onRefresh={() => {
-            if (selectedMatch) void handleSelectMatch(selectedMatch.id, { keepView: true });
-            else if (currentSteamId || configuredSteamId) loadProfileData(currentSteamId || configuredSteamId);
-          }}
+          onRefresh={handleRefresh}
         />
 
         <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-6">
@@ -861,7 +938,10 @@ function MainAppContent() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => void loadProfileData(profileLoadFailedFor)}
+                  onClick={() => {
+                    resetOpenDotaHealth();
+                    void loadProfileData(profileLoadFailedFor);
+                  }}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-xs transition"
                 >
                   {t('parseRetryButton')}
