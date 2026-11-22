@@ -201,6 +201,7 @@ export function mapOpenDotaPlayerMatch(
             tables?.[heroId],
           ),
           null,
+          durationSeconds,
         );
 
   const avgRank = numOrUndef(m?.average_rank);

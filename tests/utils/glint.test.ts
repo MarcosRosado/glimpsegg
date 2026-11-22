@@ -43,6 +43,45 @@ describe('computeGlint', () => {
     expect(computeGlint({ ...allAt(0.5), xp_per_min: NaN }, null)).toBeNull();
   });
 
+  it('o modelo no ar nao tem termo de duracao: passar a duracao nao muda a nota', () => {
+    expect('duration' in GLINT_MODEL).toBe(false);
+    for (const role of ['core', 'support', null] as const) {
+      for (const v of [0, 0.3, 0.5, 0.9]) {
+        const base = computeGlint(allAt(v), role);
+        expect(computeGlint(allAt(v), role, 2400)).toBe(base);
+        expect(computeGlint(allAt(v), role, null)).toBe(base);
+        expect(computeGlint(allAt(v), role, 0)).toBe(base);
+      }
+    }
+  });
+
+  describe('modelo com termo de duracao (o formato do reajuste contra o alvo proprio)', () => {
+    // Pesos de forma, nao do reajuste: o que se testa é a conta, nao o candidato.
+    const model = {
+      weights: { core: [10, 10, 10, 10, 10, 10, 10, 10, 10], support: [20, 5, 5, 5, 5, 5, 5, 5, 5], any: [15, 8, 8, 8, 8, 8, 8, 8, 8] },
+      duration: { core: -0.5, support: -1, any: -0.25, capMinutes: null },
+    };
+
+    it('soma pontos por minuto ao resultado dos oito pesos, pelo papel', () => {
+      expect(computeGlint(allAt(0.5), 'core', 40 * 60, model)).toBe(Math.round(10 + 8 * 10 * 0.5 - 0.5 * 40));
+      expect(computeGlint(allAt(0.5), 'support', 30 * 60, model)).toBe(Math.round(20 + 8 * 5 * 0.5 - 30));
+      expect(computeGlint(allAt(0.5), null, 30 * 60, model)).toBe(Math.round(15 + 8 * 8 * 0.5 - 0.25 * 30));
+    });
+
+    it('sem duracao valida devolve null, como percentil faltando', () => {
+      for (const d of [undefined, null, 0, -60, NaN]) expect(computeGlint(allAt(0.5), 'core', d, model)).toBeNull();
+    });
+
+    it('teto do minuto, quando o modelo tem', () => {
+      const capped = { ...model, duration: { ...model.duration, capMinutes: 60 } };
+      expect(computeGlint(allAt(0.9), 'core', 90 * 60, capped)).toBe(computeGlint(allAt(0.9), 'core', 60 * 60, capped));
+    });
+
+    it('a nota continua presa em 0..100', () => {
+      expect(computeGlint(allAt(0), 'support', 120 * 60, model)).toBe(0);
+    });
+  });
+
   it('cada conjunto de pesos tem intercepto + um peso por metrica', () => {
     for (const w of Object.values(GLINT_MODEL.weights)) expect(w.length).toBe(GLINT_METRICS.length + 1);
   });

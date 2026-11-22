@@ -3,13 +3,25 @@
  * app e para as duas linhas de base que ele tem de bater. Nao ajusta nada; so mede.
  *
  *   node scripts/measure-glint.cjs              medida OFICIAL: 7.42 colhido depois do congelamento
- *   node scripts/measure-glint.cjs --explore    tudo em disco (7.41 + 7.42), EXPLORATORIO
+ *   node scripts/measure-glint.cjs --explore    o que ja foi olhado (7.41 + 7.42), EXPLORATORIO
+ *   ... --model <bloco.json>   mede um CANDIDATO (pesos de `fit-glint-experimental.cjs --target
+ *                              contrib --json`) com a funcao do app, no lugar do GLINT_MODEL
+ *   ... --seen a.json,b.json   listas congeladas (padrao: so .gabarito/glint-seen-2026-11-21.json).
+ *                              O oficial exclui a UNIAO delas; o --explore le so a PRIMEIRA
  *
  * O CONJUNTO OFICIAL. `.gabarito/glint-seen-2026-11-21.json` lista as 2.573 partidas que ja
  * tinham sido olhadas quando a regua foi escrita (o 7.42 em que o Glint foi testado e onde a
  * proposta explorou; o 7.41 é o treino). A medida oficial usa so partidas de 7.42 que NAO
  * estao nessa lista. `--explore` existe para desenvolver o script, e a saida diz isso no topo:
- * numero de --explore nao decide nada.
+ * numero de --explore nao decide nada. Desde 2026-11-22 ele le SO partidas da primeira lista
+ * congelada: antes lia tudo em disco, inclusive o conjunto oficial, e olhar o oficial por ali
+ * desfazia o congelamento.
+ *
+ * O REAJUSTE (passo 4 do roteiro do Glint no plano). O candidato treinou na lista de
+ * 2026-11-21; a medida dele é `--model .gabarito/glint-candidate-2026-11-22.json --seen
+ * .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json`: so 7.42 colhido
+ * depois do SEGUNDO congelamento, a partir de 500 partidas. Mudou o candidato depois disso?
+ * Terceiro congelamento antes de medir de novo.
  *
  * QUEM É MEDIDO.
  *  - `glint`: a funcao do app (`computeGlint`, carregada de src/utils/glint.ts pelo
@@ -29,7 +41,10 @@ const { pathToFileURL } = require('url');
 const { attributable, attribute } = require('./lib/impact.cjs');
 
 const ROOT = path.join(process.cwd(), '.gabarito');
-const SEEN_FILE = path.join(ROOT, 'glint-seen-2026-11-21.json');
+const argAfter = (flag) => { const i = process.argv.indexOf(flag); return i > 0 ? process.argv[i + 1] : undefined; };
+const SEEN_FILES = argAfter('--seen') ? argAfter('--seen').split(',').map((f) => path.resolve(f)) : [path.join(ROOT, 'glint-seen-2026-11-21.json')];
+const SEEN_FILE = SEEN_FILES[SEEN_FILES.length - 1];
+const MODEL_ARG = argAfter('--model');
 const MODEL_FILE = path.join(ROOT, 'impact', 'wp-model.json');
 const OFFICIAL_PATCH = 61; // 7.42
 const PATCH_NAME = { 60: '7.41', 61: '7.42' };
@@ -97,13 +112,17 @@ function bootCI(teams, diff) {
 
 (async () => {
   const explore = process.argv.includes('--explore');
-  let seen;
-  try {
-    seen = new Set(JSON.parse(fs.readFileSync(SEEN_FILE, 'utf-8')).ids);
-  } catch {
-    console.log(`falta ${path.relative(process.cwd(), SEEN_FILE)}: sem ele nao ha como separar o conjunto oficial.`);
-    process.exit(1);
+  const seenLists = [];
+  for (const f of SEEN_FILES) {
+    try {
+      seenLists.push(new Set(JSON.parse(fs.readFileSync(f, 'utf-8')).ids));
+    } catch {
+      console.log(`falta ${path.relative(process.cwd(), f)}: sem ele nao ha como separar o conjunto oficial.`);
+      process.exit(1);
+    }
   }
+  const seen = new Set(seenLists.flatMap((l) => [...l]));
+  const explored = seenLists[0];
   let model = null;
   try {
     model = JSON.parse(fs.readFileSync(MODEL_FILE, 'utf-8'));
@@ -111,6 +130,19 @@ function bootCI(teams, diff) {
     console.log('sem .gabarito/impact/wp-model.json: R5 fica sem medida. Rode scripts/build-impact-reference.cjs.');
   }
   const G = await loadGlint();
+  // O modelo medido: o GLINT_MODEL do app ou, com --model, o candidato — sempre pela funcao do
+  // app (`computeGlint` recebe o modelo), nunca por uma copia da formula.
+  let MODEL = G.GLINT_MODEL;
+  if (MODEL_ARG) {
+    let cand;
+    try { cand = JSON.parse(fs.readFileSync(path.resolve(MODEL_ARG), 'utf-8')); } catch { cand = null; }
+    const ok = cand && ['core', 'support', 'any'].every((k) => Array.isArray(cand.weights?.[k]) && cand.weights[k].length === PCT_KEYS.length + 1);
+    if (!ok || JSON.stringify(cand.metrics) !== JSON.stringify(PCT_KEYS)) {
+      console.log(`--model ${MODEL_ARG}: bloco invalido (precisa de weights.core/support/any e das oito metricas na ordem do app).`);
+      process.exit(1);
+    }
+    MODEL = cand;
+  }
 
   const matches = [];
   for (const dir of ['pairs', 'matches']) {
@@ -118,7 +150,7 @@ function bootCI(teams, diff) {
     try { names = fs.readdirSync(path.join(ROOT, dir)).filter((n) => n.endsWith('.json.gz')); } catch { continue; }
     for (const n of names) {
       const id = Number(n.replace('.json.gz', ''));
-      if (!explore && seen.has(id)) continue;
+      if (explore ? !explored.has(id) : seen.has(id)) continue;
       let p;
       try { p = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(ROOT, dir, n))).toString('utf-8')); } catch { continue; }
       const od = p.od;
@@ -138,8 +170,8 @@ function bootCI(teams, diff) {
           hero: o.hero_id, pos, win: !!o.win, radiant: !!o.isRadiant,
           ref: ref && pos ? ref[i] - model.positionMean[pos] : null,
           scores: {
-            glint: G.computeGlint(pct, pos ? G.glintRoleOf(`POSITION_${pos}`) : null),
-            'glint-any': G.computeGlint(pct, null),
+            glint: G.computeGlint(pct, pos ? G.glintRoleOf(`POSITION_${pos}`) : null, od.duration, MODEL),
+            'glint-any': G.computeGlint(pct, null, od.duration, MODEL),
             kda3: (100 * (x[2] + x[3] + x[4])) / 3,
             media8: (100 * x.reduce((a, b) => a + b, 0)) / 8,
             imp: s && typeof s.imp === 'number' ? s.imp + 50 : null,
@@ -150,10 +182,12 @@ function bootCI(teams, diff) {
     }
   }
 
+  const frozenOn = (path.basename(SEEN_FILE).match(/\d{4}-\d{2}-\d{2}/) || ['?'])[0];
   const header = explore
-    ? 'REGUA DO GLINT — EXPLORATORIO (--explore: inclui partidas ja vistas e o treino; nao decide nada)'
-    : `REGUA DO GLINT — MEDIDA OFICIAL (7.42 colhido depois de 2026-11-21, fora de ${path.basename(SEEN_FILE)})`;
+    ? `REGUA DO GLINT — EXPLORATORIO (--explore: so partidas ja olhadas, de ${path.basename(SEEN_FILES[0])}; nao decide nada)`
+    : `REGUA DO GLINT — MEDIDA OFICIAL (7.42 colhido depois de ${frozenOn}, fora de ${SEEN_FILES.map((f) => path.basename(f)).join(' + ')})`;
   console.log(header);
+  if (MODEL_ARG) console.log(`modelo medido: CANDIDATO ${path.basename(MODEL_ARG)} (nao o GLINT_MODEL do app)`);
   console.log(`partidas ${matches.length} | linhas ${matches.length * 10}`);
   if (!explore && matches.length < MIN_OFFICIAL) {
     console.log(`conjunto oficial abaixo de ${MIN_OFFICIAL} partidas: ainda nao ha medida. A coleta diaria vai enchendo; rode de novo depois.`);
@@ -255,6 +289,8 @@ function bootCI(teams, diff) {
   console.log(`\nR8 lista x detalhe: r ${r8.toFixed(3)} (>= 0,95) e R1 nos dois => ${r8pass ? 'PASSA' : 'FALHA'}`);
 
   // R9 — composicao explicavel (desejavel)
-  const neg = Object.entries(G.GLINT_MODEL.weights).flatMap(([role, w]) => w.slice(1).flatMap((v, i) => (v < 0 ? [`${role}:${G.GLINT_METRICS[i]} ${v}`] : [])));
+  // Sobre os oito pesos: o termo de duracao do reajuste (`duration`) é normalizacao, nao
+  // composicao, e fica de fora — leitura declarada na proposta, feita depois de ver o R3.
+  const neg = Object.entries(MODEL.weights).flatMap(([role, w]) => w.slice(1).flatMap((v, i) => (v < 0 ? [`${role}:${G.GLINT_METRICS[i]} ${v}`] : [])));
   console.log(`R9 pesos nao negativos (desejavel): ${neg.length ? 'FALHA — ' + neg.join(', ') : 'PASSA'}`);
 })();

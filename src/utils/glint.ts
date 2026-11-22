@@ -98,20 +98,43 @@ export const GLINT_THRESHOLDS = {
 } as const;
 
 /**
+ * O que `computeGlint` le de um modelo. `duration` é opcional: o modelo no ar nao tem, e o
+ * reajuste contra o alvo proprio (docs/PROPOSTA-REGUA-GLINT.md) tem — o percentil é por heroi
+ * em qualquer duracao, partida longa infla taxa por minuto, e o termo de duracao (pontos por
+ * minuto, minuto com teto opcional) tira esse vies (criterio R3). Fica fora de `weights` de
+ * proposito: nao é composicao da nota, é normalizacao.
+ */
+export interface GlintModelShape {
+  weights: Record<GlintRole | 'any', readonly number[]>;
+  duration?: { core: number; support: number; any: number; capMinutes?: number | null };
+}
+
+/**
  * A nota, de 0 a 100, ou `null` se faltar QUALQUER um dos oito percentis — nota com metrica
  * faltando seria outro modelo com o mesmo nome. `role` nulo usa os pesos sem papel.
+ * `durationSeconds` so pesa se o modelo tiver termo de duracao; ai, sem duracao valida, `null`
+ * pelo mesmo motivo. `model` existe para o script de medida e os testes medirem um candidato
+ * com ESTA funcao, em vez de uma copia da formula.
  */
 export function computeGlint(
   pct: Partial<Record<GlintMetric, number | null | undefined>> | null | undefined,
   role: GlintRole | null,
+  durationSeconds?: number | null,
+  model: GlintModelShape = GLINT_MODEL,
 ): number | null {
   if (!pct) return null;
-  const w: readonly number[] = role ? GLINT_MODEL.weights[role] : GLINT_MODEL.weights.any;
+  const w: readonly number[] = role ? model.weights[role] : model.weights.any;
   let sum = w[0];
   for (let i = 0; i < GLINT_METRICS.length; i++) {
     const v = pct[GLINT_METRICS[i]];
     if (typeof v !== 'number' || !Number.isFinite(v)) return null;
     sum += v * w[i + 1];
+  }
+  if (model.duration) {
+    if (typeof durationSeconds !== 'number' || !Number.isFinite(durationSeconds) || durationSeconds <= 0) return null;
+    const cap = model.duration.capMinutes;
+    const minutes = cap ? Math.min(cap, durationSeconds / 60) : durationSeconds / 60;
+    sum += minutes * (role ? model.duration[role] : model.duration.any);
   }
   return Math.round(Math.max(0, Math.min(100, sum)));
 }

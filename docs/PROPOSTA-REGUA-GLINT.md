@@ -213,6 +213,32 @@ oficial — depois dela, mexer na referência seria ajuste posterior, que a §5 
   não há tendência a coroar core. Fica só o desconto da média — padronizar por posição diria
   "relativo à função", e na leitura A o carry que move mais probabilidade teve mais impacto.
 
+**Reajuste contra o alvo próprio (2026-11-22, madrugada) — ferramenta pronta, candidato NÃO
+travado.** A ordem do roteiro mudou: o reajuste e o segundo congelamento vieram **antes** da
+medida do passo 2, porque a coleta tinha parado em 71/500 por um 429 (consertado no coletor).
+`fit-glint-experimental.cjs --target contrib` treina só na lista de 2026-11-21 (2.572 partidas,
+7.41 e 7.42); `.gabarito/glint-seen-2026-11-22.json` (2.646 ids, tudo em disco antes do
+reajuste) separa o conjunto em que o reajuste será medido (`measure-glint.cjs --model <bloco>
+--seen <as duas listas>`, a partir de 500 partidas). Quatro versões, todas guardadas em
+`.gabarito/glint-candidate-2026-11-22*.json`, as três últimas **depois de ver número** (o
+histórico está no cabeçalho do script; o holdout interno foi lido em toda iteração e deixou de
+ser limpo):
+
+| Versão | O que muda | Holdout interno (493 partidas) |
+| --- | --- | --- |
+| v1 | pesos não negativos sobre os oito percentis | R5 0,545 · **R3 0,146 (falha)** · R8 0,950 |
+| v2 | + duração em minutos como termo livre, por papel | R3 0,009 · R5 0,563 · **R8 0,934 (falha)** |
+| v3 | pesos sem papel imitam a nota do detalhe | igual à v2 (R8 0,933) |
+| v4 | um coeficiente de duração para os três conjuntos, teto de 60 min (regra de linearidade escrita antes) | R3 0,010 · R5 0,548 (kda3 0,403) · **R8 0,948** · **R1 da lista falha** (pos 2: 56, faixa 45–55) |
+
+O que se aprendeu: o alvo não tem relação com a duração (r 0,000); o viés de R3 está nas
+entradas (o percentil de xp/min correlaciona 0,52 com a duração). Corrigir isso por papel separa
+a lista do detalhe (R8). E sem papel a nota não consegue centrar a posição 2 (R1 da lista). Com
+isso, R8 e R1 sem papel são o gargalo. A leitura de R9 passou a ser **sobre os oito pesos**: o
+termo de duração é normalização, não composição (decidido depois de ver o R3, por isso
+declarado). **Nada disso entrou em `src/`.** `computeGlint` só ganhou o argumento de duração,
+neutro para o modelo no ar (testado).
+
 **Como ler o veredito.** R2 e R4 passam para todas as candidatas na prévia: são guardas, não
 separam. Quem decide são R1, R3 (que reprovam a média de 8), R5 e R9. R2 sem amostra (menos de
 10 heróis com 200+ linhas) sai `n/d` e **não conta como aprovação**: o veredito espera R2 medida.

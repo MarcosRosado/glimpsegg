@@ -459,6 +459,19 @@ oficial **espera partidas**. Detalhe e números em [PROPOSTA-REGUA-GLINT.md](PRO
    medida na mão. **Se não passar:** o Glint segue experimental com o modelo de hoje, e a
    proposta registra por quê.
 
+**Estado em 2026-11-22 (madrugada).** Os passos 3 e 4 andaram **antes** do 2: a ferramenta do
+reajuste existe (`fit-glint-experimental.cjs --target contrib`), o `measure-glint.cjs` aceita
+`--model` e `--seen` (o `--explore` agora só lê partidas já olhadas) e o segundo congelamento
+está em `.gabarito/glint-seen-2026-11-22.json`. O conjunto oficial do passo 2 estava em 73/500
+porque o coletor parava no primeiro 429 com o dia quase inteiro de saldo (consertado em 203b4f8).
+**Nenhum candidato foi travado.** A melhor versão (v4, tabela no §7 da proposta) passa R3 e R5
+mas fica em R8 0,948 e falha R1 sem papel no holdout interno. **Decisão do dono**, antes de medir
+qualquer candidato no conjunto do segundo congelamento:
+(a) travar a v4 assim mesmo e deixar a medida oficial decidir (o provável é falhar R8 ou R1 da
+lista por pouco); (b) dar à lista um sinal de papel (a posição típica do herói, por exemplo) e
+reajustar, com um terceiro congelamento; (c) encerrar o reajuste e seguir com o Glint de hoje,
+que o passo 2 mede sozinho quando chegar a 500. O passo 2 continua valendo como estava.
+
 Pendências menores da referência, se alguém mexer nela **antes** da medida oficial: a morte
 fora de luta não penaliza quem morreu (limitação declarada em `lib/impact.cjs`); torre, barracks
 e Roshan só entram pelo ouro.
