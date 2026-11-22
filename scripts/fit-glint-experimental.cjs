@@ -181,6 +181,27 @@ function evaluate(matches, pred) {
  * Holdout da v4: R3 passa (0,010); R5 por papel 0,548, acima dos 0,403 do kda3; mas R8 0,948
  * (piso 0,95) e R1 da lista FALHA (posicao 2 com mediana 56 para faixa 45-55). Por isso a v4
  * NAO foi travada como candidato: a decisao foi para o dono (plano, roteiro do Glint).
+ *
+ * V5 (2026-11-22, opcao (b) escolhida pelo dono: "dar a lista um sinal de papel"). Escrita ANTES
+ * do primeiro ajuste da v5:
+ *  - O SINAL: a FATIA DE CORE do heroi, p = linhas em posicao 1-3 / linhas com posicao, contada
+ *    nas partidas de treino (lista congelada). Heroi com menos de HERO_SHARE_MIN_ROWS (100)
+ *    linhas fica sem fatia. Nao sao os `roles` da Valve em constants/heroes.ts: quase todo heroi
+ *    la lista "Carry" e "Support" juntos.
+ *  - A NOTA SEM POSICAO (lista de partidas e partida nao parseada) passa a ser o detalhe
+ *    ESPERADO para aquele heroi: p x nota de core + (1 - p) x nota de suporte, antes do corte em
+ *    0..100. Heroi sem fatia cai nos pesos sem papel da v4, como antes.
+ *  - Pesos, duracao, teto e limiares: os da v4, sem mudanca. So a perna sem posicao muda.
+ *  - Na validacao interna a fatia sai SO da parte do ajuste (id % 5 !== 0); no bloco final, de
+ *    todas as partidas da lista.
+ *  - REGRA DE TRAVA, escrita antes de ver numero: a v5 vira candidato se, no holdout interno,
+ *    passar R1 nas duas pernas, R3 nas duas e R8 (r >= 0,95). Senao, volta ao dono. Lembrete: o
+ *    holdout ja foi lido nas v1-v4, entao isto é conferencia, nao medida.
+ * RESULTADO (holdout, perna sem posicao): R1 passa (53 55 50 46 47, faixa 45-55; so 7.42 tambem),
+ * R3 r 0,003, R8 0,975 (a v4 dava 0,948), R5 0,509 (a v4 dava 0,441). Pela regra, a v5 FOI
+ * TRAVADA em 2026-11-22 01:28 como .gabarito/glint-candidate-2026-11-22-v5.json (103 herois com
+ * fatia). A medida dela é a linha "reajuste do Glint" da rotina diaria. Mexer no candidato
+ * depois disso exige terceiro congelamento.
  */
 const TARGET_RATES = {
   high: { extremeHigh: 0.01, elite: 0.05, stomp: 0.08, strong: 0.12, good: 0.22, impact: 0.35, neutral: 0.5 },
@@ -189,6 +210,8 @@ const TARGET_RATES = {
 const SCALE_CENTER = 50;
 /** Teto do minuto no termo de duracao; `null` = sem teto. Ver a v2 no cabecalho. */
 const DURATION_CAP_MIN = 60;
+/** v5: heroi com menos linhas que isto (com posicao, no treino) fica sem fatia de core. */
+const HERO_SHARE_MIN_ROWS = 100;
 const SCALE_P10_P90 = 48;
 
 /**
@@ -319,7 +342,7 @@ function fitContrib() {
         if (!pos || x.some((v) => typeof v !== 'number') || !Number.isFinite(contrib[i])) break;
         const minutes = od.duration / 60;
         const dur = DURATION_CAP_MIN ? Math.min(DURATION_CAP_MIN, minutes) : minutes;
-        rows.push({ id, x, y: contrib[i] - model.positionMean[pos], core: pos <= 3, pos, radiant: !!o.isRadiant, patch: od.patch, minutes, dur });
+        rows.push({ id, hero: o.hero_id, x, y: contrib[i] - model.positionMean[pos], core: pos <= 3, pos, radiant: !!o.isRadiant, patch: od.patch, minutes, dur });
       }
       if (rows.length === 10) matches.push(rows);
     }
@@ -379,6 +402,19 @@ function fitContrib() {
   const byRoleOf = (W) => (r) => screen(r.core ? W.core : W.support, r);
   const noRoleOf = (W) => (r) => screen(W.any, r);
 
+  /** v5: fatia de core por heroi (linhas em posicao 1-3 / linhas), so com HERO_SHARE_MIN_ROWS+. */
+  const heroShare = (ms) => {
+    const c = {};
+    for (const r of ms.flat()) { const h = (c[r.hero] = c[r.hero] || { n: 0, core: 0 }); h.n++; if (r.core) h.core++; }
+    return Object.fromEntries(Object.entries(c).filter(([, h]) => h.n >= HERO_SHARE_MIN_ROWS).map(([k, h]) => [k, h.core / h.n]));
+  };
+  /** v5: a nota sem posicao — o detalhe esperado para o heroi; sem fatia, os pesos sem papel. */
+  const listOf = (W, share) => (r) => {
+    const p = share[r.hero];
+    if (p === undefined) return screen(W.any, r);
+    return Math.round(Math.max(0, Math.min(100, p * rawPredict(W.core, r) + (1 - p) * rawPredict(W.support, r))));
+  };
+
   const hold = matches.filter((m) => m[0].id % 5 === 0);
   const fitPart = matches.filter((m) => m[0].id % 5 !== 0);
   const V4 = { sharedDuration: true };
@@ -426,6 +462,17 @@ function fitContrib() {
     byRole: r1(hold, byRoleOf(part.v4)), noRole: r1(hold, noRoleOf(part.v4)),
     byRole742: r1(hold742, byRoleOf(part.v4)), noRole742: r1(hold742, noRoleOf(part.v4)),
   };
+  const sharePart = heroShare(fitPart);
+  const listV5 = listOf(part.v4, sharePart);
+  const holdFlat = hold.flat();
+  validation.v5 = {
+    heroesWithShare: Object.keys(sharePart).length,
+    holdoutRowsWithShare: Number(((100 * holdFlat.filter((r) => sharePart[r.hero] !== undefined).length) / holdFlat.length).toFixed(1)),
+    R1: r1(hold, listV5), R1_742: r1(hold742, listV5),
+    R3: r3(hold, listV5),
+    R5: withinTeam(hold, listV5),
+    R8: Number(corr(holdFlat.map(byRoleOf(part.v4)), holdFlat.map(listV5)).toFixed(3)),
+  };
   validation.R8 = { candidate: r8(part.v4), v3: r8(part.v3), v2AnyOnTarget: r8(part.v2), v1: r8(part.v1) };
   // Linearidade, na parte do AJUSTE (nunca no holdout): nota media por faixa de duracao.
   const bands = [[0, 25], [25, 30], [30, 35], [35, 40], [40, 45], [45, 50], [50, 60], [60, 999]];
@@ -448,7 +495,7 @@ function fitContrib() {
   const block = {
     fittedAt: new Date().toISOString().slice(0, 10),
     target: 'contrib',
-    version: 4,
+    version: 5,
     seenFile: path.basename(seenFile),
     trainMatches: matches.length,
     trainByPatch: { '7.41': matches.filter((m) => m[0].patch === TRAIN_PATCH).length, '7.42': matches.filter((m) => m[0].patch === TEST_PATCH).length },
@@ -459,6 +506,9 @@ function fitContrib() {
       capMinutes: DURATION_CAP_MIN,
       ...Object.fromEntries(Object.entries(W).map(([k, w]) => [k, Number(w[nine].toFixed(3))])),
     },
+    /** v5: fatia de core do heroi (por hero_id), para a nota sem posicao. */
+    heroCoreShare: Object.fromEntries(Object.entries(heroShare(matches)).map(([k, v]) => [k, Number(v.toFixed(3))])),
+    heroCoreShareMinRows: HERO_SHARE_MIN_ROWS,
     thresholds,
     thresholdRates: Object.fromEntries([
       ...Object.keys(TARGET_RATES.high).map((k) => [k, fired(thresholds[k], true)]),
@@ -495,6 +545,12 @@ function fitContrib() {
   for (const [name, v] of [['por papel', validation.R1.byRole], ['sem papel', validation.R1.noRole], ['por papel, so 7.42', validation.R1.byRole742], ['sem papel, so 7.42', validation.R1.noRole742]]) {
     console.log(`  ${name.padEnd(20)} ${v.pass ? 'PASSA' : 'FALHA'} ${v.medians.join(' ')} | faixa ${v.band.join('-')}`);
   }
+  const V5 = validation.v5;
+  console.log(`\nV5 — PERNA SEM POSICAO PELA FATIA DE CORE DO HEROI (fatia da parte do ajuste: ${V5.heroesWithShare} herois; ${V5.holdoutRowsWithShare}% das linhas do holdout com fatia):`);
+  console.log(`  R1 ${V5.R1.pass ? 'PASSA' : 'FALHA'} ${V5.R1.medians.join(' ')} | faixa ${V5.R1.band.join('-')}   (so 7.42: ${V5.R1_742.pass ? 'PASSA' : 'FALHA'} ${V5.R1_742.medians.join(' ')} | faixa ${V5.R1_742.band.join('-')})`);
+  console.log(`  R3 r ${V5.R3.r.toFixed(3)} | IC95 [${V5.R3.ci95.join(', ')}]`);
+  console.log(`  R5 Spearman ${V5.R5.rho.toFixed(3)} | mesmo melhor do time ${V5.R5.bestPct}%`);
+  console.log(`  R8 (detalhe por papel x lista v5) r ${V5.R8.toFixed(3)} (piso 0,95)`);
   console.log(`\nR8 NO HOLDOUT (lista sem papel x detalhe por papel; piso da regua: r >= 0,95): v4 ${validation.R8.candidate} | v3 ${validation.R8.v3} | v2 ${validation.R8.v2AnyOnTarget} | v1 ${validation.R8.v1}`);
   console.log('\nLINEARIDADE (parte do ajuste, nunca o holdout): nota media por faixa de duracao');
   for (const b of linearity) console.log(`  ${b.band.padEnd(7)} ${String(b.rows).padStart(6)} linhas | v4 por papel ${String(b.candidate).padStart(5)} | v4 sem papel ${String(b.candidateNoRole).padStart(5)} | v1 ${String(b.v1).padStart(5)}`);

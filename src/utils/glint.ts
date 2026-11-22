@@ -107,11 +107,19 @@ export const GLINT_THRESHOLDS = {
 export interface GlintModelShape {
   weights: Record<GlintRole | 'any', readonly number[]>;
   duration?: { core: number; support: number; any: number; capMinutes?: number | null };
+  /**
+   * Fatia de core de cada heroi (`hero_id` -> 0..1), medida nas partidas de treino. Sem posicao
+   * (lista de partidas, partida nao parseada), a nota vira o detalhe ESPERADO para o heroi:
+   * p x nota de core + (1 - p) x nota de suporte. Heroi fora da tabela usa os pesos sem papel.
+   * O modelo no ar nao tem.
+   */
+  heroCoreShare?: Readonly<Record<number, number>>;
 }
 
 /**
  * A nota, de 0 a 100, ou `null` se faltar QUALQUER um dos oito percentis — nota com metrica
- * faltando seria outro modelo com o mesmo nome. `role` nulo usa os pesos sem papel.
+ * faltando seria outro modelo com o mesmo nome. `role` nulo usa os pesos sem papel (ou, se o
+ * modelo tiver `heroCoreShare` e o heroi estiver nela, a mistura core/suporte pela fatia).
  * `durationSeconds` so pesa se o modelo tiver termo de duracao; ai, sem duracao valida, `null`
  * pelo mesmo motivo. `model` existe para o script de medida e os testes medirem um candidato
  * com ESTA funcao, em vez de uma copia da formula.
@@ -121,21 +129,28 @@ export function computeGlint(
   role: GlintRole | null,
   durationSeconds?: number | null,
   model: GlintModelShape = GLINT_MODEL,
+  heroId?: number | null,
 ): number | null {
   if (!pct) return null;
-  const w: readonly number[] = role ? model.weights[role] : model.weights.any;
-  let sum = w[0];
-  for (let i = 0; i < GLINT_METRICS.length; i++) {
-    const v = pct[GLINT_METRICS[i]];
+  for (const m of GLINT_METRICS) {
+    const v = pct[m];
     if (typeof v !== 'number' || !Number.isFinite(v)) return null;
-    sum += v * w[i + 1];
   }
+  let minutes = 0;
   if (model.duration) {
     if (typeof durationSeconds !== 'number' || !Number.isFinite(durationSeconds) || durationSeconds <= 0) return null;
     const cap = model.duration.capMinutes;
-    const minutes = cap ? Math.min(cap, durationSeconds / 60) : durationSeconds / 60;
-    sum += minutes * (role ? model.duration[role] : model.duration.any);
+    minutes = cap ? Math.min(cap, durationSeconds / 60) : durationSeconds / 60;
   }
+  /** Soma antes do corte em 0..100, para um conjunto de pesos. */
+  const raw = (set: GlintRole | 'any'): number => {
+    const w = model.weights[set];
+    let sum = w[0];
+    for (let i = 0; i < GLINT_METRICS.length; i++) sum += (pct[GLINT_METRICS[i]] as number) * w[i + 1];
+    return model.duration ? sum + minutes * model.duration[set] : sum;
+  };
+  const share = !role && heroId != null ? model.heroCoreShare?.[heroId] : undefined;
+  const sum = role ? raw(role) : share !== undefined ? share * raw('core') + (1 - share) * raw('support') : raw('any');
   return Math.round(Math.max(0, Math.min(100, sum)));
 }
 

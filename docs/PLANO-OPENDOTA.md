@@ -464,13 +464,18 @@ reajuste existe (`fit-glint-experimental.cjs --target contrib`), o `measure-glin
 `--model` e `--seen` (o `--explore` agora só lê partidas já olhadas) e o segundo congelamento
 está em `.gabarito/glint-seen-2026-11-22.json`. O conjunto oficial do passo 2 estava em 73/500
 porque o coletor parava no primeiro 429 com o dia quase inteiro de saldo (consertado em 203b4f8).
-**Nenhum candidato foi travado.** A melhor versão (v4, tabela no §7 da proposta) passa R3 e R5
-mas fica em R8 0,948 e falha R1 sem papel no holdout interno. **Decisão do dono**, antes de medir
-qualquer candidato no conjunto do segundo congelamento:
-(a) travar a v4 assim mesmo e deixar a medida oficial decidir (o provável é falhar R8 ou R1 da
-lista por pouco); (b) dar à lista um sinal de papel (a posição típica do herói, por exemplo) e
-reajustar, com um terceiro congelamento; (c) encerrar o reajuste e seguir com o Glint de hoje,
-que o passo 2 mede sozinho quando chegar a 500. O passo 2 continua valendo como estava.
+A v4 (tabela no §7 da proposta) passou R3 e R5 mas ficou em R8 0,948 e falhou R1 sem papel no
+holdout interno. O dono escolheu a opção **(b), sinal de papel na lista**: a **v5** usa, sem
+posição, a fatia de core do herói medida no treino, passou na regra de trava escrita antes do
+ajuste e foi **travada às 01:28** (`.gabarito/glint-candidate-2026-11-22-v5.json`). O segundo
+congelamento vale como fronteira dela (nada entrou em disco nem foi olhado depois dele).
+
+O que falta: (1) o passo 2 segue igual — a rotina imprime a medida oficial do Glint de hoje ao
+chegar a 500; (2) a mesma rotina imprime a medida da v5 (seção "reajuste do Glint") ao chegar a
+500 partidas depois do segundo congelamento — com a coleta consertada, os dois conjuntos enchem
+quase juntos; (3) se a v5 passar, segue o passo 5 (o bloco em `glint.ts` com `duration` e
+`heroCoreShare`, limiares por taxa-alvo, tooltip e texto); se falhar, ela não entra, e mexer de
+novo exige terceiro congelamento.
 
 Pendências menores da referência, se alguém mexer nela **antes** da medida oficial: a morte
 fora de luta não penaliza quem morreu (limitação declarada em `lib/impact.cjs`); torre, barracks

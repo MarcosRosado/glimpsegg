@@ -73,4 +73,9 @@ node scripts/build-benchmarks.cjs
 echo "--- regua do Glint (docs/PROPOSTA-REGUA-GLINT.md) ---"
 node scripts/build-impact-reference.cjs | sed -n '/^1\./,/^  maior desvio/p'
 node scripts/measure-glint.cjs
+# O reajuste travado em 2026-11-22 (v5), so em partidas de depois do segundo congelamento.
+# Trocou o candidato? Novo congelamento antes, e esta linha muda junto (plano, roteiro do Glint).
+echo "--- reajuste do Glint (candidato v5, travado em 2026-11-22) ---"
+node scripts/measure-glint.cjs --model .gabarito/glint-candidate-2026-11-22-v5.json \
+  --seen .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json
 echo "=== $(date '+%F %T %z') — fim ==="

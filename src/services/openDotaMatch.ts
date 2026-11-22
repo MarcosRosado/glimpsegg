@@ -616,7 +616,7 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
       imp: 0,
       // Nota propria experimental, dos percentis que a OpenDota manda por jogador. Sem
       // posicao (partida nao parseada) usa os pesos sem papel; sem percentil, `null`.
-      glint: computeGlint(glintPercentilesFromMatch(p.benchmarks), glintRoleOf(position), durationSeconds),
+      glint: computeGlint(glintPercentilesFromMatch(p.benchmarks), glintRoleOf(position), durationSeconds, undefined, heroId),
       role: position,
       lane: mapLane(p),
       items: [p.item_0, p.item_1, p.item_2, p.item_3, p.item_4, p.item_5].map(num),

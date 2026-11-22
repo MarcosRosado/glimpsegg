@@ -80,6 +80,37 @@ describe('computeGlint', () => {
     it('a nota continua presa em 0..100', () => {
       expect(computeGlint(allAt(0), 'support', 120 * 60, model)).toBe(0);
     });
+
+    describe('fatia de core do heroi (a nota sem posicao)', () => {
+      const withShare = { ...model, heroCoreShare: { 1: 1, 5: 0, 8: 0.25 } };
+      const raw = (b: number, w: number, beta: number, min: number) => b + 8 * w * 0.5 + beta * min;
+
+      it('sem posicao, mistura core e suporte pela fatia, antes do corte', () => {
+        const core = raw(10, 10, -0.5, 30);
+        const sup = raw(20, 5, -1, 30);
+        expect(computeGlint(allAt(0.5), null, 30 * 60, withShare, 8)).toBe(Math.round(0.25 * core + 0.75 * sup));
+        expect(computeGlint(allAt(0.5), null, 30 * 60, withShare, 1)).toBe(computeGlint(allAt(0.5), 'core', 30 * 60, withShare));
+        expect(computeGlint(allAt(0.5), null, 30 * 60, withShare, 5)).toBe(computeGlint(allAt(0.5), 'support', 30 * 60, withShare));
+      });
+
+      it('heroi fora da tabela, ou sem heroi, usa os pesos sem papel', () => {
+        const any = computeGlint(allAt(0.5), null, 30 * 60, model);
+        expect(computeGlint(allAt(0.5), null, 30 * 60, withShare, 999)).toBe(any);
+        expect(computeGlint(allAt(0.5), null, 30 * 60, withShare)).toBe(any);
+        expect(computeGlint(allAt(0.5), null, 30 * 60, withShare, null)).toBe(any);
+      });
+
+      it('com posicao conhecida a fatia nao pesa', () => {
+        expect(computeGlint(allAt(0.5), 'support', 30 * 60, withShare, 1)).toBe(computeGlint(allAt(0.5), 'support', 30 * 60, model));
+      });
+    });
+  });
+
+  it('o modelo no ar nao tem fatia por heroi: passar o heroi nao muda a nota', () => {
+    expect('heroCoreShare' in GLINT_MODEL).toBe(false);
+    for (const role of ['core', 'support', null] as const) {
+      expect(computeGlint(allAt(0.6), role, 2400, undefined, 1)).toBe(computeGlint(allAt(0.6), role));
+    }
   });
 
   it('cada conjunto de pesos tem intercepto + um peso por metrica', () => {

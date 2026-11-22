@@ -170,8 +170,10 @@ function bootCI(teams, diff) {
           hero: o.hero_id, pos, win: !!o.win, radiant: !!o.isRadiant,
           ref: ref && pos ? ref[i] - model.positionMean[pos] : null,
           scores: {
-            glint: G.computeGlint(pct, pos ? G.glintRoleOf(`POSITION_${pos}`) : null, od.duration, MODEL),
-            'glint-any': G.computeGlint(pct, null, od.duration, MODEL),
+            glint: G.computeGlint(pct, pos ? G.glintRoleOf(`POSITION_${pos}`) : null, od.duration, MODEL, o.hero_id),
+            // A nota sem posicao, como a lista de partidas mostra (com `heroCoreShare`, se o
+            // modelo tiver, a mistura core/suporte pela fatia do heroi).
+            'glint-any': G.computeGlint(pct, null, od.duration, MODEL, o.hero_id),
             kda3: (100 * (x[2] + x[3] + x[4])) / 3,
             media8: (100 * x.reduce((a, b) => a + b, 0)) / 8,
             imp: s && typeof s.imp === 'number' ? s.imp + 50 : null,

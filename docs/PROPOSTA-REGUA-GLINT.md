@@ -213,8 +213,7 @@ oficial — depois dela, mexer na referência seria ajuste posterior, que a §5 
   não há tendência a coroar core. Fica só o desconto da média — padronizar por posição diria
   "relativo à função", e na leitura A o carry que move mais probabilidade teve mais impacto.
 
-**Reajuste contra o alvo próprio (2026-11-22, madrugada) — ferramenta pronta, candidato NÃO
-travado.** A ordem do roteiro mudou: o reajuste e o segundo congelamento vieram **antes** da
+**Reajuste contra o alvo próprio (2026-11-22, madrugada) — candidato v5 TRAVADO às 01:28.** A ordem do roteiro mudou: o reajuste e o segundo congelamento vieram **antes** da
 medida do passo 2, porque a coleta tinha parado em 71/500 por um 429 (consertado no coletor).
 `fit-glint-experimental.cjs --target contrib` treina só na lista de 2026-11-21 (2.572 partidas,
 7.41 e 7.42); `.gabarito/glint-seen-2026-11-22.json` (2.646 ids, tudo em disco antes do
@@ -230,14 +229,25 @@ ser limpo):
 | v2 | + duração em minutos como termo livre, por papel | R3 0,009 · R5 0,563 · **R8 0,934 (falha)** |
 | v3 | pesos sem papel imitam a nota do detalhe | igual à v2 (R8 0,933) |
 | v4 | um coeficiente de duração para os três conjuntos, teto de 60 min (regra de linearidade escrita antes) | R3 0,010 · R5 0,548 (kda3 0,403) · **R8 0,948** · **R1 da lista falha** (pos 2: 56, faixa 45–55) |
+| **v5 — travada** | opção (b) do dono: sem posição, a nota é o detalhe esperado para o herói, p × core + (1−p) × suporte, com p = fatia de core do herói no treino (100+ linhas; 103 heróis); pesos, duração e limiares da v4 | perna sem posição: **R1 passa** (53 55 50 46 47), R3 0,003, **R8 0,975**, R5 0,509 |
 
 O que se aprendeu: o alvo não tem relação com a duração (r 0,000); o viés de R3 está nas
 entradas (o percentil de xp/min correlaciona 0,52 com a duração). Corrigir isso por papel separa
 a lista do detalhe (R8). E sem papel a nota não consegue centrar a posição 2 (R1 da lista). Com
 isso, R8 e R1 sem papel são o gargalo. A leitura de R9 passou a ser **sobre os oito pesos**: o
 termo de duração é normalização, não composição (decidido depois de ver o R3, por isso
-declarado). **Nada disso entrou em `src/`.** `computeGlint` só ganhou o argumento de duração,
-neutro para o modelo no ar (testado).
+declarado). **Nada disso entrou em `src/`.** `computeGlint` só ganhou os argumentos de duração e
+de herói, neutros para o modelo no ar (testado).
+
+A regra de trava da v5 foi escrita antes do ajuste (R1, R3 nas duas pernas e R8 no holdout
+interno) e passou; a prévia exploratória (`--explore --model`, partidas de treino) passa R1 a R5,
+R8 e R9 nas duas pernas. **A medida que decide** é a de `measure-glint.cjs --model
+.gabarito/glint-candidate-2026-11-22-v5.json --seen <as duas listas>`, a partir de 500 partidas de
+7.42 colhidas depois do segundo congelamento; a rotina diária a imprime na seção "reajuste do
+Glint". Nada entrou em disco entre o segundo congelamento e a trava, e nenhuma partida posterior
+a ele foi olhada, então ele vale como fronteira da v5 sem um terceiro. Mudar o candidato agora
+exige um novo congelamento. O alvo usa `.gabarito/impact/wp-model.json`, que a rotina regrava
+todo dia a partir do 7.41 — estável enquanto o 7.41 não crescer (1.847 partidas de treino).
 
 **Como ler o veredito.** R2 e R4 passam para todas as candidatas na prévia: são guardas, não
 separam. Quem decide são R1, R3 (que reprovam a média de 8), R5 e R9. R2 sem amostra (menos de
