@@ -1,7 +1,14 @@
 import React from 'react';
 import { Trophy, Swords, Coins, Flame, Eye, Landmark, HeartPulse } from 'lucide-react';
 import { MatchDetails, Role } from '../../types/dota';
-import { AwardId, AwardUnit, MatchAward, computeMatchAwards } from '../../utils/awardEngine';
+import {
+  AwardId,
+  AwardUnit,
+  MatchAward,
+  ROUGH_GAME_MAX_GLINT,
+  ROUGH_GAME_MIN_LEAD_GLINT,
+  computeMatchAwards,
+} from '../../utils/awardEngine';
 import { TranslationKey } from '../../i18n/translations';
 import { getHero } from '../../constants/heroes';
 import { formatGold } from '../../utils/dotaFormatters';
@@ -120,7 +127,8 @@ function formatAwardValue(award: { value: number; unit: AwardUnit; id: AwardId }
 
 const AwardBadge: React.FC<{ id: AwardId; t: Translate; small?: boolean }> = ({ id, t, small }) => (
   <span
-    title={t(AWARD_HINT[id])}
+    // Teto e folga do "dia dificil" saem do motor: o texto tinha "41" fixo e envelheceu na v5.
+    title={t(AWARD_HINT[id], { cap: ROUGH_GAME_MAX_GLINT, lead: ROUGH_GAME_MIN_LEAD_GLINT })}
     className={`font-black uppercase tracking-wide rounded border cursor-help ${AWARD_STYLE[id]} ${
       small ? 'text-[8px] px-1 py-px' : 'text-[9px] px-1.5 py-0.5'
     }`}

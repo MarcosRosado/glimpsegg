@@ -25,7 +25,9 @@
  * GLINT NA LISTA. A lista traz os totais crus das oito estatisticas do modelo, e a tabela
  * publica `GET /benchmarks?hero_id=` da o percentil — os mesmos percentis que o detalhe da
  * partida recebe prontos (ver `utils/glint.ts`). Custa uma chamada por heroi distinto na
- * primeira carga, com cache de 7 dias por patch. Sem posicao, usa os pesos sem papel.
+ * primeira carga, com cache de 7 dias por patch. A lista nao tem posicao: a nota é a do detalhe
+ * esperada para o heroi (fatia de core medida, `GLINT_MODEL.heroCoreShare`), e heroi fora da
+ * tabela usa os pesos sem papel.
  * Heroi sem tabela (ou tabela que falhou) deixa `glint: null` e a nota some daquela linha.
  */
 import type {

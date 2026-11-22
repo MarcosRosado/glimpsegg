@@ -211,30 +211,39 @@ nele reintroduziria a mistura.
 
 A nota de impacto do app, de 0 a 100. É uma **regressão linear sobre oito percentis da OpenDota**
 (onde o jogador ficou em cada estatística entre partidas do mesmo herói — partida inteira, todos
-os ranques), ajustada para reproduzir o IMP da STRATZ + 50 em partidas de 7.41 e testada em 7.42:
-r 0,81, erro médio 10,4, mesmo lado em 81%, mesmo melhor da partida em 50% (terceiro ajuste,
-com 823 partidas de treino e 469 de teste; os anteriores, com 197 de teste, davam r 0,82). Isso está **abaixo**
-do aceite da Fase 4 do plano — é o que "experimental" quer dizer, e o rótulo não é enfeite:
+os ranques) mais um **termo de duração**. **Desde a v5 (no ar em 2026-11-22) o alvo não é mais o
+IMP da STRATZ** (D8): os pesos reproduzem a referência de **contribuição para a vitória**
+(probabilidade de vitória atribuída por evento, `scripts/lib/impact.cjs`), com a régua própria
+de [`docs/PROPOSTA-REGUA-GLINT.md`](docs/PROPOSTA-REGUA-GLINT.md). Ajuste em 2.572 partidas (7.41 e
+7.42); conferência interna em 493 partidas: ordena o time como a referência com Spearman 0,55 no
+detalhe e 0,51 na lista (o KDA dá 0,40), lista × detalhe r 0,975, correlação com a duração 0,003.
+**A v5 entrou por decisão do dono antes da medida oficial** (500 partidas colhidas depois do
+segundo congelamento; a rotina diária imprime) — os números acima foram lidos em todas as
+versões do reajuste e são otimistas. É o que "experimental" quer dizer, e o rótulo não é enfeite:
 
 - **Todo número de Glint sai com a procedência.** O `GlintBadge` (`components/ui/`) carrega o
-  tooltip com as métricas do teste; quem mostra a nota fora dele usa `useGlintHint()`. Nota sem
-  rótulo de experimental é regressão.
-- **Não dizer "50 = esperado para herói e posição".** O centro medido é ~45 (a mediana do IMP é
-  negativa) e o percentil é por herói, não por posição nem por ranque.
-- **Sem composição no tooltip.** Ouro e dano saíram com peso negativo por colinearidade com
-  abates; "puxado por farm" seria causa inventada.
-- **Percentil faltando ⇒ `null`**, e a nota some daquela linha. Nunca `0`.
-- **Limiar não se converte somando 50.** A regressão comprime a escala (p10/p90 de 21/70 contra
-  17/76 do IMP + 50). `GLINT_THRESHOLDS` saiu por **quantil**: o Glint que dispara na mesma taxa
-  do limiar de IMP que o app usava.
-- **Peso e limiar saem de `scripts/fit-glint-experimental.cjs`**, nunca do olho. Rodar de novo a
-  cada lote grande de pares e colar o bloco em `GLINT_MODEL`.
-- **O alvo vai deixar de ser o IMP (D8, 2026-11-21).** O Glint não precisa imitar a STRATZ: a
-  régua própria mede impacto como contribuição para a vitória (probabilidade de vitória
-  atribuída por evento) — [`docs/PROPOSTA-REGUA-GLINT.md`](docs/PROPOSTA-REGUA-GLINT.md). Tudo
-  acima descreve o modelo **atual**, ajustado ao IMP, até o reajuste passar na régua. O que
-  fazer quando as partidas novas chegarem está no plano, seção "Glint: o que fazer quando as
-  partidas novas chegarem".
+  tooltip com as métricas da conferência (`GLINT_MODEL.check`); quem mostra a nota fora dele usa
+  `useGlintHint()`. Nota sem rótulo de experimental é regressão.
+- **Centro é 50 por construção, mas não é "esperado para herói e posição".** A escala de tela leva
+  a mediana a 50 e o p10–p90 a 48 pontos; o percentil é por herói, não por posição nem por ranque,
+  e a mediana por posição fica entre 46 e 55.
+- **Sem composição no tooltip.** Os pesos são todos não negativos (R9), mas as oito métricas andam
+  juntas; "puxado por farm" seria causa inventada.
+- **Percentil ou duração faltando ⇒ `null`**, e a nota some daquela linha. Nunca `0`. O termo de
+  duração existe porque o percentil é por herói em qualquer duração e partida longa infla taxa
+  por minuto (critério R3); sem ele, a nota seria outra.
+- **Sem posição (lista de partidas, partida não parseada)** a nota é a do detalhe **esperada para o
+  herói**: fatia de core × nota de core + o resto × nota de suporte (`heroCoreShare`, medida no
+  treino, 103 heróis). Herói fora da tabela usa os pesos sem papel.
+- **Limiar sai por taxa de disparo**, nunca somando ou convertendo de outra escala:
+  `GLINT_THRESHOLDS` traz ao lado a taxa medida de cada um (alvos de 1% nos extremos a 50% no
+  neutro).
+- **Peso e limiar saem de `scripts/fit-glint-experimental.cjs --target contrib`**, nunca do olho.
+  Modelo novo só entra depois de passar na régua em partidas nunca vistas — congelar a lista de
+  partidas já olhadas **antes** de olhar. O modelo antigo, ajustado ao IMP (r 0,81 contra o IMP
+  em 469 partidas de 7.42), está em `.gabarito/glint-imp-fit-2026-11-19.json` e a rotina ainda o
+  mede, para o registro. O roteiro está no plano, seção "Glint: o que fazer quando as partidas
+  novas chegarem".
 
 No detalhe da partida os percentis vêm prontos (`players[].benchmarks`); na lista de partidas
 saem dos totais crus mais a tabela pública `GET /benchmarks?hero_id=` (uma chamada por herói, com

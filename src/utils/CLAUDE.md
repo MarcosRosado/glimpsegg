@@ -10,7 +10,7 @@ em `tests/utils/`, espelhando esta pasta — ver [../../tests/CLAUDE.md](../../t
 | Arquivo | Papel |
 | --- | --- |
 | `awardEngine.ts` | Destaques da partida: `computeMatchAwards` devolve `AwardId` + número cru. `SUPERLATIVES` traz `margin` e `floor` **próprios de cada métrica**; `ROUGH_GAME_MAX_GLINT`/`ROUGH_GAME_MIN_LEAD_GLINT` seguram o prêmio de partida difícil. `resolveScoreKind` diz se a partida tem nota (`GLINT`) ou não (`null`) — e sem nota os prêmios que dependem dela são omitidos. A escala `IMP` saiu em 2026-11-19 |
-| `glint.ts` | **A nota de impacto do app, experimental.** `computeGlint` (regressão sobre oito percentis da OpenDota), `GLINT_MODEL` (pesos + métricas do teste), `GLINT_THRESHOLDS` (por quantil), `percentileFromTable`/`glintPercentilesFromRaw` (o caminho da lista de partidas) e os formatadores `formatGlint`/`getGlintColor`/`getGlintBadgeStyle`. Pesos e limiares saem de `scripts/fit-glint-experimental.cjs` |
+| `glint.ts` | **A nota de impacto do app, experimental.** `computeGlint` (regressão sobre oito percentis da OpenDota mais termo de duração; sem posição, mistura core/suporte pela fatia do herói), `GLINT_MODEL` (v5 desde 2026-11-22: pesos contra a contribuição para a vitória + métricas da conferência em `check`), `GLINT_THRESHOLDS` (por taxa de disparo), `percentileFromTable`/`glintPercentilesFromRaw` (o caminho da lista de partidas) e os formatadores `formatGlint`/`getGlintColor`/`getGlintBadgeStyle`. Pesos e limiares saem de `scripts/fit-glint-experimental.cjs --target contrib` |
 | `performance.ts` | `calculateRadarStats`, ancorado em `ROLE_BASELINES` e multiplicadores fixos. O `calculateCustomImp` saiu em 2026-11-19 com o mapper da STRATZ |
 | `performanceEnricher.ts` | `getEnrichedCombatStats`/`FarmStats`/`AbilityUpgrades` e `getItemBenchmarkSeconds`. Contém `ITEM_BENCHMARKS` |
 | `buildAdvisor.ts` | `computeBuildAdvice`: "item de build" = item presente no `itemFullPurchase` daquele herói/posição/ranque. Usa `insights/wilson.ts` |
@@ -43,7 +43,7 @@ em `tests/utils/`, espelhando esta pasta — ver [../../tests/CLAUDE.md](../../t
 - `minimapCoords`: **quem chama declara o espaço de origem; a função nunca infere.** A versão que
   inferia pela faixa de valores plotava todo o lado Radiant errado.
 - **Glint nunca sem rótulo de experimental, e nunca `0` no lugar de `null`.** Limiar novo sai por
-  quantil do script de ajuste, não somando 50 a um limiar de IMP — a escala é comprimida.
+  taxa de disparo no script de ajuste, nunca convertido de outra escala.
 - **Veredito de rota só de dado dos 10 primeiros minutos de quem estava na rota** (`laneVerdict.ts`).
   Rota sem medida fica `UNKNOWN` e a UI **omite** a seção; rota desigual nunca vira "Lane vencida"
   (não passou no aceite) — nada de deduzir rota de Glint, mortes ou vitória. Limiar novo sai do

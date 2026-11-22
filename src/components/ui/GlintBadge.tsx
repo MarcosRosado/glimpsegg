@@ -14,20 +14,25 @@ import {
  * O chip do Glint, em um lugar so — substitui o `ImpBadge` desde que a STRATZ saiu.
  *
  * A nota é EXPERIMENTAL (`utils/glint.ts`), e isso faz parte do chip, nao de quem o usa:
- * o `title` explica o que ela é e traz as metricas do teste, e o tamanho `md` mostra o
+ * o `title` explica o que ela é e traz as metricas da conferencia, e o tamanho `md` mostra o
  * selo "beta" ao lado do numero. Quem renderiza nao consegue exibir a nota sem a
  * procedencia. `glint` nulo ou ausente nao renderiza nada — nunca "0".
  */
 const ICONS: Record<GlintIconKind, typeof Zap> = { STAR: Star, SKULL: Skull, ZAP: Zap };
 
-/** Os numeros do tooltip, tirados do proprio modelo: mudam sozinhos a cada reajuste. */
+/**
+ * Os numeros do tooltip, tirados do proprio modelo: mudam sozinhos a cada reajuste. O ρ é o da
+ * LISTA (nota sem posicao), o mais fraco dos dois — o mesmo criterio conservador de antes, que
+ * citava o "sem papel". É conferencia interna, nao a medida oficial (ver `utils/glint.ts`), e o
+ * texto diz "ainda em ajuste" por isso.
+ */
 export function useGlintHint(): string {
   const { t, language } = useLanguage();
-  const fmt = (n: number) => n.toLocaleString(language, { maximumFractionDigits: 2 });
+  const fmt = (n: number) => n.toLocaleString(language, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return t('glintHint', {
-    r: fmt(GLINT_MODEL.test.noRole.r),
-    error: fmt(GLINT_MODEL.test.noRole.meanAbsError),
-    matches: GLINT_MODEL.testMatches,
+    rho: fmt(GLINT_MODEL.check.teamRhoList),
+    kda: fmt(GLINT_MODEL.check.teamRhoKda),
+    matches: GLINT_MODEL.check.matches,
     center: GLINT_MEDIAN,
   });
 }

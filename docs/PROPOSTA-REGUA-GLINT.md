@@ -236,15 +236,18 @@ entradas (o percentil de xp/min correlaciona 0,52 com a duração). Corrigir iss
 a lista do detalhe (R8). E sem papel a nota não consegue centrar a posição 2 (R1 da lista). Com
 isso, R8 e R1 sem papel são o gargalo. A leitura de R9 passou a ser **sobre os oito pesos**: o
 termo de duração é normalização, não composição (decidido depois de ver o R3, por isso
-declarado). **Nada disso entrou em `src/`.** `computeGlint` só ganhou os argumentos de duração e
-de herói, neutros para o modelo no ar (testado).
+declarado). Na trava, nada disso tinha entrado em `src/`: `computeGlint` só ganhou os argumentos
+de duração e de herói, neutros para o modelo de então (testado). **Na mesma manhã a v5 foi para o
+app por decisão do dono, antes da medida oficial** (plano, fim do roteiro do Glint): a medida
+abaixo passa a decidir se ela fica, não se entra.
 
 A regra de trava da v5 foi escrita antes do ajuste (R1, R3 nas duas pernas e R8 no holdout
 interno) e passou; a prévia exploratória (`--explore --model`, partidas de treino) passa R1 a R5,
-R8 e R9 nas duas pernas. **A medida que decide** é a de `measure-glint.cjs --model
-.gabarito/glint-candidate-2026-11-22-v5.json --seen <as duas listas>`, a partir de 500 partidas de
-7.42 colhidas depois do segundo congelamento; a rotina diária a imprime na seção "reajuste do
-Glint". Nada entrou em disco entre o segundo congelamento e a trava, e nenhuma partida posterior
+R8 e R9 nas duas pernas. **A medida que decide** é a de `measure-glint.cjs --seen <as duas
+listas>` (o modelo do app, que é a v5 colada; com `--model
+.gabarito/glint-candidate-2026-11-22-v5.json` a saída é idêntica), a partir de 500 partidas de
+7.42 colhidas depois do segundo congelamento; a rotina diária a imprime na seção "Glint no ar
+(v5)". Nada entrou em disco entre o segundo congelamento e a trava, e nenhuma partida posterior
 a ele foi olhada, então ele vale como fronteira da v5 sem um terceiro. Mudar o candidato agora
 exige um novo congelamento. O alvo usa `.gabarito/impact/wp-model.json`, que a rotina regrava
 todo dia a partir do 7.41 — estável enquanto o 7.41 não crescer (1.847 partidas de treino).

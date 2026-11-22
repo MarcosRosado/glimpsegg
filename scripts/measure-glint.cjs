@@ -17,11 +17,13 @@
  * congelada: antes lia tudo em disco, inclusive o conjunto oficial, e olhar o oficial por ali
  * desfazia o congelamento.
  *
- * O REAJUSTE (passo 4 do roteiro do Glint no plano). O candidato treinou na lista de
- * 2026-11-21; a medida dele é `--model .gabarito/glint-candidate-2026-11-22.json --seen
- * .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json`: so 7.42 colhido
- * depois do SEGUNDO congelamento, a partir de 500 partidas. Mudou o candidato depois disso?
- * Terceiro congelamento antes de medir de novo.
+ * O REAJUSTE (passo 4 do roteiro do Glint no plano). A v5 treinou na lista de 2026-11-21 e
+ * esta no app desde 2026-11-22 (decisao do dono, antes da medida). A medida dela é `--seen
+ * .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json` (o GLINT_MODEL do
+ * app; com `--model .gabarito/glint-candidate-2026-11-22-v5.json` a saida é identica): so 7.42
+ * colhido depois do SEGUNDO congelamento, a partir de 500 partidas. O modelo antigo, ajustado ao
+ * IMP, se mede com `--model .gabarito/glint-imp-fit-2026-11-19.json` (padrao de --seen). Mudou o
+ * modelo do app depois disso? Terceiro congelamento antes de medir de novo.
  *
  * QUEM É MEDIDO.
  *  - `glint`: a funcao do app (`computeGlint`, carregada de src/utils/glint.ts pelo

@@ -153,14 +153,15 @@ const SUPERLATIVES: SuperlativeSpec[] = [
  */
 /**
  * Dia dificil: so quando o ultimo destoa mesmo do penultimo. Na escala do IMP eram teto -10 e
- * folga 5 (32% das partidas); na do Glint o teto é `GLINT_THRESHOLDS.poor` (41, o quantil de
- * IMP <= -10). A folga saiu por taxa de disparo: em 197 partidas de 7.42
- * (2026-11-19), sem a clausula do superlativo, a regra de IMP dispara em 61% e a de Glint em
- * 74% / 63% / 58% com folga de 3 / 4 / 5 — fica 4. Onde as duas disparam (85 partidas), o
- * jogador é o mesmo em 60.
+ * folga 5 (32% das partidas); na do Glint o teto é `GLINT_THRESHOLDS.poor` (45 na v5, os 41%
+ * de baixo). A folga saiu por taxa de disparo: em 197 partidas de 7.42 (2026-11-19), sem a
+ * clausula do superlativo, a regra de IMP dispara em 61% e a de Glint em 74% / 63% / 58% com
+ * folga de 3 / 4 / 5 — ficou 4. Conferido de novo na troca para a v5 (2026-11-22, 2.573
+ * partidas da primeira lista congelada, sem a clausula do superlativo): folga 4 dispara em
+ * 67% (7.41) e 68% (7.42) com a v5, contra 65% e 66% do modelo antigo — continua 4.
  */
-const ROUGH_GAME_MAX_GLINT = GLINT_THRESHOLDS.poor;
-const ROUGH_GAME_MIN_LEAD_GLINT = 4;
+export const ROUGH_GAME_MAX_GLINT = GLINT_THRESHOLDS.poor;
+export const ROUGH_GAME_MIN_LEAD_GLINT = 4;
 
 const CORE_POSITIONS: Role[] = ['POSITION_1', 'POSITION_2', 'POSITION_3'];
 const SUPPORT_POSITIONS: Role[] = ['POSITION_4', 'POSITION_5'];

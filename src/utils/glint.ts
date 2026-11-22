@@ -1,31 +1,37 @@
 /**
  * GLINT EXPERIMENTAL — a nota de impacto do app desde que a STRATZ saiu (2026-11-19).
  *
- * O QUE ELA É. Uma regressao linear sobre oito PERCENTIS da OpenDota: onde o jogador ficou,
- * em cada estatistica, entre partidas do MESMO HEROI (partida inteira, todos os ranques).
- * Os pesos foram ajustados para reproduzir o IMP da STRATZ + 50 em partidas de 7.41 e
- * testados em partidas de 7.42 que nao entraram no ajuste.
+ * O QUE ELA É (v5, no ar desde 2026-11-22). Uma regressao linear sobre oito PERCENTIS da
+ * OpenDota — onde o jogador ficou, em cada estatistica, entre partidas do MESMO HEROI (partida
+ * inteira, todos os ranques) — mais um termo de duracao. Desde a v5 o alvo NAO é mais o IMP da
+ * STRATZ (decisao D8): os pesos reproduzem a referencia de CONTRIBUICAO PARA A VITORIA
+ * (probabilidade de vitoria atribuida por evento, scripts/lib/impact.cjs), com a regua propria
+ * de docs/PROPOSTA-REGUA-GLINT.md. Escala de tela: a mediana vai a 50 e o intervalo p10-p90
+ * ocupa 48 pontos.
  *
- * O QUE ELA NAO É. Nao é a nota do plano (docs/PLANO-OPENDOTA.md, Fase 4), que compara por
- * minuto e por posicao contra benchmark proprio. Por isso:
- *  - o rotulo na tela é sempre "Glint (experimental)", com as metricas de teste no tooltip;
- *  - NAO se diz "50 = esperado para heroi e posicao": o centro medido é ~45 (a mediana do
- *    IMP é negativa) e o percentil é por heroi, nao por posicao nem por ranque;
- *  - NAO ha composicao no tooltip ("puxado por farm"): ouro e dano sairam com peso negativo
- *    por colinearidade com abates, e explicar a nota por eles seria inventar causa.
+ *  - Pesos NAO NEGATIVOS (R9): cada metrica so soma. Ainda assim nao ha composicao no tooltip:
+ *    as oito andam juntas, e "puxado por farm" seria causa inventada.
+ *  - Termo de DURACAO (pontos por minuto, teto de 60 min): o percentil é por heroi em qualquer
+ *    duracao e partida longa infla taxa por minuto. Sem duracao valida, a nota é `null`.
+ *  - SEM POSICAO (lista de partidas, partida nao parseada), a nota é o detalhe ESPERADO para o
+ *    heroi: fatia de core x nota de core + o resto x nota de suporte (`heroCoreShare`, medida no
+ *    treino, so herois com pelo menos 100 jogadores com posicao). Heroi fora da tabela
+ *    usa os pesos sem papel.
  *
- * MEDIDO NO TESTE (469 partidas de 7.42, ajuste em 823 de 7.41, 2026-11-19 — terceiro ajuste
- * do dia, depois da coleta das 15h; os anteriores, com 326 e 566 de treino e 197 de teste,
- * deram r 0,82 e 49% a 51% em "mesmo melhor"):
- *   por papel   r 0,81 | erro medio 10,4 | mesmo lado do 50: 81% | mesmo melhor da partida: 50%
- *   sem papel   r 0,79 | erro medio 10,9 | mesmo lado do 50: 80% | mesmo melhor da partida: 46%
- * O aceite da nota definitiva (r >= 0,85, erro <= 9, lado >= 88%, melhor >= 60%) NAO foi
- * atingido — é exatamente o que "experimental" quer dizer aqui. A escolha das oito metricas
- * foi feita olhando o conjunto de teste, entao os numeros acima sao um pouco otimistas.
+ * O QUE ELA AINDA NAO É. Medida oficialmente: a v5 entrou por decisao do dono ANTES da medida
+ * em partidas nunca vistas (500 partidas colhidas depois do segundo congelamento; a rotina
+ * diaria imprime). Os numeros abaixo sao CONFERENCIA INTERNA, em 493 partidas separadas do
+ * ajuste mas lidas em todas as versoes do reajuste — otimistas. Por isso o rotulo continua
+ * "experimental"/"beta".
  *
- * REFAZER. `node scripts/fit-glint-experimental.cjs` reajusta com os pares que houver em
- * `.gabarito/pairs/` e imprime o bloco para colar em `GLINT_MODEL`, mais a tabela de
- * limiares. Nunca ajustar peso ou limiar no olho.
+ * CONFERENCIA INTERNA (ajuste em 2572 partidas, 1.846 de 7.41 e 726 de 7.42):
+ *   ordem dentro do time contra a referencia (Spearman): detalhe 0,548 | lista 0,509 | KDA 0,403
+ *   lista x detalhe r 0,975 | correlacao com a duracao 0,003 | mediana por posicao 53 55 50 46 47
+ *
+ * REFAZER. `node scripts/fit-glint-experimental.cjs --target contrib --json <arquivo>` gera o
+ * candidato; ele so entra aqui depois de passar na regua em partidas novas (novo congelamento
+ * antes de olhar). Nunca ajustar peso ou limiar no olho. O modelo anterior, ajustado ao IMP,
+ * esta em `.gabarito/glint-imp-fit-2026-11-19.json`.
  */
 
 /** As oito estatisticas do modelo, com o nome que a OpenDota usa em `benchmarks`. */
@@ -42,64 +48,85 @@ export const GLINT_METRICS = [
 export type GlintMetric = (typeof GLINT_METRICS)[number];
 export type GlintRole = 'core' | 'support';
 
-/** [intercepto, ...um peso por metrica, na ordem de GLINT_METRICS]. Percentil em 0..1. */
+/**
+ * Colado de `.gabarito/glint-candidate-2026-11-22-v5.json` (travado as 01:28 de 2026-11-22).
+ * `weights`: [intercepto, ...um peso por metrica, na ordem de GLINT_METRICS]; percentil em 0..1.
+ */
 export const GLINT_MODEL = {
-  fittedAt: '2026-11-19',
-  trainPatch: '7.41',
-  trainMatches: 823,
-  testPatch: '7.42',
-  testMatches: 469,
-  test: {
-    byRole: { r: 0.81, meanAbsError: 10.4, sameSidePct: 81, sameBestPct: 50 },
-    noRole: { r: 0.79, meanAbsError: 10.9, sameSidePct: 80, sameBestPct: 46 },
+  version: 5,
+  fittedAt: '2026-11-22',
+  target: 'contrib',
+  trainMatches: 2572,
+  /** Conferencia interna (ver o cabecalho). `teamRho*`: Spearman dentro do time contra a referencia. */
+  check: {
+    matches: 493,
+    teamRhoDetail: 0.548,
+    teamRhoList: 0.509,
+    teamRhoKda: 0.403,
+    listVsDetailR: 0.975,
+    durationR: 0.003,
   },
   weights: {
-    core: [-2.66, -16.94, 8.11, 33.17, 34.96, 23.99, 2.5, 6.76, -3.32],
-    support: [6.34, -0.9, -1.4, 19.16, 32.2, 35.13, 3.43, 2.71, -3.77],
-    /** Sem papel: partida nao parseada nao tem `position_est`. */
-    any: [3.85, -8.85, 5.54, 25.26, 33.74, 29.62, -2.43, 4.18, -4.11],
+    core: [17.79, 27.71, 22.03, 9.69, 22.97, 4.16, 0, 0, 3.49],
+    support: [34.62, 9.62, 0, 22.75, 14.33, 17.34, 1.94, 1.63, 0],
+    /** Sem papel e sem fatia do heroi. */
+    any: [26.45, 15.24, 13.47, 17.5, 20.61, 10.29, 0, 0, 3.11],
+  },
+  /** Pontos por minuto de partida, minuto com teto. */
+  duration: { core: -0.438, support: -0.438, any: -0.438, capMinutes: 60 },
+  /** `hero_id` -> fatia das linhas de treino em que o heroi foi core (pos 1 a 3). */
+  heroCoreShare: {
+    1: 0.982, 2: 0.971, 4: 0.948, 5: 0.033, 6: 0.963, 7: 0.727, 8: 0.995, 9: 0.06, 10: 0.969, 11: 0.962,
+    12: 0.996, 13: 0.952, 14: 0.347, 15: 0.904, 16: 0.949, 17: 0.987, 18: 0.993, 19: 0.769, 20: 0.332, 21: 0.48,
+    22: 0.363, 23: 0.955, 25: 0.785, 26: 0.114, 27: 0.021, 28: 0.938, 29: 0.934, 30: 0.025, 31: 0.016, 32: 0.88,
+    33: 0.69, 34: 0.962, 35: 0.817, 36: 0.958, 37: 0.033, 38: 0.992, 39: 0.85, 40: 0.108, 41: 0.966, 42: 0.976,
+    43: 0.853, 44: 0.99, 45: 0.244, 46: 0.981, 47: 0.884, 48: 0.991, 49: 0.987, 50: 0.031, 52: 0.901, 53: 0.644,
+    54: 0.991, 55: 0.923, 59: 0.934, 60: 0.967, 62: 0.048, 63: 0.489, 64: 0.06, 65: 0.593, 67: 0.973, 68: 0.078,
+    69: 0.941, 70: 0.987, 71: 0.169, 74: 0.748, 75: 0.164, 76: 0.981, 81: 0.962, 82: 0.966, 84: 0.288, 85: 0.32,
+    86: 0.162, 87: 0.005, 88: 0.199, 90: 0.72, 91: 0.298, 93: 0.939, 97: 0.715, 98: 0.965, 99: 0.933, 100: 0.216,
+    101: 0.125, 102: 0.418, 104: 0.979, 105: 0.078, 106: 0.977, 107: 0.509, 109: 0.971, 110: 0.509, 111: 0.077, 112: 0.066,
+    113: 0.879, 114: 0.921, 119: 0.056, 120: 0.985, 121: 0.033, 123: 0.027, 126: 0.97, 128: 0.382, 129: 0.951, 131: 0.032,
+    135: 0.953, 136: 0.726, 137: 0.949,
   },
 } as const;
 
 /**
- * Limiares na escala do Glint, cada um com a taxa de disparo medida no teste (linhas de
- * jogador de 7.42). Sairam por QUANTIL: o Glint que dispara na mesma taxa do limiar de IMP
- * que o app usava — coluna "por papel" do script, a do modelo principal. Somar 50 ao limiar
- * antigo estaria errado — a regressao comprime a escala (p10/p50/p90 do Glint: 22/45/69), e
- * os extremos nunca disparariam.
+ * Mediana do Glint, o "centro" que o tooltip cita. Desde a v5 a escala de tela é ancorada nela
+ * (mediana -> 50); no modelo ajustado ao IMP era 45.
  */
-/**
- * Mediana medida do Glint, o "centro" que o tooltip cita. Não é `GLINT_THRESHOLDS.neutral`
- * (49, o equivalente a IMP 0): a mediana do IMP é negativa, e o tooltip usava o 49 como centro.
- */
-export const GLINT_MEDIAN = 45;
+export const GLINT_MEDIAN = 50;
 
+/**
+ * Limiares na escala do Glint, por TAXA DE DISPARO (o reajuste escolhe o valor que dispara na
+ * taxa-alvo nas linhas de treino; ao lado, a taxa medida). Nunca somar ou converter de outra
+ * escala.
+ */
 export const GLINT_THRESHOLDS = {
-  /** 0,4% — era IMP >= 50. */
+  /** 1,2% ficam acima (alvo 1%). */
   extremeHigh: 85,
-  /** 4,3% — era IMP >= 35. */
-  elite: 75,
-  /** 7,6% — era IMP >= 30 (o criterio de atropelo da lista). */
-  stomp: 72,
-  /** 11,2% — era IMP >= 25. */
-  strong: 68,
-  /** 22,3% — era IMP >= 15. */
-  good: 61,
-  /** 35,1% — era IMP >= 5 (o piso de "impacto alto" da lista). */
-  impact: 54,
-  /** 43,8% ficam acima — era IMP >= 0. Nao é 50: a mediana medida é 45. */
-  neutral: 49,
-  /** 42,4% — era IMP <= -10. */
-  poor: 41,
-  /** 19,7% — era IMP <= -25. */
-  weak: 29,
-  /** 0,9% — era IMP <= -50. */
-  extremeLow: 8,
+  /** 5,8% (alvo 5%). */
+  elite: 78,
+  /** 8,1% (alvo 8%) — o criterio de atropelo da lista. */
+  stomp: 76,
+  /** 13,2% (alvo 12%). */
+  strong: 72,
+  /** 22,3% (alvo 22%). */
+  good: 66,
+  /** 36,3% (alvo 35%) — o piso de "impacto alto" da lista. */
+  impact: 58,
+  /** 50,9% ficam acima (alvo 50%): a mediana. */
+  neutral: 50,
+  /** 41,4% ficam abaixo ou igual (alvo 40%). */
+  poor: 45,
+  /** 21,6% (alvo 20%). */
+  weak: 34,
+  /** 1,1% (alvo 1%). */
+  extremeLow: 11,
 } as const;
 
 /**
- * O que `computeGlint` le de um modelo. `duration` é opcional: o modelo no ar nao tem, e o
- * reajuste contra o alvo proprio (docs/PROPOSTA-REGUA-GLINT.md) tem — o percentil é por heroi
+ * O que `computeGlint` le de um modelo. `duration` e `heroCoreShare` sao opcionais: o modelo no
+ * ar (v5) tem os dois, o antigo ajustado ao IMP nao tinha — o percentil é por heroi
  * em qualquer duracao, partida longa infla taxa por minuto, e o termo de duracao (pontos por
  * minuto, minuto com teto opcional) tira esse vies (criterio R3). Fica fora de `weights` de
  * proposito: nao é composicao da nota, é normalizacao.
@@ -111,7 +138,6 @@ export interface GlintModelShape {
    * Fatia de core de cada heroi (`hero_id` -> 0..1), medida nas partidas de treino. Sem posicao
    * (lista de partidas, partida nao parseada), a nota vira o detalhe ESPERADO para o heroi:
    * p x nota de core + (1 - p) x nota de suporte. Heroi fora da tabela usa os pesos sem papel.
-   * O modelo no ar nao tem.
    */
   heroCoreShare?: Readonly<Record<number, number>>;
 }
@@ -154,7 +180,7 @@ export function computeGlint(
   return Math.round(Math.max(0, Math.min(100, sum)));
 }
 
-/** Posicao 1 a 3 = core, 4 e 5 = suporte. Sem posicao conhecida, `null` (pesos sem papel). */
+/** Posicao 1 a 3 = core, 4 e 5 = suporte. Sem posicao conhecida, `null` (fatia do heroi ou pesos sem papel). */
 export function glintRoleOf(position: string | null | undefined): GlintRole | null {
   if (position === 'POSITION_1' || position === 'POSITION_2' || position === 'POSITION_3') return 'core';
   if (position === 'POSITION_4' || position === 'POSITION_5') return 'support';

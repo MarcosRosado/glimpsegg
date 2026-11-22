@@ -41,7 +41,7 @@ cumpre:
 
 | Exigência | Como fica curto |
 | --- | --- |
-| Glint é **experimental** e sai com procedência | Selo "experimental" e tooltip com o teste, o recorte e o centro: "Nota experimental de 0 a 100, pelos seus percentis no herói (todos os ranks). Centro perto de 45. Acompanha o antigo IMP: r 0,81 em 469 partidas." É a exceção declarada ao teto de tooltip: nenhuma dessas três partes pode sair |
+| Glint é **experimental** e sai com procedência | Selo "experimental" e tooltip com o teste, o recorte e o centro: "Nota experimental de 0 a 100, pelos seus percentis no herói (partida inteira, todos os ranks). Centro em 50. Mede quanto você pesou na vitória: no time, ordena os jogadores perto da nossa referência (ρ 0,51; o KDA dá 0,40) em 493 partidas de conferência. Ainda em ajuste." (v5, 2026-11-22; antes citava o r contra o antigo IMP) É a exceção declarada ao teto de tooltip: nenhuma dessas três partes pode sair |
 | `ROLE_BASELINE` é **estimativa** | Chip "estimativa", sem parágrafo |
 | Bracket `ALL` não é "no seu rank" | "média geral" ou "no seu rank", e nada mais |
 | Dado ausente | Esconda a seção. Se o vazio confundir, uma linha: "Sem wards: replay não analisado." |
