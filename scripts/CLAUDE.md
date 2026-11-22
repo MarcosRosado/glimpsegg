@@ -82,8 +82,12 @@ geram artefato commitado (ícones, catálogo de itens), uma calcula a versão da
   natural, mas responde `null` com "User is not an admin." — e a primeira versão tratou esse
   `null` como "sem triagem" **em silêncio** e rodou horas no caminho caro (317 de 544 candidatas
   pagas para cair em `modo`). Resposta nula de triagem agora é impressa. Ele valida
-  `STRATZ_FIELDS` antes de qualquer chamada, para em 429 ou em 5 erros seguidos, e segura
-  4,5 s entre pares pelo limite horário do token.
+  `STRATZ_FIELDS` antes de qualquer chamada, para em 5 erros seguidos ou em 429, e segura
+  4,5 s entre pares pelo limite horário do token. **Num 429 da OpenDota ele espera e repete a
+  mesma chamada** (`openDotaWithRetry`: `Retry-After`, ou 60/120/240 s, até 4 tentativas) e só
+  então para, devolvendo o cursor para a partida não se perder — e imprime o saldo do minuto e
+  do dia que veio no 429. Parar no primeiro 429 jogou fora a cota de dois dias seguidos
+  (2026-11-20 com 1.276 chamadas de saldo, 2026-11-21 com 2.917).
 - **O patch vem da OpenDota, nunca do `gameVersionId` da STRATZ**, que é 190 para 7.41f e para
   7.42. Registro usa o `patch` da partida (60, 61); a triagem usa o horário de início contra a
   data de `/constants/patch`. A cada patch novo: acrescentar o id em `PATCH_BY_OD_ID` (coletor e

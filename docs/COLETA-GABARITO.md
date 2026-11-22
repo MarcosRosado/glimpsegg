@@ -162,7 +162,9 @@ segundos) e **ler** a série uma vez por semana.
 | --- | --- | --- |
 | `triagem pela STRATZ voltou vazia` ou `indisponivel` em toda página | A STRATZ parou de responder à triagem. O coletor segue, mas paga uma chamada por candidata (rende ~40% em vez de ~90%) | Conferir com `node scripts/check-patch-readiness.cjs`. Se a STRATZ caiu de vez, acabaram os pares: o que está em disco é o gabarito final |
 | `com IMP nos 10 jogadores` caindo em relação ao total | A STRATZ está deixando de calcular IMP | Priorizar ainda mais os pares; anotar a data no §7 do plano |
-| `STRATZ HTTP 429` ou `limite de chamadas atingido` | Limite do token (o script já segura 4,5 s por par) | Esperar uma hora e retomar |
+| `STRATZ HTTP 429` | Limite do token (o script já segura 4,5 s por par) | Esperar uma hora e retomar |
+| `OpenDota 429 em ... esperando N s` | Limite da OpenDota com saldo no dia. Desde 2026-11-22 o coletor espera e repete a mesma chamada (até 4 tentativas) | Nada. Ler o `saldo minuto`: **0** com o coletor bem abaixo de 60/min = outro cliente no mesmo IP (o app aberto); minuto **e** dia com saldo = limite do lado da OpenDota |
+| `limite de chamadas atingido: parando (saldo minuto ...)` | O 429 resistiu às 4 tentativas, ou veio da STRATZ | O cursor voltou para a partida do 429; a próxima execução retoma dela. Se repetir todo dia com saldo alto, anotar os saldos no §7 do plano |
 | `OpenDota HTTP 500` avulso | Partida que a OpenDota não consegue servir | Nada: conta como `erro` e segue. Cinco seguidos param o script |
 | `a trilha 7.42 chegou ao patch anterior` | A paginação desceu até a virada | Acabou o que havia abaixo do ponto de partida da trilha. A 7.41 está parada de propósito (2026-11-21); partida de 7.42 mais nova que o início da trilha não é colhida — decidir antes de mexer no cursor |
 | Célula que não sai do zero por dias (partida curta, Herald/Guardian) | Raridade real em `/parsedMatches` | Ver "Células raras" abaixo |

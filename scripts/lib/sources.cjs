@@ -124,9 +124,50 @@ async function openDota(endpoint) {
   if (!res.ok) {
     const err = new Error(`OpenDota HTTP ${res.status}`);
     err.status = res.status;
+    // O que a OpenDota disse no 429, para o log separar as causas: minuto zerado = outro
+    // cliente no mesmo IP (o app); minuto e dia com saldo = limite do lado de la.
+    err.minuteLeft = minute;
+    err.dayLeft = day;
+    err.retryAfter = res.headers.get('retry-after');
     throw err;
   }
   return res.json();
+}
+
+const RATE_LIMIT_BASE_MS = 60000;
+const RATE_LIMIT_MAX_MS = 300000;
+/**
+ * Espera antes de repetir depois de um 429. `Retry-After` em segundos vence (com piso de 5 s e
+ * teto de 5 min); sem ele, 60 s, 120 s, 240 s... ate o teto. A janela da OpenDota é de um
+ * minuto, entao a primeira espera ja cobre o caso comum.
+ */
+function rateLimitWaitMs(retryAfter, attempt) {
+  const s = Number(retryAfter);
+  if (retryAfter !== null && retryAfter !== undefined && retryAfter !== '' && Number.isFinite(s) && s >= 0) {
+    return Math.min(RATE_LIMIT_MAX_MS, Math.max(5000, s * 1000));
+  }
+  return Math.min(RATE_LIMIT_MAX_MS, RATE_LIMIT_BASE_MS * 2 ** attempt);
+}
+
+/**
+ * `openDota` que espera e repete o MESMO endpoint num 429, ate `tries` tentativas. Existe
+ * porque o coletor parava no primeiro 429 com o dia quase inteiro de saldo (2026-11-20: 1.276
+ * chamadas sobrando; 2026-11-21: 2.917, depois de 60 chamadas) e perdia a cota do dia. Dia
+ * zerado no cabecalho nao se repete: ali a espera nao resolve ate a virada. Outro status
+ * qualquer sobe na hora, como antes.
+ */
+async function openDotaWithRetry(endpoint, { tries = 4, log = console.log } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await openDota(endpoint);
+    } catch (e) {
+      const dayZero = e.dayLeft !== null && e.dayLeft !== undefined && Number(e.dayLeft) <= 0;
+      if (e.status !== 429 || dayZero || attempt + 1 >= tries) throw e;
+      const wait = rateLimitWaitMs(e.retryAfter, attempt);
+      log(`OpenDota 429 em ${endpoint.split('?')[0]} | saldo minuto ${e.minuteLeft ?? '?'} | dia ${e.dayLeft ?? '?'} | retry-after ${e.retryAfter ?? '-'} | esperando ${Math.round(wait / 1000)} s (tentativa ${attempt + 2} de ${tries})`);
+      await sleep(wait);
+    }
+  }
 }
 
 // Seis niveis: `[[X!]!]!` (lista de lista) precisa de cinco, e tipo que nao desembrulha
@@ -211,6 +252,6 @@ function readJson(file, fallback) {
   }
 }
 
-module.exports = { DATA_DIR, dataPath, readToken, requireToken, sleep, stratz, openDota, openDotaBudget, readJson,
+module.exports = { DATA_DIR, dataPath, readToken, requireToken, sleep, stratz, openDota, openDotaWithRetry, rateLimitWaitMs, openDotaBudget, readJson,
   newSnapshotPath, latestSnapshotPath,
   stratzTypeFields, stratzSelection, stratzField };

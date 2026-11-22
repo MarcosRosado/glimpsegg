@@ -45,7 +45,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { DATA_DIR, dataPath, requireToken, sleep, stratz, openDota, openDotaBudget, readJson } = require('./lib/sources.cjs');
+const { DATA_DIR, dataPath, requireToken, sleep, stratz, openDotaWithRetry, openDotaBudget, readJson } = require('./lib/sources.cjs');
 
 const TARGET_PER_CELL = 50;
 const CELL_CAP = 90;
@@ -316,7 +316,7 @@ const argValue = (flag) => {
     lastPageAt = Date.now();
     let page;
     try {
-      page = await openDota('parsedMatches' + (index.cursors[lane] ? `?less_than_match_id=${index.cursors[lane]}` : ''));
+      page = await openDotaWithRetry('parsedMatches' + (index.cursors[lane] ? `?less_than_match_id=${index.cursors[lane]}` : ''));
     } catch (e) {
       console.log('parsedMatches:', e.message);
       if (e.status === 429) break;
@@ -379,7 +379,7 @@ const argValue = (flag) => {
       try {
         let o;
         try {
-          o = await openDota(`matches/${id}`);
+          o = await openDotaWithRetry(`matches/${id}`);
           errorStreak.od = 0;
         } catch (e) {
           errorStreak.od += 1;
@@ -457,7 +457,12 @@ const argValue = (flag) => {
         // 429 é limite de chamadas de uma das duas APIs: insistir so descarta candidatas
         // (o cursor ja andou) e, na OpenDota, gasta o que sobrou do dia.
         if (e.status === 429 || Math.max(errorStreak.od, errorStreak.st) >= MAX_ERROR_STREAK) {
-          console.log(e.status === 429 ? 'limite de chamadas atingido: parando.' : `${MAX_ERROR_STREAK} erros seguidos: parando.`);
+          // O cursor andou antes da chamada; sem voltar, esta partida nunca mais seria vista
+          // (`less_than_match_id` é estrito). A ordem da pagina é decrescente: id + 1 a devolve.
+          if (e.status === 429) index.cursors[lane] = Number(id) + 1;
+          console.log(e.status === 429
+            ? `limite de chamadas atingido: parando (saldo minuto ${e.minuteLeft ?? '?'} | dia ${e.dayLeft ?? '?'} | retry-after ${e.retryAfter ?? '-'}).`
+            : `${MAX_ERROR_STREAK} erros seguidos: parando.`);
           stop = true;
           break;
         }
