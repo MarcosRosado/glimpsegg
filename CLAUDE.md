@@ -217,9 +217,13 @@ IMP da STRATZ** (D8): os pesos reproduzem a referência de **contribuição para
 de [`docs/PROPOSTA-REGUA-GLINT.md`](docs/PROPOSTA-REGUA-GLINT.md). Ajuste em 2.572 partidas (7.41 e
 7.42); conferência interna em 493 partidas: ordena o time como a referência com Spearman 0,55 no
 detalhe e 0,51 na lista (o KDA dá 0,40), lista × detalhe r 0,975, correlação com a duração 0,003.
-**A v5 entrou por decisão do dono antes da medida oficial** (500 partidas colhidas depois do
-segundo congelamento; a rotina diária imprime) — os números acima foram lidos em todas as
-versões do reajuste e são otimistas. É o que "experimental" quer dizer, e o rótulo não é enfeite:
+**A v5 entrou por decisão do dono antes da medida oficial** — os números acima foram lidos em
+todas as versões do reajuste e são otimistas. A medida oficial saiu em 2026-11-23 (2.555
+partidas novas): R5 0,52 contra 0,39 do KDA e R1–R4, R9 passando no detalhe, mas a lista falha
+R1 (meio alto demais) e por isso R8; **o dono manteve a v5** (2026-11-24). O ajuste fino v5.1
+(deslocamento por posição) está travado e em medida — números e roteiro no fim do §7 de
+[`docs/PROPOSTA-REGUA-GLINT.md`](docs/PROPOSTA-REGUA-GLINT.md). É o que "experimental" quer
+dizer, e o rótulo não é enfeite:
 
 - **Todo número de Glint sai com a procedência.** O `GlintBadge` (`components/ui/`) carrega o
   tooltip com as métricas da conferência (`GLINT_MODEL.check`); quem mostra a nota fora dele usa

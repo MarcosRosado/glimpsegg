@@ -18,11 +18,10 @@
  *    treino, so herois com pelo menos 100 jogadores com posicao). Heroi fora da tabela
  *    usa os pesos sem papel.
  *
- * O QUE ELA AINDA NAO É. Medida oficialmente: a v5 entrou por decisao do dono ANTES da medida
- * em partidas nunca vistas (500 partidas colhidas depois do segundo congelamento; a rotina
- * diaria imprime). Os numeros abaixo sao CONFERENCIA INTERNA, em 493 partidas separadas do
- * ajuste mas lidas em todas as versoes do reajuste — otimistas. Por isso o rotulo continua
- * "experimental"/"beta".
+ * O QUE ELA AINDA NAO É. Aprovada na regua inteira: a v5 entrou por decisao do dono ANTES da
+ * medida em partidas nunca vistas, e a medida (abaixo) reprovou a lista em R1. Os numeros da
+ * conferencia interna, em 493 partidas separadas do ajuste mas lidas em todas as versoes do
+ * reajuste, sao otimistas. Por isso o rotulo continua "experimental"/"beta".
  *
  * CONFERENCIA INTERNA (ajuste em 2572 partidas, 1.846 de 7.41 e 726 de 7.42):
  *   ordem dentro do time contra a referencia (Spearman): detalhe 0,548 | lista 0,509 | KDA 0,403
