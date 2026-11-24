@@ -125,6 +125,47 @@ describe('computeGlint', () => {
         expect(computeGlint(allAt(0.5), 'support', 30 * 60, withShare, 1)).toBe(computeGlint(allAt(0.5), 'support', 30 * 60, model));
       });
     });
+
+    describe('deslocamento por posicao e fatia das cinco posicoes (v5.1)', () => {
+      const positionOffset = { 1: -1, 2: -3, 3: 2, 4: 0.5, 5: 0 };
+      const v51 = { ...model, positionOffset, heroPositionShare: { 8: [0.1, 0.5, 0.1, 0.2, 0.1] }, anyOffset: 1.5 };
+      const raw = (b: number, w: number, beta: number, min: number) => b + 8 * w * 0.5 + beta * min;
+      const core = raw(10, 10, -0.5, 30);
+      const sup = raw(20, 5, -1, 30);
+
+      it('com posicao, soma o deslocamento dela a nota do papel', () => {
+        expect(computeGlint(allAt(0.5), 'core', 30 * 60, v51, 8, 2)).toBe(Math.round(core - 3));
+        expect(computeGlint(allAt(0.5), 'core', 30 * 60, v51, 8, 3)).toBe(Math.round(core + 2));
+        expect(computeGlint(allAt(0.5), 'support', 30 * 60, v51, 8, 4)).toBe(Math.round(sup + 0.5));
+      });
+
+      it('papel sem posicao (ou posicao fora de 1..5) nao desloca', () => {
+        expect(computeGlint(allAt(0.5), 'core', 30 * 60, v51, 8)).toBe(Math.round(core));
+        expect(computeGlint(allAt(0.5), 'core', 30 * 60, v51, 8, 0)).toBe(Math.round(core));
+      });
+
+      it('sem posicao, é o detalhe esperado pelas cinco posicoes do heroi', () => {
+        const expected = 0.1 * (core - 1) + 0.5 * (core - 3) + 0.1 * (core + 2) + 0.2 * (sup + 0.5) + 0.1 * sup;
+        expect(computeGlint(allAt(0.5), null, 30 * 60, v51, 8)).toBe(Math.round(expected));
+      });
+
+      it('a fatia das cinco posicoes vence a fatia de core', () => {
+        const both = { ...v51, heroCoreShare: { 8: 1 } };
+        expect(computeGlint(allAt(0.5), null, 30 * 60, both, 8)).toBe(computeGlint(allAt(0.5), null, 30 * 60, v51, 8));
+      });
+
+      it('heroi sem fatia usa os pesos sem papel mais o anyOffset', () => {
+        expect(computeGlint(allAt(0.5), null, 30 * 60, v51, 999)).toBe(Math.round(raw(15, 8, -0.25, 30) + 1.5));
+      });
+
+      it('o modelo sem os campos novos ignora a posicao', () => {
+        for (const pos of [1, 2, 3, 4, 5]) {
+          expect(computeGlint(allAt(0.5), pos <= 3 ? 'core' : 'support', 30 * 60, model, 8, pos)).toBe(
+            computeGlint(allAt(0.5), pos <= 3 ? 'core' : 'support', 30 * 60, model, 8),
+          );
+        }
+      });
+    });
   });
 
   it('com posicao conhecida o heroi nao muda a nota do modelo no ar', () => {

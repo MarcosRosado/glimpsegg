@@ -202,6 +202,39 @@ function evaluate(matches, pred) {
  * TRAVADA em 2026-11-22 01:28 como .gabarito/glint-candidate-2026-11-22-v5.json (103 herois com
  * fatia). A medida dela é a linha "reajuste do Glint" da rotina diaria. Mexer no candidato
  * depois disso exige terceiro congelamento.
+ *
+ * V5.1 — AJUSTE FINO (`--refine`, 2026-11-24). Escrito ANTES da primeira execucao deste modo.
+ * A medida oficial da v5 (2.555 partidas de 7.42 depois do segundo congelamento) passou R1-R5 e
+ * R9 e falhou R8 so porque a lista falhou R1: posicao 2 com mediana 56 para a faixa 45-55. O dono
+ * manteve a v5 ("é uma metrica muito melhor que a antiga") e pediu ajuste fino. Terceiro
+ * congelamento ANTES de qualquer leitura: .gabarito/glint-seen-2026-11-24.json (5.201 partidas).
+ * Diagnostico exploratorio sobre ela (nao decide nada): contra o alvo, que ja desconta a media da
+ * posicao, o detalhe da +2,4 pontos a posicao 2 e -2,8 a posicao 3 — desvio CONSTANTE por posicao,
+ * nos dois patches, que o alvo nao explica. A lista, alem disso, da ~3 pontos a menos ao suporte
+ * de heroi misto (os pesos de core aplicados a um jogo de suporte); corrigir isso pediria inferir
+ * a posicao pelas estatisticas, que é modelo novo, nao ajuste fino — fica declarado e de fora.
+ *  - O QUE MUDA: so um DESLOCAMENTO POR POSICAO, somado a nota do detalhe. Pesos, duracao e teto
+ *    sao os da v5 (lidos de `--base`, o candidato travado), sem reajuste.
+ *    off[pos] = c - media(nota crua da v5 nas linhas da posicao), com c tal que a mediana da nota
+ *    deslocada em todas as linhas seja 50. Nota crua = a soma antes do corte em 0..100. Como o alvo
+ *    ja desconta a media da posicao, a nota passa a ter a mesma media em toda posicao, que é o que
+ *    o alvo diz; nao é "levar a mediana para dentro da faixa" (R1 mede mediana, o ajuste usa media).
+ *  - A LISTA continua sendo o detalhe ESPERADO para o heroi, agora pelas cinco posicoes:
+ *    soma de s[pos] x (nota crua do papel da posicao + off[pos]), com s = fatia de cada posicao do
+ *    heroi nas partidas da lista congelada (`heroPositionShare`, so herois com 100+ linhas; a
+ *    `heroCoreShare` sai do bloco). Heroi sem fatia: pesos sem papel + `anyOffset`, com anyOffset
+ *    tal que a mediana dessa perna, em todas as linhas, seja 50.
+ *  - LIMIARES por taxa-alvo, recalculados sobre a nota deslocada (mesmas taxas da v5).
+ *  - DADOS: tudo da lista congelada (`--seen`, 7.41 e 7.42). Validacao interna em id % 5 === 0,
+ *    com off, c e fatias tirados SO do resto; o bloco final usa todas. Esse holdout contem as
+ *    partidas da medida oficial da v5, ja lidas: é conferencia, nao medida.
+ *  - REGRA DE TRAVA (escrita antes de ver numero). No holdout interno: (1) R1 passa nas duas
+ *    pernas COM MARGEM: toda mediana de posicao pelo menos 1 ponto dentro da faixa p40-p60;
+ *    (2) R3 |r| <= 0,10 nas duas pernas; (3) R8 r >= 0,95; (4) R5 (Spearman dentro do time) nao
+ *    cai mais de 0,005 em relacao a v5 nas mesmas partidas, em nenhuma perna. Passou: o bloco é
+ *    travado como .gabarito/glint-candidate-2026-11-24-v5.1.json (somente leitura) e so entra no
+ *    app depois de passar na regua (measure-glint.cjs --model, com as tres listas no --seen) em
+ *    500+ partidas de 7.42 colhidas depois do terceiro congelamento. Nao passou: volta ao dono.
  */
 const TARGET_RATES = {
   high: { extremeHigh: 0.01, elite: 0.05, stomp: 0.08, strong: 0.12, good: 0.22, impact: 0.35, neutral: 0.5 },
@@ -298,11 +331,16 @@ function withinTeam(matches, score) {
   return { teams: n, rho: Number((rho / n).toFixed(3)), bestPct: Number(((100 * best) / n).toFixed(1)) };
 }
 
-function fitContrib() {
+/**
+ * As partidas da lista congelada (`--seen`, ou `defaultSeen`), 7.41 e 7.42, com o alvo de
+ * contribuicao por linha. Partida fora da lista nunca é lida. Comum a `--target contrib` e
+ * `--refine`.
+ */
+function loadContribMatches(defaultSeen) {
   const { attributable, attribute } = require('./lib/impact.cjs');
   const ROOT = path.join(process.cwd(), '.gabarito');
   const seenArg = process.argv.indexOf('--seen');
-  const seenFile = seenArg > 0 ? path.resolve(process.argv[seenArg + 1]) : path.join(ROOT, 'glint-seen-2026-11-21.json');
+  const seenFile = seenArg > 0 ? path.resolve(process.argv[seenArg + 1]) : path.join(ROOT, defaultSeen);
   let seen, model;
   try {
     seen = new Set(JSON.parse(fs.readFileSync(seenFile, 'utf-8')).ids);
@@ -351,6 +389,11 @@ function fitContrib() {
     console.log(`partidas utilizaveis da lista congelada: ${matches.length} (precisa de 500).`);
     process.exit(1);
   }
+  return { matches, skippedUnseen, seenFile };
+}
+
+function fitContrib() {
+  const { matches, skippedUnseen, seenFile } = loadContribMatches('glint-seen-2026-11-21.json');
 
   /**
    * v4: UM coeficiente de duracao para core, suporte e sem papel. Descida em blocos (convexa):
@@ -566,7 +609,162 @@ function fitContrib() {
   console.log('\nbloco candidato: node scripts/fit-glint-experimental.cjs --target contrib --json > <arquivo>; medir com measure-glint.cjs --model <arquivo>');
 }
 
+/**
+ * MODO `--refine` — o AJUSTE FINO v5.1 (regra no cabecalho, escrita antes da primeira execucao).
+ *
+ *   node scripts/fit-glint-experimental.cjs --refine --seen .gabarito/glint-seen-2026-11-24.json
+ *   ... --base <bloco>   o candidato travado de base (padrao .gabarito/glint-candidate-2026-11-22-v5.json)
+ *   ... --json           o bloco candidato
+ *
+ * Pesos e duracao vem da base, sem reajuste; so saem o deslocamento por posicao, a fatia das
+ * cinco posicoes por heroi, o `anyOffset` e os limiares por taxa-alvo.
+ */
+function fitRefine() {
+  const ROOT = path.join(process.cwd(), '.gabarito');
+  if (process.argv.indexOf('--seen') < 0) {
+    console.log('--refine exige --seen <lista congelada>: o ajuste fino nao tem lista padrao.');
+    process.exit(1);
+  }
+  const baseArg = process.argv.indexOf('--base');
+  const baseFile = baseArg > 0 ? path.resolve(process.argv[baseArg + 1]) : path.join(ROOT, 'glint-candidate-2026-11-22-v5.json');
+  const base = JSON.parse(fs.readFileSync(baseFile, 'utf-8'));
+  if (JSON.stringify(base.metrics) !== JSON.stringify(METRICS) || !base.duration) {
+    console.log(`base ${path.basename(baseFile)} invalida: precisa das oito metricas na ordem e do termo de duracao.`);
+    process.exit(1);
+  }
+  const { matches, skippedUnseen, seenFile } = loadContribMatches('glint-seen-2026-11-24.json');
+
+  // Pesos da base na forma de `rawPredict`: [intercepto, ...oito, duracao]. O minuto ja vem com
+  // o teto de DURATION_CAP_MIN na linha; a base tem de usar o mesmo teto.
+  if (base.duration.capMinutes !== DURATION_CAP_MIN) {
+    console.log(`teto de duracao da base (${base.duration.capMinutes}) diferente do script (${DURATION_CAP_MIN}).`);
+    process.exit(1);
+  }
+  const W = Object.fromEntries(['core', 'support', 'any'].map((k) => [k, [...base.weights[k], base.duration[k]]]));
+  const roleOfPos = (p) => (p <= 3 ? 'core' : 'support');
+  const detRaw = (r) => rawPredict(W[roleOfPos(r.pos)], r);
+  const clampRound = (v) => Math.round(Math.max(0, Math.min(100, v)));
+  const r2 = (v) => Number(v.toFixed(2));
+  const r3n = (v) => Number(v.toFixed(3));
+
+  /** Deslocamentos, fatias e anyOffset tirados das partidas `ms` (arredondados como no bloco). */
+  const fitParams = (ms) => {
+    const flat = ms.flat();
+    const off0 = {};
+    for (let p = 1; p <= 5; p++) {
+      const rs = flat.filter((r) => r.pos === p);
+      off0[p] = -rs.reduce((a, r) => a + detRaw(r), 0) / rs.length;
+    }
+    const c = SCALE_CENTER - quant(flat.map((r) => detRaw(r) + off0[r.pos]), 0.5);
+    const positionOffset = Object.fromEntries([1, 2, 3, 4, 5].map((p) => [p, r2(off0[p] + c)]));
+    const cnt = {};
+    for (const r of flat) { const h = (cnt[r.hero] = cnt[r.hero] || [0, 0, 0, 0, 0]); h[r.pos - 1]++; }
+    const heroPositionShare = {};
+    for (const [h, a] of Object.entries(cnt)) {
+      const n = a.reduce((s, v) => s + v, 0);
+      if (n >= HERO_SHARE_MIN_ROWS) heroPositionShare[h] = a.map((v) => r3n(v / n));
+    }
+    const anyOffset = r2(SCALE_CENTER - quant(flat.map((r) => rawPredict(W.any, r)), 0.5));
+    return { positionOffset, heroPositionShare, anyOffset };
+  };
+  const detailOf = (P) => (r) => clampRound(detRaw(r) + P.positionOffset[r.pos]);
+  const listOfP = (P) => (r) => {
+    const d = P.heroPositionShare[r.hero];
+    if (!d) return clampRound(rawPredict(W.any, r) + P.anyOffset);
+    let s = 0;
+    for (let i = 0; i < 5; i++) s += d[i] * (rawPredict(W[roleOfPos(i + 1)], r) + P.positionOffset[i + 1]);
+    return clampRound(s);
+  };
+  // A v5 como esta no app: pesos por papel no detalhe; na lista, a fatia de core travada.
+  const v5Detail = (r) => clampRound(detRaw(r));
+  const v5List = (r) => {
+    const p = base.heroCoreShare?.[r.hero];
+    if (p === undefined) return clampRound(rawPredict(W.any, r));
+    return clampRound(p * rawPredict(W.core, r) + (1 - p) * rawPredict(W.support, r));
+  };
+
+  const r1 = (ms, score) => {
+    const f = ms.flat();
+    const v = f.map(score);
+    const lo = quant(v, 0.4), hi = quant(v, 0.6);
+    const meds = [1, 2, 3, 4, 5].map((p) => quant(f.filter((r) => r.pos === p).map(score), 0.5));
+    return { pass: meds.every((m) => m >= lo && m <= hi), margin: meds.every((m) => m >= lo + 1 && m <= hi - 1), medians: meds, band: [lo, hi] };
+  };
+  const r3 = (ms, score) => { const f = ms.flat(); return r3n(corr(f.map(score), f.map((x) => x.dur))); };
+  const r8 = (ms, a, b) => { const f = ms.flat(); return r3n(corr(f.map(a), f.map(b))); };
+
+  const hold = matches.filter((m) => m[0].id % 5 === 0);
+  const fitPart = matches.filter((m) => m[0].id % 5 !== 0);
+  const P = fitParams(fitPart);
+  const legs = {
+    'v5.1 detalhe': detailOf(P), 'v5.1 lista': listOfP(P),
+    'v5 detalhe': v5Detail, 'v5 lista': v5List,
+  };
+  const val = {};
+  for (const [k, f] of Object.entries(legs)) val[k] = { R1: r1(hold, f), R3: r3(hold, f), R5: withinTeam(hold, f) };
+  const R8new = r8(hold, legs['v5.1 detalhe'], legs['v5.1 lista']);
+  const R8old = r8(hold, v5Detail, v5List);
+  const lock = {
+    R1margin: val['v5.1 detalhe'].R1.margin && val['v5.1 lista'].R1.margin,
+    R3: Math.abs(val['v5.1 detalhe'].R3) <= 0.1 && Math.abs(val['v5.1 lista'].R3) <= 0.1,
+    R8: R8new >= 0.95,
+    R5: val['v5.1 detalhe'].R5.rho >= val['v5 detalhe'].R5.rho - 0.005 && val['v5.1 lista'].R5.rho >= val['v5 lista'].R5.rho - 0.005,
+  };
+  lock.pass = lock.R1margin && lock.R3 && lock.R8 && lock.R5;
+
+  // O bloco final: parametros de todas as partidas da lista; limiares por taxa-alvo no detalhe.
+  const F = fitParams(matches);
+  const flat = matches.flat();
+  const g = flat.map(detailOf(F)).sort((a, b) => a - b);
+  const thresholds = {};
+  for (const [name, rate] of Object.entries(TARGET_RATES.high)) thresholds[name] = g[g.length - Math.round(rate * g.length)];
+  for (const [name, rate] of Object.entries(TARGET_RATES.low)) thresholds[name] = g[Math.round(rate * g.length) - 1];
+  const fired = (t, high) => Number(((100 * g.filter((v) => (high ? v >= t : v <= t)).length) / g.length).toFixed(1));
+  const block = {
+    fittedAt: new Date().toISOString().slice(0, 10),
+    target: 'contrib',
+    version: '5.1',
+    base: path.basename(baseFile),
+    seenFile: path.basename(seenFile),
+    trainMatches: matches.length,
+    trainByPatch: { '7.41': matches.filter((m) => m[0].patch === TRAIN_PATCH).length, '7.42': matches.filter((m) => m[0].patch === TEST_PATCH).length },
+    metrics: METRICS,
+    weights: base.weights,
+    duration: base.duration,
+    positionOffset: F.positionOffset,
+    heroPositionShare: F.heroPositionShare,
+    heroPositionShareMinRows: HERO_SHARE_MIN_ROWS,
+    anyOffset: F.anyOffset,
+    thresholds,
+    thresholdRates: Object.fromEntries([
+      ...Object.keys(TARGET_RATES.high).map((k) => [k, fired(thresholds[k], true)]),
+      ...Object.keys(TARGET_RATES.low).map((k) => [k, fired(thresholds[k], false)]),
+    ]),
+    median: g[g.length >> 1],
+    validation: { holdoutMatches: hold.length, fitPartOffsets: P.positionOffset, legs: val, R8: { 'v5.1': R8new, v5: R8old }, lock },
+  };
+  if (process.argv.includes('--json')) return console.log(JSON.stringify(block, null, 2));
+
+  console.log('GLINT v5.1 — AJUSTE FINO (deslocamento por posicao sobre os pesos da base)');
+  console.log(`base ${block.base} | lista ${block.seenFile} | partidas ${matches.length} (7.41 ${block.trainByPatch['7.41']}, 7.42 ${block.trainByPatch['7.42']}) | fora da lista e nao lidas: ${skippedUnseen} arquivos`);
+  console.log(`\nVALIDACAO INTERNA (${hold.length} partidas com id % 5 === 0; contem a medida oficial da v5, ja lida: conferencia, nao medida)`);
+  console.log(`deslocamentos da parte do ajuste: ${[1, 2, 3, 4, 5].map((p) => `pos ${p} ${P.positionOffset[p]}`).join(' | ')} | anyOffset ${P.anyOffset}`);
+  for (const [k, v] of Object.entries(val)) {
+    console.log(`  ${k.padEnd(13)} R1 ${v.R1.pass ? 'PASSA' : 'FALHA'}${v.R1.margin ? ' com margem' : ''} ${v.R1.medians.join(' ')} | faixa ${v.R1.band.join('-')} | R3 r ${v.R3.toFixed(3)} | R5 ${v.R5.rho.toFixed(3)} (melhor ${v.R5.bestPct}%)`);
+  }
+  console.log(`  R8 lista x detalhe: v5.1 ${R8new} | v5 ${R8old}`);
+  console.log(`\nREGRA DE TRAVA: R1 com margem ${lock.R1margin ? 'PASSA' : 'FALHA'} | R3 ${lock.R3 ? 'PASSA' : 'FALHA'} | R8 ${lock.R8 ? 'PASSA' : 'FALHA'} | R5 >= v5 - 0,005 ${lock.R5 ? 'PASSA' : 'FALHA'} => ${lock.pass ? 'TRAVA' : 'VOLTA AO DONO'}`);
+  console.log(`\nBLOCO FINAL (todas as partidas): ${[1, 2, 3, 4, 5].map((p) => `pos ${p} ${F.positionOffset[p]}`).join(' | ')} | anyOffset ${F.anyOffset} | ${Object.keys(F.heroPositionShare).length} herois com fatia`);
+  console.log(`LIMIARES por taxa-alvo (detalhe, todas as linhas; mediana ${block.median}):`);
+  for (const k of [...Object.keys(TARGET_RATES.high), ...Object.keys(TARGET_RATES.low)]) {
+    const high = k in TARGET_RATES.high;
+    console.log(`  ${k.padEnd(12)} ${high ? '>=' : '<='} ${String(thresholds[k]).padStart(3)}  alvo ${(100 * (high ? TARGET_RATES.high[k] : TARGET_RATES.low[k])).toFixed(0)}% | dispara em ${block.thresholdRates[k]}%`);
+  }
+  console.log('\nbloco: --refine --seen <lista> --json > <arquivo>; medir com measure-glint.cjs --model <arquivo> --seen <as tres listas>');
+}
+
 (() => {
+  if (process.argv.includes('--refine')) return fitRefine();
   if (process.argv.includes('--target')) {
     const t = process.argv[process.argv.indexOf('--target') + 1];
     if (t !== 'contrib') { console.log('uso: --target contrib'); process.exit(1); }

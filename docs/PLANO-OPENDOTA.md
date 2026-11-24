@@ -492,6 +492,18 @@ um reajuste novo, com terceiro congelamento antes de olhar. A rotina diária imp
 medidas: "modelo antigo, ajustado ao IMP" (primeiro congelamento, para o registro) e "Glint no
 ar (v5)" (segundo congelamento, a que decide).
 
+**2026-11-24: medida oficial da v5 e ajuste fino.** A medida saiu no log de 2026-11-23 (2.555
+partidas): passa R1–R5 e R9 no detalhe (R5 0,521 contra 0,390 do KDA; R2 enfim medida) e falha
+R8 só porque a lista falha R1 — posição 2 com mediana 56 para a faixa 45–55. Pela letra do
+parágrafo acima, falhou. **O dono manteve a v5** ("é uma métrica muito melhor que a antiga") e
+pediu ajuste fino. Terceiro congelamento (`.gabarito/glint-seen-2026-11-24.json`, 5.201
+partidas) antes de qualquer leitura; o ajuste fino **v5.1** (deslocamento por posição sobre os
+pesos da v5; lista pelas cinco posições do herói) passou a regra de trava escrita antes e está
+travado em `.gabarito/glint-candidate-2026-11-24-v5.1.json`. Ele **não** está no app: entra se
+passar na medida em 500 partidas de 7.42 colhidas depois do terceiro congelamento (seção
+"ajuste fino v5.1" da rotina diária). Números e o que ficou de fora em
+[PROPOSTA-REGUA-GLINT.md](PROPOSTA-REGUA-GLINT.md), fim do §7.
+
 Pendências menores da referência, se alguém mexer nela **antes** da medida oficial: a morte
 fora de luta não penaliza quem morreu (limitação declarada em `lib/impact.cjs`); torre, barracks
 e Roshan só entram pelo ouro.

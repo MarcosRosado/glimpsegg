@@ -28,6 +28,12 @@
  *   ordem dentro do time contra a referencia (Spearman): detalhe 0,548 | lista 0,509 | KDA 0,403
  *   lista x detalhe r 0,975 | correlacao com a duracao 0,003 | mediana por posicao 53 55 50 46 47
  *
+ * MEDIDA OFICIAL (2026-11-23, 2.555 partidas novas): passa R1-R5 e R9 no detalhe; falha R8 so
+ * porque a lista falha R1 (posicao 2 com mediana 56, faixa 45-55). O dono manteve a v5. O ajuste
+ * fino v5.1 (deslocamento por posicao, `positionOffset`; lista pelas cinco posicoes,
+ * `heroPositionShare`) esta travado e em medida; ate passar, `GLINT_MODEL` continua a v5 e os
+ * campos novos de `GlintModelShape` ficam sem uso no app.
+ *
  * REFAZER. `node scripts/fit-glint-experimental.cjs --target contrib --json <arquivo>` gera o
  * candidato; ele so entra aqui depois de passar na regua em partidas novas (novo congelamento
  * antes de olhar). Nunca ajustar peso ou limiar no olho. O modelo anterior, ajustado ao IMP,
@@ -140,6 +146,19 @@ export interface GlintModelShape {
    * p x nota de core + (1 - p) x nota de suporte. Heroi fora da tabela usa os pesos sem papel.
    */
   heroCoreShare?: Readonly<Record<number, number>>;
+  /**
+   * Pontos somados a nota do detalhe por posicao (1 a 5). O alvo ja desconta a media da posicao,
+   * entao a nota deve ter a mesma media em toda posicao; sem isto a v5 dava +2 ao meio e -3 a
+   * offlane. So pesa quando quem chama informa a posicao.
+   */
+  positionOffset?: Readonly<Record<number, number>>;
+  /**
+   * Fatia de cada posicao (1 a 5, nessa ordem) por heroi. Sem posicao, a nota vira o detalhe
+   * ESPERADO pelas cinco posicoes. Tem precedencia sobre `heroCoreShare`.
+   */
+  heroPositionShare?: Readonly<Record<number, readonly number[]>>;
+  /** Pontos somados aos pesos sem papel (heroi sem fatia), para essa perna centrar em 50. */
+  anyOffset?: number;
 }
 
 /**
@@ -156,6 +175,7 @@ export function computeGlint(
   durationSeconds?: number | null,
   model: GlintModelShape = GLINT_MODEL,
   heroId?: number | null,
+  position?: number | null,
 ): number | null {
   if (!pct) return null;
   for (const m of GLINT_METRICS) {
@@ -175,8 +195,24 @@ export function computeGlint(
     for (let i = 0; i < GLINT_METRICS.length; i++) sum += (pct[GLINT_METRICS[i]] as number) * w[i + 1];
     return model.duration ? sum + minutes * model.duration[set] : sum;
   };
-  const share = !role && heroId != null ? model.heroCoreShare?.[heroId] : undefined;
-  const sum = role ? raw(role) : share !== undefined ? share * raw('core') + (1 - share) * raw('support') : raw('any');
+  const offset = (pos: number): number => model.positionOffset?.[pos] ?? 0;
+  let sum: number;
+  if (role) {
+    const pos = typeof position === 'number' && position >= 1 && position <= 5 ? position : null;
+    sum = raw(role) + (pos ? offset(pos) : 0);
+  } else {
+    const dist = heroId != null ? model.heroPositionShare?.[heroId] : undefined;
+    const share = heroId != null ? model.heroCoreShare?.[heroId] : undefined;
+    if (dist) {
+      // O detalhe esperado pelas cinco posicoes: o papel e o deslocamento de cada uma.
+      sum = 0;
+      for (let i = 0; i < 5; i++) sum += (dist[i] ?? 0) * (raw(i < 3 ? 'core' : 'support') + offset(i + 1));
+    } else if (share !== undefined) {
+      sum = share * raw('core') + (1 - share) * raw('support');
+    } else {
+      sum = raw('any') + (model.anyOffset ?? 0);
+    }
+  }
   return Math.round(Math.max(0, Math.min(100, sum)));
 }
 

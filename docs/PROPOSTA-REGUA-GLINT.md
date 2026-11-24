@@ -256,3 +256,47 @@ todo dia a partir do 7.41 — estável enquanto o 7.41 não crescer (1.847 parti
 separam. Quem decide são R1, R3 (que reprovam a média de 8), R5 e R9. R2 sem amostra (menos de
 10 heróis com 200+ linhas) sai `n/d` e **não conta como aprovação**: o veredito espera R2 medida.
 O IC95 de R5 reamostra partidas, não times (os dois lados do mesmo jogo andam juntos).
+
+### Medida oficial da v5 e o ajuste fino v5.1 (2026-11-24)
+
+**A medida oficial da v5 saiu no log de 2026-11-23** (2.555 partidas de 7.42 colhidas depois do
+segundo congelamento; a coleta de 2026-11-22 parou cedo com a OpenDota instável — timeouts e
+HTTP 520/521 —, e a de 2026-11-23 rodou inteira):
+
+| Critério | Detalhe (por papel) | Lista (sem posição) |
+| --- | --- | --- |
+| R1 | passa (53 56 50 48 49; faixa 46–56) | **falha** (53 **56** 50 46 47; faixa 45–55) |
+| R2 | passa (100% de 50 heróis — medida, não mais `n/d`) | passa (98%) |
+| R3 | r −0,00 | r −0,00 |
+| R4 | 4,8% | 5,5% |
+| R5 | **0,521** (kda3 0,390; IC95 da diferença [0,120; 0,140]) | 0,478 |
+| R8 | r 0,975, mas exige R1 nas duas pernas ⇒ **falha** | |
+| R9 | passa | |
+
+No mesmo log o modelo antigo, ajustado ao IMP, falha R5 (0,336, abaixo do KDA) e R9. Pela letra
+do roteiro a v5 falhou (só por R8, via R1 da lista, por 1 ponto). **O dono decidiu mantê-la**
+("é uma métrica muito melhor que a antiga") e pediu ajuste fino.
+
+**Terceiro congelamento** antes de qualquer outra leitura: `.gabarito/glint-seen-2026-11-24.json`
+(5.201 partidas, tudo em disco). Diagnóstico exploratório sobre ele: contra o alvo, o detalhe dá
++2,4 pontos à posição 2 e −2,8 à posição 3, desvio constante nos dois patches que o alvo (que já
+desconta a média da posição) não explica; e a lista dá ~3 pontos a menos ao suporte de herói
+misto, porque os pesos de core aplicados ao jogo de suporte puxam a nota para baixo. O segundo
+pediria inferir a posição pelas estatísticas — modelo novo, não ajuste fino — e ficou de fora,
+declarado.
+
+**v5.1** (`fit-glint-experimental.cjs --refine`, regra escrita no cabeçalho antes da primeira
+execução): pesos, duração e teto da v5 intocados; um **deslocamento por posição** que dá à nota
+a mesma média em toda posição (−0,98 · −3,29 · +1,65 · +0,32 · −0,05); a lista vira o detalhe
+esperado pelas **cinco** posições do herói (`heroPositionShare`, 127 heróis); limiares
+recalculados por taxa-alvo (mudam em até 1 ponto). Holdout interno (contém a medida da v5, já
+lida — conferência): detalhe 52 52 50 49 49 (faixa 45–55), R5 0,539 (v5 0,530); lista 52 54 50
+46 47 (faixa 44–55), R5 0,488 (v5 0,489); R8 0,974; R3 0,000. Passou a regra de trava e foi
+travada em `.gabarito/glint-candidate-2026-11-24-v5.1.json`. A margem da lista na posição 4 é de
+1 ponto — o defeito do suporte de herói misto, que ficou de fora.
+
+**O que decide:** `measure-glint.cjs --model .gabarito/glint-candidate-2026-11-24-v5.1.json
+--seen <as três listas>`, a partir de 500 partidas de 7.42 colhidas depois do terceiro
+congelamento; a rotina diária imprime na seção "ajuste fino v5.1". Passou: entra no
+`glint.ts` (o `computeGlint` já aceita `positionOffset`, `heroPositionShare` e `anyOffset`, e
+quem chama passa a posição). Falhou: a v5 segue no ar, e o que falhou volta ao dono.

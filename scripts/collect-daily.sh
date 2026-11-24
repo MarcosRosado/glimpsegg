@@ -82,4 +82,9 @@ node scripts/measure-glint.cjs --model .gabarito/glint-imp-fit-2026-11-19.json -
 # congelamento antes, e esta linha muda junto (plano, roteiro do Glint).
 echo "--- Glint no ar (v5, travado em 2026-11-22) ---"
 node scripts/measure-glint.cjs --seen .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json
+# O ajuste fino v5.1 (deslocamento por posicao sobre os pesos da v5), travado em 2026-11-24 depois
+# do TERCEIRO congelamento: so 7.42 colhido depois dele. Ainda nao é o modelo do app — entra se
+# passar aqui, a partir de 500 partidas (plano, roteiro do Glint).
+echo "--- ajuste fino v5.1 (candidato, travado em 2026-11-24) ---"
+node scripts/measure-glint.cjs --model .gabarito/glint-candidate-2026-11-24-v5.1.json --seen .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json,.gabarito/glint-seen-2026-11-24.json
 echo "=== $(date '+%F %T %z') — fim ==="

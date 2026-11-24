@@ -26,6 +26,11 @@
  * --seen .gabarito/glint-seen-2026-11-21.json` (a medida registrada antes do reajuste). Mudou o
  * modelo do app depois disso? Terceiro congelamento antes de medir de novo.
  *
+ * O TERCEIRO CONGELAMENTO (2026-11-24, `.gabarito/glint-seen-2026-11-24.json`, 5.201 partidas)
+ * veio depois da medida oficial da v5 e antes do ajuste fino v5.1. A medida da v5.1 é `--model
+ * .gabarito/glint-candidate-2026-11-24-v5.1.json --seen <as tres listas>`. A posicao vai para o
+ * `computeGlint` junto com o papel: o deslocamento por posicao da v5.1 depende dela.
+ *
  * QUEM É MEDIDO.
  *  - `glint`: a funcao do app (`computeGlint`, carregada de src/utils/glint.ts pelo
  *    `runnerImport` do Vite — uma copia dos pesos aqui mediria outra nota), pesos por papel.
@@ -177,7 +182,8 @@ function bootCI(teams, diff) {
           hero: o.hero_id, pos, win: !!o.win, radiant: !!o.isRadiant,
           ref: ref && pos ? ref[i] - model.positionMean[pos] : null,
           scores: {
-            glint: G.computeGlint(pct, pos ? G.glintRoleOf(`POSITION_${pos}`) : null, od.duration, MODEL, o.hero_id),
+            // A posicao vai junto: o modelo com `positionOffset` (v5.1 em diante) a usa; a v5 a ignora.
+            glint: G.computeGlint(pct, pos ? G.glintRoleOf(`POSITION_${pos}`) : null, od.duration, MODEL, o.hero_id, pos),
             // A nota sem posicao, como a lista de partidas mostra (com `heroCoreShare`, se o
             // modelo tiver, a mistura core/suporte pela fatia do heroi).
             'glint-any': G.computeGlint(pct, null, od.duration, MODEL, o.hero_id),
