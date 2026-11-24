@@ -502,7 +502,9 @@ pesos da v5; lista pelas cinco posições do herói) passou a regra de trava esc
 travado em `.gabarito/glint-candidate-2026-11-24-v5.1.json`. Ele **não** está no app: entra se
 passar na medida em 500 partidas de 7.42 colhidas depois do terceiro congelamento (seção
 "ajuste fino v5.1" da rotina diária). Números e o que ficou de fora em
-[PROPOSTA-REGUA-GLINT.md](PROPOSTA-REGUA-GLINT.md), fim do §7.
+[PROPOSTA-REGUA-GLINT.md](PROPOSTA-REGUA-GLINT.md), fim do §7. **No mesmo dia o dono mandou a v5.1 para o app**,
+antes da medida dela (release 2.0.3): a medida em 500 partidas novas decide se ela **fica**; se
+falhar, a v5 (`.gabarito/glint-candidate-2026-11-22-v5.json`) é a volta.
 
 Pendências menores da referência, se alguém mexer nela **antes** da medida oficial: a morte
 fora de luta não penaliza quem morreu (limitação declarada em `lib/impact.cjs`); torre, barracks

@@ -211,38 +211,41 @@ nele reintroduziria a mistura.
 
 A nota de impacto do app, de 0 a 100. É uma **regressão linear sobre oito percentis da OpenDota**
 (onde o jogador ficou em cada estatística entre partidas do mesmo herói — partida inteira, todos
-os ranques) mais um **termo de duração**. **Desde a v5 (no ar em 2026-11-22) o alvo não é mais o
-IMP da STRATZ** (D8): os pesos reproduzem a referência de **contribuição para a vitória**
-(probabilidade de vitória atribuída por evento, `scripts/lib/impact.cjs`), com a régua própria
-de [`docs/PROPOSTA-REGUA-GLINT.md`](docs/PROPOSTA-REGUA-GLINT.md). Ajuste em 2.572 partidas (7.41 e
-7.42); conferência interna em 493 partidas: ordena o time como a referência com Spearman 0,55 no
-detalhe e 0,51 na lista (o KDA dá 0,40), lista × detalhe r 0,975, correlação com a duração 0,003.
-**A v5 entrou por decisão do dono antes da medida oficial** — os números acima foram lidos em
-todas as versões do reajuste e são otimistas. A medida oficial saiu em 2026-11-23 (2.555
-partidas novas): R5 0,52 contra 0,39 do KDA e R1–R4, R9 passando no detalhe, mas a lista falha
-R1 (meio alto demais) e por isso R8; **o dono manteve a v5** (2026-11-24). O ajuste fino v5.1
-(deslocamento por posição) está travado e em medida — números e roteiro no fim do §7 de
-[`docs/PROPOSTA-REGUA-GLINT.md`](docs/PROPOSTA-REGUA-GLINT.md). É o que "experimental" quer
-dizer, e o rótulo não é enfeite:
+os ranques) mais um **termo de duração** e um **deslocamento por posição**. **Desde a v5 (no ar
+em 2026-11-22) o alvo não é mais o IMP da STRATZ** (D8): os pesos reproduzem a referência de
+**contribuição para a vitória** (probabilidade de vitória atribuída por evento,
+`scripts/lib/impact.cjs`), com a régua própria de
+[`docs/PROPOSTA-REGUA-GLINT.md`](docs/PROPOSTA-REGUA-GLINT.md). A medida oficial da v5 (2.555
+partidas novas, 2026-11-23) deu R5 0,52 contra 0,39 do KDA e passou R1–R4 e R9 no detalhe, mas a
+lista falhou R1 (meio alto demais) e por isso R8. **O dono manteve a v5** e, em 2026-11-24, pôs no
+ar o **ajuste fino v5.1**: os mesmos pesos, mais um deslocamento por posição que dá à nota a mesma
+média em toda posição (o alvo já desconta a média da posição). Conferência em 2.555 partidas que o
+ajuste fino viu: Spearman 0,53 no detalhe e 0,48 na lista (o KDA dá 0,39), lista × detalhe r 0,973,
+correlação com a duração 0,00. **A v5.1 entrou por decisão do dono antes da medida dela** (500
+partidas de 7.42 colhidas depois do terceiro congelamento; a rotina diária imprime). É o que
+"experimental" quer dizer, e o rótulo não é enfeite:
 
 - **Todo número de Glint sai com a procedência.** O `GlintBadge` (`components/ui/`) carrega o
   tooltip com as métricas da conferência (`GLINT_MODEL.check`); quem mostra a nota fora dele usa
   `useGlintHint()`. Nota sem rótulo de experimental é regressão.
 - **Centro é 50 por construção, mas não é "esperado para herói e posição".** A escala de tela leva
   a mediana a 50 e o p10–p90 a 48 pontos; o percentil é por herói, não por posição nem por ranque,
-  e a mediana por posição fica entre 46 e 55.
+  e a mediana por posição fica entre 46 e 54 (na lista; 49 a 53 no detalhe).
 - **Sem composição no tooltip.** Os pesos são todos não negativos (R9), mas as oito métricas andam
   juntas; "puxado por farm" seria causa inventada.
 - **Percentil ou duração faltando ⇒ `null`**, e a nota some daquela linha. Nunca `0`. O termo de
   duração existe porque o percentil é por herói em qualquer duração e partida longa infla taxa
   por minuto (critério R3); sem ele, a nota seria outra.
 - **Sem posição (lista de partidas, partida não parseada)** a nota é a do detalhe **esperada para o
-  herói**: fatia de core × nota de core + o resto × nota de suporte (`heroCoreShare`, medida no
-  treino, 103 heróis). Herói fora da tabela usa os pesos sem papel.
+  herói** pelas cinco posições: fatia de cada posição × (nota do papel + deslocamento da posição)
+  (`heroPositionShare`, medida no treino, 127 heróis). Herói fora da tabela usa os pesos sem papel.
+  Defeito conhecido: o suporte de herói misto sai ~3 pontos abaixo do detalhe (os pesos de core
+  aplicados ao jogo de suporte); corrigir pediria inferir a posição, que é modelo novo.
 - **Limiar sai por taxa de disparo**, nunca somando ou convertendo de outra escala:
   `GLINT_THRESHOLDS` traz ao lado a taxa medida de cada um (alvos de 1% nos extremos a 50% no
   neutro).
-- **Peso e limiar saem de `scripts/fit-glint-experimental.cjs --target contrib`**, nunca do olho.
+- **Peso e limiar saem de `scripts/fit-glint-experimental.cjs`** (`--target contrib` para um
+  reajuste, `--refine` para o ajuste fino sobre um candidato travado), nunca do olho.
   Modelo novo só entra depois de passar na régua em partidas nunca vistas — congelar a lista de
   partidas já olhadas **antes** de olhar. O modelo antigo, ajustado ao IMP (r 0,81 contra o IMP
   em 469 partidas de 7.42), está em `.gabarito/glint-imp-fit-2026-11-19.json` e a rotina ainda o

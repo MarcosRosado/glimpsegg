@@ -60,16 +60,16 @@ const MAX_TAGS = 4;
  * Limiares de NOTA das tags, na escala do Glint (0 a 100).
  *
  * Ate 2026-11-19 estas tags liam o IMP da STRATZ (`imp >= 25`, `>= 15`, `<= -10`). A
- * conversao foi POR QUANTIL, nao por soma de 50, e a v5 do Glint (2026-11-22) manteve as
- * taxas: cada limiar dispara na mesma taxa de antes. As taxas ao lado sao as medidas em
+ * conversao foi POR QUANTIL, nao por soma de 50, e a v5 do Glint (2026-11-22) e a v5.1
+ * (2026-11-24) mantiveram as taxas: cada limiar dispara na mesma taxa de antes. As taxas ao lado sao as medidas em
  * `src/utils/glint.ts` (`GLINT_THRESHOLDS`, linhas de treino) — sao a taxa do LIMIAR sozinho; `STOMP` e `HIGH_IMPACT` ainda cruzam
  * com outra condicao (duracao, KDA), entao a tag dispara menos que isso. Refazer com
  * `node scripts/fit-glint-experimental.cjs`, nunca no olho.
  */
-const GLINT_STOMP = GLINT_THRESHOLDS.strong;        // 72 — 13,2% (era IMP >= 25)
-const GLINT_HIGH_IMPACT = GLINT_THRESHOLDS.good;    // 66 — 22,3% (era IMP >= 15)
-const GLINT_LOW_IMPACT = GLINT_THRESHOLDS.poor;     // 45 — 41,4% (era IMP <= -10)
-const GLINT_HIGHLIGHT = GLINT_THRESHOLDS.strong;    // 72 — 13,2% (era IMP >= 25)
+const GLINT_STOMP = GLINT_THRESHOLDS.strong;        // 72 — 12,1% (era IMP >= 25)
+const GLINT_HIGH_IMPACT = GLINT_THRESHOLDS.good;    // 65 — 23,2% (era IMP >= 15)
+const GLINT_LOW_IMPACT = GLINT_THRESHOLDS.poor;     // 45 — 41,3% (era IMP <= -10)
+const GLINT_HIGHLIGHT = GLINT_THRESHOLDS.strong;    // 72 — 12,1% (era IMP >= 25)
 
 function getAccumulatedMatchTags(match: PlayerMatchSummary, t: Translate, locale: string): MatchTag[] {
   const tags: MatchTag[] = [];

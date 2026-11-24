@@ -300,3 +300,12 @@ travada em `.gabarito/glint-candidate-2026-11-24-v5.1.json`. A margem da lista n
 congelamento; a rotina diária imprime na seção "ajuste fino v5.1". Passou: entra no
 `glint.ts` (o `computeGlint` já aceita `positionOffset`, `heroPositionShare` e `anyOffset`, e
 quem chama passa a posição). Falhou: a v5 segue no ar, e o que falhou volta ao dono.
+
+**2026-11-24, depois: a v5.1 foi para o app por decisão do dono, antes da medida dela** ("Pode
+subir a atualização para o app"), como a v5 dois dias antes. Colada de
+`.gabarito/glint-candidate-2026-11-24-v5.1.json`; a medida pela função do app sai idêntica à do
+candidato (conferido nas 2.555 partidas da medida da v5). O tooltip passou a citar a conferência
+nessas 2.555 partidas, que o ajuste fino viu (ρ da lista 0,48 contra 0,39 do KDA). A folga do
+"dia difícil" foi conferida de novo (folga 4: 67% e 68%, iguais aos da v5) e ficou. A medida
+oficial da v5.1 (a seção "Glint no ar (v5.1)" da rotina diária) passa a decidir se ela **fica**;
+a da v5 segue no log, pelo candidato travado, para o registro.

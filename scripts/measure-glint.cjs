@@ -6,7 +6,7 @@
  *   node scripts/measure-glint.cjs --explore    o que ja foi olhado (7.41 + 7.42), EXPLORATORIO
  *   ... --model <bloco.json>   mede um CANDIDATO (pesos de `fit-glint-experimental.cjs --target
  *                              contrib --json`) com a funcao do app, no lugar do GLINT_MODEL
- *   ... --seen a.json,b.json   listas congeladas (padrao, desde a v5 no app: as duas, 2026-11-21 e -22).
+ *   ... --seen a.json,b.json   listas congeladas (padrao, desde a v5.1 no app: as tres, 2026-11-21, -22 e -24).
  *                              O oficial exclui a UNIAO delas; o --explore le so a PRIMEIRA
  *
  * O CONJUNTO OFICIAL. `.gabarito/glint-seen-2026-11-21.json` lista as 2.573 partidas que ja
@@ -28,8 +28,10 @@
  *
  * O TERCEIRO CONGELAMENTO (2026-11-24, `.gabarito/glint-seen-2026-11-24.json`, 5.201 partidas)
  * veio depois da medida oficial da v5 e antes do ajuste fino v5.1. A medida da v5.1 é `--model
- * .gabarito/glint-candidate-2026-11-24-v5.1.json --seen <as tres listas>`. A posicao vai para o
- * `computeGlint` junto com o papel: o deslocamento por posicao da v5.1 depende dela.
+ * .gabarito/glint-candidate-2026-11-24-v5.1.json --seen <as tres listas>` — e, desde que ela foi
+ * para o app no mesmo dia (decisao do dono, antes da medida), é o padrao sem flag. A v5 se mede
+ * com `--model .gabarito/glint-candidate-2026-11-22-v5.json --seen <as duas primeiras>`. A posicao
+ * vai para o `computeGlint` junto com o papel: o deslocamento por posicao da v5.1 depende dela.
  *
  * QUEM É MEDIDO.
  *  - `glint`: a funcao do app (`computeGlint`, carregada de src/utils/glint.ts pelo
@@ -50,11 +52,12 @@ const { attributable, attribute } = require('./lib/impact.cjs');
 
 const ROOT = path.join(process.cwd(), '.gabarito');
 const argAfter = (flag) => { const i = process.argv.indexOf(flag); return i > 0 ? process.argv[i + 1] : undefined; };
-// Padrao: as DUAS listas. Desde que a v5 é o GLINT_MODEL do app, medir sem --seen com so a primeira
-// chamaria de oficial um conjunto que inclui as 73 partidas congeladas na segunda.
+// Padrao: as TRES listas. Desde que a v5.1 é o GLINT_MODEL do app (2026-11-24), o conjunto oficial
+// dela é o 7.42 de depois do terceiro congelamento; sem a terceira lista, o oficial incluiria as
+// partidas em que o ajuste fino foi feito.
 const SEEN_FILES = argAfter('--seen')
   ? argAfter('--seen').split(',').map((f) => path.resolve(f))
-  : [path.join(ROOT, 'glint-seen-2026-11-21.json'), path.join(ROOT, 'glint-seen-2026-11-22.json')];
+  : ['glint-seen-2026-11-21.json', 'glint-seen-2026-11-22.json', 'glint-seen-2026-11-24.json'].map((f) => path.join(ROOT, f));
 const SEEN_FILE = SEEN_FILES[SEEN_FILES.length - 1];
 const MODEL_ARG = argAfter('--model');
 const MODEL_FILE = path.join(ROOT, 'impact', 'wp-model.json');

@@ -26,7 +26,7 @@ import { ITEMS_MAP, getItem } from '../constants/items';
 import { WARD_DURATION_SEC } from '../constants/mapGeometry';
 import { isStratzCell } from '../utils/minimapCoords';
 import { cumulativeAt, sumDeltas } from '../utils/insights/timeSeries';
-import { computeGlint, glintPercentilesFromMatch, glintRoleOf } from '../utils/glint';
+import { computeGlint, glintPercentilesFromMatch, glintPositionOf, glintRoleOf } from '../utils/glint';
 import {
   laneIdFromOpenDota,
   laneOutcomesFrom,
@@ -615,9 +615,10 @@ export function mapOpenDotaMatch(m: any): MatchDetails {
       heroHealing: num(p.hero_healing),
       // Marcador, nao medicao: ver `availability.imp`.
       imp: 0,
-      // Nota propria experimental, dos percentis que a OpenDota manda por jogador. Sem
-      // posicao (partida nao parseada) usa os pesos sem papel; sem percentil, `null`.
-      glint: computeGlint(glintPercentilesFromMatch(p.benchmarks), glintRoleOf(position), durationSeconds, undefined, heroId),
+      // Nota propria experimental, dos percentis que a OpenDota manda por jogador. A posicao vai
+      // junto (o deslocamento por posicao da v5.1); sem ela (partida nao parseada), o detalhe
+      // esperado para o heroi; sem percentil, `null`.
+      glint: computeGlint(glintPercentilesFromMatch(p.benchmarks), glintRoleOf(position), durationSeconds, undefined, heroId, glintPositionOf(position)),
       role: position,
       lane: mapLane(p),
       items: [p.item_0, p.item_1, p.item_2, p.item_3, p.item_4, p.item_5].map(num),

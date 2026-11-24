@@ -76,15 +76,14 @@ node scripts/build-impact-reference.cjs | sed -n '/^1\./,/^  maior desvio/p'
 # do reajuste: so 7.42 de depois do PRIMEIRO congelamento. Aposentado, medido para o registro.
 echo "--- modelo antigo, ajustado ao IMP (aposentado em 2026-11-22) ---"
 node scripts/measure-glint.cjs --model .gabarito/glint-imp-fit-2026-11-19.json --seen .gabarito/glint-seen-2026-11-21.json
-# A v5, no ar desde 2026-11-22 por decisao do dono, ANTES desta medida: so partidas de depois do
-# segundo congelamento. Sem --model de proposito: mede o GLINT_MODEL do app, que é a v5 colada
-# (a paridade com o candidato travado foi conferida na troca). Trocou o modelo do app? Novo
-# congelamento antes, e esta linha muda junto (plano, roteiro do Glint).
-echo "--- Glint no ar (v5, travado em 2026-11-22) ---"
-node scripts/measure-glint.cjs --seen .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json
-# O ajuste fino v5.1 (deslocamento por posicao sobre os pesos da v5), travado em 2026-11-24 depois
-# do TERCEIRO congelamento: so 7.42 colhido depois dele. Ainda nao é o modelo do app — entra se
-# passar aqui, a partir de 500 partidas (plano, roteiro do Glint).
-echo "--- ajuste fino v5.1 (candidato, travado em 2026-11-24) ---"
-node scripts/measure-glint.cjs --model .gabarito/glint-candidate-2026-11-24-v5.1.json --seen .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json,.gabarito/glint-seen-2026-11-24.json
+# A v5 (no ar de 2026-11-22 a 2026-11-24), medida no conjunto dela — so 7.42 de depois do segundo
+# congelamento —, pelo candidato travado (o GLINT_MODEL do app virou a v5.1). Para o registro.
+echo "--- v5 (no ar de 2026-11-22 a 2026-11-24) ---"
+node scripts/measure-glint.cjs --model .gabarito/glint-candidate-2026-11-22-v5.json --seen .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json
+# A v5.1, no ar desde 2026-11-24 por decisao do dono, ANTES desta medida: so 7.42 de depois do
+# TERCEIRO congelamento. Sem --model de proposito: mede o GLINT_MODEL do app, que é a v5.1 colada
+# (paridade com o candidato conferida na troca). Esta é a medida que decide se ela fica.
+# Trocou o modelo do app? Novo congelamento antes, e esta linha muda junto.
+echo "--- Glint no ar (v5.1, travado em 2026-11-24) ---"
+node scripts/measure-glint.cjs --seen .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json,.gabarito/glint-seen-2026-11-24.json
 echo "=== $(date '+%F %T %z') — fim ==="

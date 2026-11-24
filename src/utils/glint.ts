@@ -1,42 +1,42 @@
 /**
  * GLINT EXPERIMENTAL — a nota de impacto do app desde que a STRATZ saiu (2026-11-19).
  *
- * O QUE ELA É (v5, no ar desde 2026-11-22). Uma regressao linear sobre oito PERCENTIS da
- * OpenDota — onde o jogador ficou, em cada estatistica, entre partidas do MESMO HEROI (partida
- * inteira, todos os ranques) — mais um termo de duracao. Desde a v5 o alvo NAO é mais o IMP da
- * STRATZ (decisao D8): os pesos reproduzem a referencia de CONTRIBUICAO PARA A VITORIA
- * (probabilidade de vitoria atribuida por evento, scripts/lib/impact.cjs), com a regua propria
- * de docs/PROPOSTA-REGUA-GLINT.md. Escala de tela: a mediana vai a 50 e o intervalo p10-p90
- * ocupa 48 pontos.
+ * O QUE ELA É (v5.1, no ar desde 2026-11-24; v5 de 2026-11-22). Uma regressao linear sobre oito
+ * PERCENTIS da OpenDota — onde o jogador ficou, em cada estatistica, entre partidas do MESMO
+ * HEROI (partida inteira, todos os ranques) — mais um termo de duracao e um deslocamento por
+ * posicao. Desde a v5 o alvo NAO é mais o IMP da STRATZ (decisao D8): os pesos reproduzem a
+ * referencia de CONTRIBUICAO PARA A VITORIA (probabilidade de vitoria atribuida por evento,
+ * scripts/lib/impact.cjs), com a regua propria de docs/PROPOSTA-REGUA-GLINT.md. Escala de tela:
+ * a mediana vai a 50 e o intervalo p10-p90 ocupa 48 pontos.
  *
  *  - Pesos NAO NEGATIVOS (R9): cada metrica so soma. Ainda assim nao ha composicao no tooltip:
  *    as oito andam juntas, e "puxado por farm" seria causa inventada.
  *  - Termo de DURACAO (pontos por minuto, teto de 60 min): o percentil é por heroi em qualquer
  *    duracao e partida longa infla taxa por minuto. Sem duracao valida, a nota é `null`.
+ *  - DESLOCAMENTO POR POSICAO (v5.1): o alvo ja desconta a media da posicao, entao a nota tem a
+ *    mesma media em toda posicao. Sem ele a v5 dava ~+2,5 ao meio e ~-3 a offlane.
  *  - SEM POSICAO (lista de partidas, partida nao parseada), a nota é o detalhe ESPERADO para o
- *    heroi: fatia de core x nota de core + o resto x nota de suporte (`heroCoreShare`, medida no
- *    treino, so herois com pelo menos 100 jogadores com posicao). Heroi fora da tabela
- *    usa os pesos sem papel.
+ *    heroi pelas cinco posicoes (`heroPositionShare`, so herois com pelo menos 100 jogadores com
+ *    posicao). Heroi fora da tabela usa os pesos sem papel mais `anyOffset`.
  *
- * O QUE ELA AINDA NAO É. Aprovada na regua inteira: a v5 entrou por decisao do dono ANTES da
- * medida em partidas nunca vistas, e a medida (abaixo) reprovou a lista em R1. Os numeros da
- * conferencia interna, em 493 partidas separadas do ajuste mas lidas em todas as versoes do
- * reajuste, sao otimistas. Por isso o rotulo continua "experimental"/"beta".
+ * O QUE ELA AINDA NAO É. Aprovada na regua em partidas nunca vistas. A v5 foi medida (2026-11-23,
+ * 2.555 partidas novas): passou R1-R5 e R9 no detalhe e falhou R8 porque a lista falhou R1
+ * (posicao 2 com mediana 56, faixa 45-55); o dono a manteve. A v5.1 corrige isso so com o
+ * deslocamento por posicao (pesos da v5 intocados) e entrou por decisao do dono ANTES da medida
+ * dela (500 partidas de 7.42 colhidas depois de 2026-11-24; a rotina diaria imprime). Defeito
+ * conhecido e de fora: na lista, o suporte de heroi misto fica ~3 pontos abaixo do detalhe.
+ * Por isso o rotulo continua "experimental"/"beta".
  *
- * CONFERENCIA INTERNA (ajuste em 2572 partidas, 1.846 de 7.41 e 726 de 7.42):
- *   ordem dentro do time contra a referencia (Spearman): detalhe 0,548 | lista 0,509 | KDA 0,403
- *   lista x detalhe r 0,975 | correlacao com a duracao 0,003 | mediana por posicao 53 55 50 46 47
+ * CONFERENCIA (as 2.555 partidas da medida da v5, que o ajuste fino viu — so os cinco
+ * deslocamentos e as fatias foram ajustados nelas):
+ *   ordem dentro do time contra a referencia (Spearman): detalhe 0,529 | lista 0,479 | KDA 0,390
+ *   lista x detalhe r 0,973 | correlacao com a duracao 0,00 | mediana por posicao 52 53 52 49 49
  *
- * MEDIDA OFICIAL (2026-11-23, 2.555 partidas novas): passa R1-R5 e R9 no detalhe; falha R8 so
- * porque a lista falha R1 (posicao 2 com mediana 56, faixa 45-55). O dono manteve a v5. O ajuste
- * fino v5.1 (deslocamento por posicao, `positionOffset`; lista pelas cinco posicoes,
- * `heroPositionShare`) esta travado e em medida; ate passar, `GLINT_MODEL` continua a v5 e os
- * campos novos de `GlintModelShape` ficam sem uso no app.
- *
- * REFAZER. `node scripts/fit-glint-experimental.cjs --target contrib --json <arquivo>` gera o
- * candidato; ele so entra aqui depois de passar na regua em partidas novas (novo congelamento
- * antes de olhar). Nunca ajustar peso ou limiar no olho. O modelo anterior, ajustado ao IMP,
- * esta em `.gabarito/glint-imp-fit-2026-11-19.json`.
+ * REFAZER. `node scripts/fit-glint-experimental.cjs --target contrib --json <arquivo>` gera um
+ * reajuste completo; `--refine` so o ajuste fino sobre um candidato travado. Novo candidato so
+ * entra aqui depois de passar na regua em partidas novas (novo congelamento antes de olhar).
+ * Nunca ajustar peso ou limiar no olho. O modelo ajustado ao IMP esta em
+ * `.gabarito/glint-imp-fit-2026-11-19.json`; a v5, em `.gabarito/glint-candidate-2026-11-22-v5.json`.
  */
 
 /** As oito estatisticas do modelo, com o nome que a OpenDota usa em `benchmarks`. */
@@ -54,22 +54,23 @@ export type GlintMetric = (typeof GLINT_METRICS)[number];
 export type GlintRole = 'core' | 'support';
 
 /**
- * Colado de `.gabarito/glint-candidate-2026-11-22-v5.json` (travado as 01:28 de 2026-11-22).
+ * Colado de `.gabarito/glint-candidate-2026-11-24-v5.1.json` (travado em 2026-11-24, ajuste fino
+ * sobre a v5: `weights` e `duration` sao os dela).
  * `weights`: [intercepto, ...um peso por metrica, na ordem de GLINT_METRICS]; percentil em 0..1.
  */
 export const GLINT_MODEL = {
-  version: 5,
-  fittedAt: '2026-11-22',
+  version: 5.1,
+  fittedAt: '2026-11-24',
   target: 'contrib',
-  trainMatches: 2572,
-  /** Conferencia interna (ver o cabecalho). `teamRho*`: Spearman dentro do time contra a referencia. */
+  trainMatches: 5199,
+  /** Conferencia (ver o cabecalho). `teamRho*`: Spearman dentro do time contra a referencia. */
   check: {
-    matches: 493,
-    teamRhoDetail: 0.548,
-    teamRhoList: 0.509,
-    teamRhoKda: 0.403,
-    listVsDetailR: 0.975,
-    durationR: 0.003,
+    matches: 2555,
+    teamRhoDetail: 0.529,
+    teamRhoList: 0.479,
+    teamRhoKda: 0.39,
+    listVsDetailR: 0.973,
+    durationR: 0,
   },
   weights: {
     core: [17.79, 27.71, 22.03, 9.69, 22.97, 4.16, 0, 0, 3.49],
@@ -79,24 +80,49 @@ export const GLINT_MODEL = {
   },
   /** Pontos por minuto de partida, minuto com teto. */
   duration: { core: -0.438, support: -0.438, any: -0.438, capMinutes: 60 },
-  /** `hero_id` -> fatia das linhas de treino em que o heroi foi core (pos 1 a 3). */
-  heroCoreShare: {
-    1: 0.982, 2: 0.971, 4: 0.948, 5: 0.033, 6: 0.963, 7: 0.727, 8: 0.995, 9: 0.06, 10: 0.969, 11: 0.962,
-    12: 0.996, 13: 0.952, 14: 0.347, 15: 0.904, 16: 0.949, 17: 0.987, 18: 0.993, 19: 0.769, 20: 0.332, 21: 0.48,
-    22: 0.363, 23: 0.955, 25: 0.785, 26: 0.114, 27: 0.021, 28: 0.938, 29: 0.934, 30: 0.025, 31: 0.016, 32: 0.88,
-    33: 0.69, 34: 0.962, 35: 0.817, 36: 0.958, 37: 0.033, 38: 0.992, 39: 0.85, 40: 0.108, 41: 0.966, 42: 0.976,
-    43: 0.853, 44: 0.99, 45: 0.244, 46: 0.981, 47: 0.884, 48: 0.991, 49: 0.987, 50: 0.031, 52: 0.901, 53: 0.644,
-    54: 0.991, 55: 0.923, 59: 0.934, 60: 0.967, 62: 0.048, 63: 0.489, 64: 0.06, 65: 0.593, 67: 0.973, 68: 0.078,
-    69: 0.941, 70: 0.987, 71: 0.169, 74: 0.748, 75: 0.164, 76: 0.981, 81: 0.962, 82: 0.966, 84: 0.288, 85: 0.32,
-    86: 0.162, 87: 0.005, 88: 0.199, 90: 0.72, 91: 0.298, 93: 0.939, 97: 0.715, 98: 0.965, 99: 0.933, 100: 0.216,
-    101: 0.125, 102: 0.418, 104: 0.979, 105: 0.078, 106: 0.977, 107: 0.509, 109: 0.971, 110: 0.509, 111: 0.077, 112: 0.066,
-    113: 0.879, 114: 0.921, 119: 0.056, 120: 0.985, 121: 0.033, 123: 0.027, 126: 0.97, 128: 0.382, 129: 0.951, 131: 0.032,
-    135: 0.953, 136: 0.726, 137: 0.949,
+  /** Pontos somados a nota do detalhe, por posicao (1 a 5). */
+  positionOffset: { 1: -0.98, 2: -3.29, 3: 1.65, 4: 0.32, 5: -0.05 },
+  /** Somado aos pesos sem papel (heroi sem fatia). */
+  anyOffset: -0.03,
+  /** `hero_id` -> fatia das linhas de treino em cada posicao, 1 a 5. */
+  heroPositionShare: {
+    1: [0.938, 0.024, 0.021, 0.006, 0.011], 2: [0.009, 0.025, 0.933, 0.02, 0.013], 3: [0.008, 0.074, 0.008, 0.306, 0.603], 4: [0.683, 0.143, 0.124, 0.019, 0.031],
+    5: [0.005, 0.022, 0.009, 0.206, 0.759], 6: [0.898, 0.06, 0.011, 0.019, 0.011], 7: [0.007, 0.432, 0.278, 0.231, 0.051], 8: [0.967, 0.016, 0.012, 0.002, 0.003],
+    9: [0.009, 0.035, 0.022, 0.612, 0.322], 10: [0.822, 0.139, 0.003, 0.018, 0.018], 11: [0.131, 0.819, 0.017, 0.01, 0.022], 12: [0.956, 0.011, 0.023, 0.004, 0.006],
+    13: [0, 0.944, 0.014, 0.028, 0.014], 14: [0.015, 0.094, 0.222, 0.404, 0.265], 15: [0.12, 0.227, 0.571, 0.056, 0.026], 16: [0, 0.331, 0.621, 0.039, 0.01],
+    17: [0.022, 0.949, 0.009, 0.013, 0.006], 18: [0.94, 0.011, 0.045, 0.003, 0], 19: [0.266, 0.301, 0.183, 0.205, 0.044], 20: [0.165, 0.066, 0.12, 0.305, 0.345],
+    21: [0.126, 0.216, 0.14, 0.384, 0.135], 22: [0.006, 0.291, 0.019, 0.486, 0.197], 23: [0.022, 0.335, 0.586, 0.057, 0], 25: [0.026, 0.741, 0.013, 0.15, 0.069],
+    26: [0.003, 0.097, 0.003, 0.342, 0.556], 27: [0.002, 0.008, 0.013, 0.278, 0.699], 28: [0.013, 0.125, 0.813, 0.046, 0.004], 29: [0.01, 0.023, 0.918, 0.044, 0.005],
+    30: [0.001, 0.01, 0.006, 0.267, 0.715], 31: [0.003, 0.005, 0.006, 0.253, 0.733], 32: [0.395, 0.341, 0.138, 0.087, 0.039], 33: [0.005, 0.066, 0.566, 0.247, 0.116],
+    34: [0.012, 0.936, 0.02, 0.024, 0.008], 35: [0.119, 0.621, 0.049, 0.155, 0.055], 36: [0.103, 0.494, 0.372, 0.022, 0.01], 37: [0.007, 0.007, 0.015, 0.276, 0.694],
+    38: [0.009, 0.086, 0.893, 0.006, 0.006], 39: [0.01, 0.829, 0.027, 0.097, 0.037], 40: [0.017, 0.021, 0.073, 0.409, 0.48], 41: [0.889, 0.017, 0.06, 0.017, 0.017],
+    42: [0.332, 0.019, 0.627, 0.017, 0.005], 43: [0.074, 0.424, 0.346, 0.083, 0.072], 44: [0.934, 0.027, 0.024, 0.008, 0.007], 45: [0.002, 0.198, 0.025, 0.398, 0.378],
+    46: [0.681, 0.303, 0, 0.011, 0.005], 47: [0.047, 0.514, 0.29, 0.106, 0.043], 48: [0.963, 0.025, 0.003, 0.004, 0.006], 49: [0.117, 0.3, 0.57, 0.01, 0.002],
+    50: [0, 0.029, 0.01, 0.186, 0.775], 51: [0.013, 0.039, 0.116, 0.484, 0.348], 52: [0.114, 0.742, 0.066, 0.057, 0.022], 53: [0.282, 0.267, 0.067, 0.272, 0.111],
+    54: [0.936, 0.003, 0.051, 0.006, 0.004], 55: [0.004, 0.04, 0.888, 0.04, 0.028], 56: [0.604, 0.297, 0.042, 0.047, 0.01], 57: [0.024, 0.048, 0.387, 0.194, 0.347],
+    58: [0, 0.089, 0.12, 0.272, 0.519], 59: [0.049, 0.642, 0.24, 0.049, 0.02], 60: [0.009, 0.022, 0.948, 0.019, 0.002], 61: [0.115, 0.683, 0.181, 0.022, 0],
+    62: [0.006, 0.011, 0.017, 0.818, 0.148], 63: [0.308, 0.095, 0.075, 0.379, 0.142], 64: [0.006, 0.039, 0.018, 0.389, 0.548], 65: [0.004, 0.448, 0.222, 0.194, 0.133],
+    66: [0.006, 0.056, 0.006, 0.173, 0.759], 67: [0.938, 0.016, 0.019, 0.003, 0.025], 68: [0, 0.059, 0.007, 0.298, 0.636], 69: [0.007, 0.022, 0.905, 0.036, 0.029],
+    70: [0.86, 0.055, 0.063, 0, 0.022], 71: [0.003, 0.03, 0.112, 0.701, 0.154], 72: [0.482, 0.04, 0.031, 0.237, 0.21], 73: [0.461, 0.261, 0.096, 0.139, 0.043],
+    74: [0.002, 0.752, 0.005, 0.173, 0.068], 75: [0.012, 0.092, 0.017, 0.431, 0.448], 76: [0.066, 0.886, 0.032, 0.012, 0.004], 77: [0.061, 0.158, 0.772, 0.009, 0],
+    78: [0.012, 0.078, 0.808, 0.084, 0.018], 79: [0, 0.023, 0.028, 0.373, 0.576], 80: [0.443, 0.41, 0.082, 0.033, 0.033], 81: [0.276, 0.105, 0.56, 0.039, 0.02],
+    82: [0.162, 0.748, 0.062, 0.01, 0.019], 83: [0, 0.01, 0.02, 0.382, 0.588], 84: [0.004, 0.066, 0.199, 0.328, 0.403], 85: [0.017, 0.029, 0.272, 0.294, 0.387],
+    86: [0.001, 0.136, 0.021, 0.581, 0.262], 87: [0, 0.013, 0.004, 0.242, 0.74], 88: [0.002, 0.12, 0.036, 0.668, 0.173], 89: [0.92, 0.057, 0.011, 0, 0.011],
+    90: [0.015, 0.619, 0.03, 0.239, 0.096], 91: [0.032, 0.199, 0.053, 0.199, 0.518], 92: [0.006, 0.313, 0.559, 0.073, 0.05], 93: [0.688, 0.178, 0.071, 0.031, 0.032],
+    94: [0.832, 0.09, 0.052, 0.019, 0.006], 95: [0.823, 0.069, 0.092, 0, 0.015], 96: [0.007, 0.027, 0.947, 0.02, 0], 97: [0.012, 0.245, 0.472, 0.154, 0.117],
+    98: [0.004, 0.127, 0.833, 0.018, 0.018], 99: [0.032, 0.049, 0.88, 0.025, 0.014], 100: [0, 0.071, 0.098, 0.361, 0.47], 101: [0.004, 0.12, 0, 0.575, 0.301],
+    102: [0.148, 0.025, 0.252, 0.164, 0.412], 103: [0.117, 0.041, 0.556, 0.146, 0.14], 104: [0.018, 0.031, 0.93, 0.021, 0], 105: [0.001, 0.048, 0.019, 0.534, 0.397],
+    106: [0.014, 0.956, 0.007, 0.01, 0.014], 107: [0.004, 0.407, 0.131, 0.364, 0.093], 108: [0.016, 0.032, 0.872, 0.056, 0.024], 109: [0.972, 0.003, 0.003, 0.01, 0.01],
+    110: [0.007, 0.203, 0.238, 0.324, 0.228], 111: [0, 0.04, 0.007, 0.193, 0.76], 112: [0.003, 0.021, 0.047, 0.244, 0.686], 113: [0.051, 0.801, 0.01, 0.096, 0.042],
+    114: [0.495, 0.387, 0.031, 0.063, 0.024], 119: [0.015, 0.018, 0.01, 0.497, 0.46], 120: [0.008, 0.687, 0.293, 0.008, 0.004], 121: [0, 0.028, 0.002, 0.439, 0.531],
+    123: [0, 0.011, 0.014, 0.58, 0.395], 126: [0.022, 0.863, 0.089, 0.022, 0.005], 128: [0.01, 0.264, 0.073, 0.397, 0.256], 129: [0.009, 0.038, 0.916, 0.029, 0.009],
+    131: [0, 0.008, 0.008, 0.404, 0.581], 135: [0.007, 0.072, 0.867, 0.035, 0.02], 136: [0.044, 0.456, 0.195, 0.188, 0.118], 137: [0.003, 0.284, 0.677, 0.03, 0.006],
+    138: [0.593, 0.119, 0.034, 0.186, 0.068], 145: [0.569, 0.391, 0.036, 0.005, 0], 155: [0, 0.068, 0.49, 0.265, 0.177],
   },
 } as const;
 
 /**
- * Mediana do Glint, o "centro" que o tooltip cita. Desde a v5 a escala de tela é ancorada nela
+ * Mediana do Glint, o "centro" que o tooltip cita. Desde a v5 (e na v5.1) a escala de tela é ancorada nela
  * (mediana -> 50); no modelo ajustado ao IMP era 45.
  */
 export const GLINT_MEDIAN = 50;
@@ -108,30 +134,31 @@ export const GLINT_MEDIAN = 50;
  */
 export const GLINT_THRESHOLDS = {
   /** 1,2% ficam acima (alvo 1%). */
-  extremeHigh: 85,
-  /** 5,8% (alvo 5%). */
+  extremeHigh: 84,
+  /** 5,1% (alvo 5%). */
   elite: 78,
-  /** 8,1% (alvo 8%) — o criterio de atropelo da lista. */
-  stomp: 76,
-  /** 13,2% (alvo 12%). */
+  /** 8,2% (alvo 8%) — o criterio de atropelo da lista. */
+  stomp: 75,
+  /** 12,1% (alvo 12%). */
   strong: 72,
-  /** 22,3% (alvo 22%). */
-  good: 66,
-  /** 36,3% (alvo 35%) — o piso de "impacto alto" da lista. */
+  /** 23,2% (alvo 22%). */
+  good: 65,
+  /** 35,8% (alvo 35%) — o piso de "impacto alto" da lista. */
   impact: 58,
-  /** 50,9% ficam acima (alvo 50%): a mediana. */
+  /** 51% ficam acima (alvo 50%): a mediana. */
   neutral: 50,
-  /** 41,4% ficam abaixo ou igual (alvo 40%). */
+  /** 41,3% ficam abaixo ou igual (alvo 40%). */
   poor: 45,
-  /** 21,6% (alvo 20%). */
+  /** 20,8% (alvo 20%). */
   weak: 34,
-  /** 1,1% (alvo 1%). */
+  /** 1,0% (alvo 1%). */
   extremeLow: 11,
 } as const;
 
 /**
- * O que `computeGlint` le de um modelo. `duration` e `heroCoreShare` sao opcionais: o modelo no
- * ar (v5) tem os dois, o antigo ajustado ao IMP nao tinha — o percentil é por heroi
+ * O que `computeGlint` le de um modelo. Tudo alem de `weights` é opcional: a v5 tinha `duration`
+ * e `heroCoreShare`, a v5.1 (no ar) tem `duration`, `positionOffset`, `heroPositionShare` e
+ * `anyOffset`, e o antigo ajustado ao IMP so os pesos — o percentil é por heroi
  * em qualquer duracao, partida longa infla taxa por minuto, e o termo de duracao (pontos por
  * minuto, minuto com teto opcional) tira esse vies (criterio R3). Fica fora de `weights` de
  * proposito: nao é composicao da nota, é normalizacao.
@@ -220,6 +247,12 @@ export function glintRoleOf(position: string | null | undefined): GlintRole | nu
   if (position === 'POSITION_1' || position === 'POSITION_2' || position === 'POSITION_3') return 'core';
   if (position === 'POSITION_4' || position === 'POSITION_5') return 'support';
   return null;
+}
+
+/** `POSITION_1`..`POSITION_5` -> 1..5, para o deslocamento por posicao; o resto, `null`. */
+export function glintPositionOf(position: string | null | undefined): number | null {
+  const m = /^POSITION_([1-5])$/.exec(position ?? '');
+  return m ? Number(m[1]) : null;
 }
 
 /** `players[].benchmarks` da partida -> os oito percentis. Chave ausente fica `undefined`. */

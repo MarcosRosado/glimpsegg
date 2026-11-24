@@ -8,6 +8,7 @@ import {
   getGlintIconKind,
   glintPercentilesFromMatch,
   glintPercentilesFromRaw,
+  glintPositionOf,
   glintRoleOf,
   percentileFromTable,
 } from '../../src/utils/glint';
@@ -37,7 +38,7 @@ describe('computeGlint', () => {
   });
 
   it('sem papel e sem heroi usa os pesos sem papel', () => {
-    expect(computeGlint(allAt(0.5), null, 35 * 60)).toBe(Math.round(byHand('any', 0.5, 35)));
+    expect(computeGlint(allAt(0.5), null, 35 * 60)).toBe(Math.round(byHand('any', 0.5, 35) + GLINT_MODEL.anyOffset));
   });
 
   it('o modelo no ar exige duracao: sem ela a nota é null, nunca uma nota sem o termo', () => {
@@ -49,10 +50,20 @@ describe('computeGlint', () => {
     for (const w of Object.values(GLINT_MODEL.weights)) for (const x of w.slice(1)) expect(x).toBeGreaterThanOrEqual(0);
   });
 
-  it('sem posicao, heroi da tabela mistura core e suporte pela fatia medida', () => {
-    const [id, share] = Object.entries(GLINT_MODEL.heroCoreShare)[0];
-    const mixed = share * byHand('core', 0.5, 35) + (1 - share) * byHand('support', 0.5, 35);
-    expect(computeGlint(allAt(0.5), null, 35 * 60, undefined, Number(id))).toBe(Math.round(mixed));
+  it('sem posicao, heroi da tabela é o detalhe esperado pelas cinco posicoes medidas', () => {
+    const [id, dist] = Object.entries(GLINT_MODEL.heroPositionShare)[0];
+    const off = GLINT_MODEL.positionOffset;
+    const expected = dist.reduce((s, f, i) => s + f * (byHand(i < 3 ? 'core' : 'support', 0.5, 35) + off[(i + 1) as 1 | 2 | 3 | 4 | 5]), 0);
+    expect(computeGlint(allAt(0.5), null, 35 * 60, undefined, Number(id))).toBe(Math.round(expected));
+  });
+
+  it('com posicao, o modelo no ar soma o deslocamento dela (v5.1)', () => {
+    for (const pos of [1, 2, 3, 4, 5] as const) {
+      const role = pos <= 3 ? 'core' : 'support';
+      expect(computeGlint(allAt(0.5), role, 35 * 60, undefined, null, pos)).toBe(
+        Math.round(byHand(role, 0.5, 35) + GLINT_MODEL.positionOffset[pos]),
+      );
+    }
   });
 
   it('percentil faltando devolve null: nota com metrica a menos seria outro modelo', () => {
@@ -193,6 +204,10 @@ describe('computeGlint', () => {
     expect(glintRoleOf('POSITION_5')).toBe('support');
     expect(glintRoleOf('UNKNOWN')).toBeNull();
     expect(glintRoleOf(undefined)).toBeNull();
+    expect(glintPositionOf('POSITION_2')).toBe(2);
+    expect(glintPositionOf('POSITION_5')).toBe(5);
+    expect(glintPositionOf('UNKNOWN')).toBeNull();
+    expect(glintPositionOf(undefined)).toBeNull();
   });
 });
 
@@ -204,7 +219,7 @@ describe('Glint no mapper da partida (fixture real)', () => {
     for (const p of match.players) {
       const rp = raw.players.find((x: any) => x.player_slot === p.playerSlot);
       expect(p.glint).not.toBeNull();
-      expect(p.glint).toBe(computeGlint(glintPercentilesFromMatch(rp.benchmarks), glintRoleOf(p.position), raw.duration, undefined, rp.hero_id));
+      expect(p.glint).toBe(computeGlint(glintPercentilesFromMatch(rp.benchmarks), glintRoleOf(p.position), raw.duration, undefined, rp.hero_id, glintPositionOf(p.position)));
       expect(p.glint).toBeGreaterThanOrEqual(0);
       expect(p.glint).toBeLessThanOrEqual(100);
     }
