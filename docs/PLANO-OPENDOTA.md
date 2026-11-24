@@ -506,6 +506,13 @@ passar na medida em 500 partidas de 7.42 colhidas depois do terceiro congelament
 antes da medida dela (release 2.0.3): a medida em 500 partidas novas decide se ela **fica**; se
 falhar, a v5 (`.gabarito/glint-candidate-2026-11-22-v5.json`) é a volta.
 
+**2026-11-24, noite: a v5.1 passou e fica.** A medida saiu no log do mesmo dia (2.416 partidas
+de 7.42 fora dos três congelamentos, pelo `GLINT_MODEL` do app): R1–R5, R8 e R9 passam no
+detalhe e na lista — R5 0,519 e 0,467 contra 0,377 do KDA, R8 r 0,973, e a posição 2 da lista
+caiu de 56 para 53. Tabela e ressalvas (R2 sobre 47 heróis, janela única de 19/11, nada sobre a
+7.42a) no fim do §7 de [PROPOSTA-REGUA-GLINT.md](PROPOSTA-REGUA-GLINT.md). O roteiro do Glint
+fecha aqui: reajuste novo só com quarto congelamento.
+
 Pendências menores da referência, se alguém mexer nela **antes** da medida oficial: a morte
 fora de luta não penaliza quem morreu (limitação declarada em `lib/impact.cjs`); torre, barracks
 e Roshan só entram pelo ouro.

@@ -221,8 +221,11 @@ lista falhou R1 (meio alto demais) e por isso R8. **O dono manteve a v5** e, em 
 ar o **ajuste fino v5.1**: os mesmos pesos, mais um deslocamento por posição que dá à nota a mesma
 média em toda posição (o alvo já desconta a média da posição). Conferência em 2.555 partidas que o
 ajuste fino viu: Spearman 0,53 no detalhe e 0,48 na lista (o KDA dá 0,39), lista × detalhe r 0,973,
-correlação com a duração 0,00. **A v5.1 entrou por decisão do dono antes da medida dela** (500
-partidas de 7.42 colhidas depois do terceiro congelamento; a rotina diária imprime). É o que
+correlação com a duração 0,00. **A v5.1 entrou por decisão do dono antes da medida dela**, e a
+medida saiu no mesmo dia (log de 2026-11-24, 2.416 partidas de 7.42 fora dos três
+congelamentos): **passou** R1–R5, R8 e R9 nos dois caminhos, R5 0,519 no detalhe e 0,467 na lista
+contra 0,377 do KDA, lista × detalhe r 0,973. **A v5.1 fica.** As partidas são de antes da 7.42a
+(a trilha desce a partir do cursor), então a medida não diz nada sobre ela. É o que
 "experimental" quer dizer, e o rótulo não é enfeite:
 
 - **Todo número de Glint sai com a procedência.** O `GlintBadge` (`components/ui/`) carrega o
@@ -230,7 +233,8 @@ partidas de 7.42 colhidas depois do terceiro congelamento; a rotina diária impr
   `useGlintHint()`. Nota sem rótulo de experimental é regressão.
 - **Centro é 50 por construção, mas não é "esperado para herói e posição".** A escala de tela leva
   a mediana a 50 e o p10–p90 a 48 pontos; o percentil é por herói, não por posição nem por ranque,
-  e a mediana por posição fica entre 46 e 54 (na lista; 49 a 53 no detalhe).
+  e a mediana por posição fica entre 46 e 53 na lista e entre 48 e 52 no detalhe (medida oficial
+  da v5.1).
 - **Sem composição no tooltip.** Os pesos são todos não negativos (R9), mas as oito métricas andam
   juntas; "puxado por farm" seria causa inventada.
 - **Percentil ou duração faltando ⇒ `null`**, e a nota some daquela linha. Nunca `0`. O termo de

@@ -309,3 +309,33 @@ nessas 2.555 partidas, que o ajuste fino viu (ρ da lista 0,48 contra 0,39 do KD
 "dia difícil" foi conferida de novo (folga 4: 67% e 68%, iguais aos da v5) e ficou. A medida
 oficial da v5.1 (a seção "Glint no ar (v5.1)" da rotina diária) passa a decidir se ela **fica**;
 a da v5 segue no log, pelo candidato travado, para o registro.
+
+### Medida oficial da v5.1: passou, fica (2026-11-24)
+
+Log de 2026-11-24, seção "Glint no ar (v5.1)": `measure-glint.cjs` **sem `--model`**, ou seja, o
+`GLINT_MODEL` do app, sobre 2.416 partidas de 7.42 fora dos três congelamentos (24.160 linhas).
+
+| Critério | Detalhe (`glint`) | Lista (`glint-any`) | KDA |
+| --- | --- | --- | --- |
+| R1 mediana por posição | 51 52 50 48 48 (faixa 45–55) — passa | 51 53 50 46 47 (faixa 44–54) — passa | 53 55 51 49 48 |
+| R2 por herói | 94% de 47 heróis — passa | 94% de 47 — passa | 98% |
+| R3 duração | r 0,00 — passa | r 0,01 — passa | r 0,05 |
+| R4 empate no topo | 5,2% — passa | 5,0% — passa | 5,0% |
+| R5 Spearman no time · mesmo melhor | 0,519 · 47,2% — passa (IC95 da diferença 0,138–0,152) | 0,467 · 46,6% — passa | 0,377 · 40,9% |
+| R6 time vencedor com média maior | 94,5% | 94,0% | 91,5% |
+
+R7 (sanidade, só relatado): r 0,85 contra IMP + 50 em 672 linhas. R8: lista × detalhe r 0,973 e
+R1 nos dois — passa. R9: pesos não negativos — passa. O defeito que tirou a v5 do aceite (lista
+com mediana 56 na posição 2) sumiu: a posição 2 da lista ficou em 53.
+
+**A v5.1 fica**; a v5 deixa de ser a volta. Ressalvas registradas, nenhuma muda o veredito:
+
+- **R2 sobre 47 heróis, não 101.** A amostra é de um dia; a medida acumula nos próximos logs.
+- **Uma janela só.** As 2.416 partidas começaram entre 09:29 e 10:17 UTC de 2026-11-19 — a trilha
+  desce a partir do cursor, e essa faixa é contígua à do treino.
+- **Nada sobre a 7.42a** (publicada em 2026-11-24 08:00 UTC). Pelo mesmo motivo, a trilha não
+  colhe partida mais nova que o início dela, e a OpenDota dá o mesmo `patch` (61) às duas; separar
+  exigiria filtrar por `start_time >= 1795507200` e mexer no cursor (decisão do dono, ver
+  [COLETA-GABARITO.md](COLETA-GABARITO.md), "a trilha 7.42 chegou ao patch anterior").
+- **Quarto congelamento.** Essas partidas já foram lidas: quem reajustar o modelo daqui em diante
+  congela a lista antes de olhar, como nas três vezes anteriores.
