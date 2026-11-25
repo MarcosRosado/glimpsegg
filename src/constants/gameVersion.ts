@@ -1,12 +1,14 @@
 /**
  * Patch do Dota 2 que serve de referência inicial/fallback para as análises.
  *
- * Versão atual de referência embutida: 7.42.
- * Em execução, o app consulta dinamicamente a Valve (Steam News API),
- * OpenDota e STRATZ para manter o patch sempre sincronizado e atualizado
- * em tempo real, sem necessidade de atualização do app.
+ * Versão atual de referência embutida: 7.42a (2026-11-24).
+ * Em execução, o app consulta dinamicamente a Valve (Steam News API) e a
+ * OpenDota (com o dotaconstants do GitHub de reserva) para manter o patch
+ * sincronizado sem atualização do app — a Steam é a única que traz a letra.
+ * Este valor é só o piso: vale quando todas falham e nunca rebaixa o que
+ * elas resolverem.
  */
-export const CURRENT_GAME_PATCH = '7.42';
+export const CURRENT_GAME_PATCH = '7.42a';
 
 
 export interface PatchTransitionConfig {

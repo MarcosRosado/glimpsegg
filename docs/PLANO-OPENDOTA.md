@@ -511,7 +511,9 @@ de 7.42 fora dos três congelamentos, pelo `GLINT_MODEL` do app): R1–R5, R8 e 
 detalhe e na lista — R5 0,519 e 0,467 contra 0,377 do KDA, R8 r 0,973, e a posição 2 da lista
 caiu de 56 para 53. Tabela e ressalvas (R2 sobre 47 heróis, janela única de 19/11, nada sobre a
 7.42a) no fim do §7 de [PROPOSTA-REGUA-GLINT.md](PROPOSTA-REGUA-GLINT.md). O roteiro do Glint
-fecha aqui: reajuste novo só com quarto congelamento.
+fecha aqui: reajuste novo só com quarto congelamento. Na mesma noite saiu a 7.42a, e a rotina
+passou a colher a trilha 7.42a e a medir a v5.1 só nela (`--patch 7.42a`) — o que diz se ela
+segue valendo depois do balanceamento.
 
 Pendências menores da referência, se alguém mexer nela **antes** da medida oficial: a morte
 fora de luta não penaliza quem morreu (limitação declarada em `lib/impact.cjs`); torre, barracks

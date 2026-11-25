@@ -23,9 +23,11 @@
  * 2.555 partidas novas): passou R1-R5 e R9 no detalhe e falhou R8 porque a lista falhou R1
  * (posicao 2 com mediana 56, faixa 45-55); o dono a manteve. A v5.1 corrige isso so com o
  * deslocamento por posicao (pesos da v5 intocados) e entrou por decisao do dono ANTES da medida
- * dela (500 partidas de 7.42 colhidas depois de 2026-11-24; a rotina diaria imprime). Defeito
- * conhecido e de fora: na lista, o suporte de heroi misto fica ~3 pontos abaixo do detalhe.
- * Por isso o rotulo continua "experimental"/"beta".
+ * dela. A medida saiu no mesmo dia (2026-11-24, 2.416 partidas de 7.42 de 19/11, fora dos tres
+ * congelamentos) e PASSOU R1-R5, R8 e R9 no detalhe e na lista: ela fica. Ainda nao medida em
+ * 7.42a (a rotina diaria imprime a partir de 500 partidas). Defeito conhecido e de fora: na
+ * lista, o suporte de heroi misto fica ~3 pontos abaixo do detalhe. Por isso o rotulo continua
+ * "experimental"/"beta".
  *
  * CONFERENCIA (as 2.555 partidas da medida da v5, que o ajuste fino viu — so os cinco
  * deslocamentos e as fatias foram ajustados nelas):

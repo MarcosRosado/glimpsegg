@@ -51,7 +51,10 @@ do 7.41, e o sync antigo, que só lia a OpenDota, rodava sem mudar nada. Item re
 fica no catálogo — partida antiga ainda o referencia.
 
 As notas completas do patch saem do mesmo datafeed, em JSON, sem precisar do site:
-`https://www.dota2.com/datafeed/patchnotes?version=<patch>&language=english`.
+`https://www.dota2.com/datafeed/patchnotes?version=<patch>&language=english`. O
+`patch_timestamp` de lá é **marcador de data** (sempre 08:00 UTC), não a hora da virada: a 7.42
+virou às 21:28 UTC e a 7.42a às ~23:39 UTC (notícia da Steam). Hora de virada sai da notícia ou
+de `/constants/patch` da OpenDota.
 
 > Se pular: `getItem` devolve fallback — item novo aparece como `Item #<id>` com ícone de receita e
 > `cost: 0`. **Sem erro.** E `cost: 0` derruba o corte `cost >= 1800` que o `ScoreboardTable`
@@ -124,6 +127,15 @@ procedência é o que este projeto inteiro existe para evitar.
 `src/services/__fixtures__/` fixa **forma**, não valor. Winrate desatualizado não quebra teste
 nenhum. Regenerar só quando a STRATZ ou a OpenDota mudarem o schema da resposta — e não há script:
 é captura manual de resposta real, anonimizada à mão.
+
+## 8b. Patch de letra (7.42a, 7.42b…)
+
+Costuma ser só balanceamento. O app resolve a letra sozinho pela Steam News, o cache de
+estatísticas vira junto e a janela de transição compara pelo patch maior — não reabrir. Sobra:
+rodar o sync de itens (passo 2), subir `CURRENT_GAME_PATCH` (higiene) e, na régua interna, a
+trilha nova do coletor ([COLETA-GABARITO.md](COLETA-GABARITO.md), "Trilha 7.42a"), porque a
+OpenDota dá o mesmo `patch` à letra e a trilha antiga nunca chega nela. Em 7.42a (2026-11-24):
+40 heróis e 3 itens ajustados, sem herói nem item novo, sync sem diferença.
 
 ## 9. Fechar
 

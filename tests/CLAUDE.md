@@ -2,7 +2,7 @@
 
 A suíte inteira do projeto. Teste **não fica junto do código**: `src/` e `electron/` contêm só o que
 o app embarca, e tudo que verifica comportamento mora aqui. A árvore **espelha `src/`**,
-`tests/electron/` espelha `electron/` e `tests/scripts/` espelha `scripts/` (só o que o workflow de release usa) — `src/utils/heroGrid/ranking.ts` é testado por
+`tests/electron/` espelha `electron/` e `tests/scripts/` espelha `scripts/` (o passo de versão da release e o patch das trilhas de coleta) — `src/utils/heroGrid/ranking.ts` é testado por
 `tests/utils/heroGrid/ranking.test.ts`. Arquivo novo segue o espelho; não há pasta de "testes
 soltos".
 
@@ -22,7 +22,7 @@ que precisa saber disso. O `tsconfig.app.json` inclui `["src", "tests"]`, então
 | `support/` | — (não espelha nada) | `fixtureMatches.ts`: as duas partidas reais da OpenDota pelo mapper real, e as sobreposições `withSynthetic*` (média do herói, divisão de dano) para as regras dormentes. Não é teste; ver abaixo |
 | `services/heroGrid/` | `src/services/heroGrid/` | `heroGridBridge` (o caminho browser devolve indisponível **explícito**, nunca sucesso simulado), `openDotaWinrates` — sem rede e sem token |
 | `i18n/` | `src/i18n/` | `translations`: paridade de chaves, nenhuma entrada vazia, mesmos placeholders nas duas locales e o guard de chave órfã |
-| `scripts/` | `scripts/` | `next-version` (o passo de versão do `release.yml`: sem tag, igual, patch maior, minor/major maior, menor que a tag). `.test.cjs` com globais, como os do main |
+| `scripts/` | `scripts/` | `next-version` (o passo de versão do `release.yml`: sem tag, igual, patch maior, minor/major maior, menor que a tag) e `patches` (`lib/patches.cjs`: a 7.42a pela hora de início, a folga depois da notícia, entrada sem hora). `.test.cjs` com globais, como os do main |
 | `electron/heroGrid/` | `electron/heroGrid/` | Os `.test.cjs` do processo main: `gridFile` (a guarda de imutabilidade, sobre os bytes que vão ao disco), `pathGuard`, `steamPaths`, `dotaProcess` |
 | `electron/` | `electron/` | `steamProfile` (só SteamID64 vira URL; nome e foto do XML; foto fora da Valve descartada; perfil inexistente e resposta desconhecida) e `configMigration` (o arquivo de config renomeado: copia sem o token, antigo intocado, roda uma vez), sobre um diretório temporário real |
 

@@ -225,7 +225,8 @@ correlação com a duração 0,00. **A v5.1 entrou por decisão do dono antes da
 medida saiu no mesmo dia (log de 2026-11-24, 2.416 partidas de 7.42 fora dos três
 congelamentos): **passou** R1–R5, R8 e R9 nos dois caminhos, R5 0,519 no detalhe e 0,467 na lista
 contra 0,377 do KDA, lista × detalhe r 0,973. **A v5.1 fica.** As partidas são de antes da 7.42a
-(a trilha desce a partir do cursor), então a medida não diz nada sobre ela. É o que
+(a trilha desce a partir do cursor), então a medida não diz nada sobre ela; desde 2026-11-25 a
+rotina colhe a 7.42a e mede a v5.1 só nela (`docs/COLETA-GABARITO.md`, "Trilha 7.42a"). É o que
 "experimental" quer dizer, e o rótulo não é enfeite:
 
 - **Todo número de Glint sai com a procedência.** O `GlintBadge` (`components/ui/`) carrega o

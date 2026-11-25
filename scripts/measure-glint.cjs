@@ -6,6 +6,7 @@
  *   node scripts/measure-glint.cjs --explore    o que ja foi olhado (7.41 + 7.42), EXPLORATORIO
  *   ... --model <bloco.json>   mede um CANDIDATO (pesos de `fit-glint-experimental.cjs --target
  *                              contrib --json`) com a funcao do app, no lugar do GLINT_MODEL
+ *   ... --patch 7.42a          so o patch de letra (a OpenDota da `patch` 61 as duas; ver lib/patches.cjs)
  *   ... --seen a.json,b.json   listas congeladas (padrao, desde a v5.1 no app: as tres, 2026-11-21, -22 e -24).
  *                              O oficial exclui a UNIAO delas; o --explore le so a PRIMEIRA
  *
@@ -49,6 +50,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { pathToFileURL } = require('url');
 const { attributable, attribute } = require('./lib/impact.cjs');
+const { patchOf } = require('./lib/patches.cjs');
 
 const ROOT = path.join(process.cwd(), '.gabarito');
 const argAfter = (flag) => { const i = process.argv.indexOf(flag); return i > 0 ? process.argv[i + 1] : undefined; };
@@ -60,6 +62,14 @@ const SEEN_FILES = argAfter('--seen')
   : ['glint-seen-2026-11-21.json', 'glint-seen-2026-11-22.json', 'glint-seen-2026-11-24.json'].map((f) => path.join(ROOT, f));
 const SEEN_FILE = SEEN_FILES[SEEN_FILES.length - 1];
 const MODEL_ARG = argAfter('--model');
+// `--patch 7.42a` restringe o conjunto oficial ao patch de letra. A OpenDota da `patch` 61 a 7.42 e
+// a 7.42a; sem o filtro, as duas entram juntas como "7.42". O de letra sai da hora de inicio
+// (`lib/patches.cjs`, com folga de 2 h depois da noticia da Steam).
+const PATCH_ARG = argAfter('--patch');
+if (PATCH_ARG && PATCH_ARG !== '7.42a') {
+  console.log('--patch aceita so 7.42a (o 7.42 sem filtro ja é o conjunto oficial).');
+  process.exit(1);
+}
 const MODEL_FILE = path.join(ROOT, 'impact', 'wp-model.json');
 const OFFICIAL_PATCH = 61; // 7.42
 const PATCH_NAME = { 60: '7.41', 61: '7.42' };
@@ -170,6 +180,7 @@ function bootCI(teams, diff) {
       try { p = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(ROOT, dir, n))).toString('utf-8')); } catch { continue; }
       const od = p.od;
       if (!od || !PATCH_NAME[od.patch] || (!explore && od.patch !== OFFICIAL_PATCH)) continue;
+      if (PATCH_ARG && patchOf(od.patch, od.start_time) !== PATCH_ARG) continue;
       if (!Array.isArray(od.players) || od.players.length !== 10) continue;
       const st = new Map((p.st?.players || []).map((x) => [x.playerSlot, x]));
       const ref = model && attributable(od) ? attribute(model.weights, od).contrib : null;
@@ -203,7 +214,9 @@ function bootCI(teams, diff) {
   const frozenOn = (path.basename(SEEN_FILE).match(/\d{4}-\d{2}-\d{2}/) || ['?'])[0];
   const header = explore
     ? `REGUA DO GLINT — EXPLORATORIO (--explore: so partidas ja olhadas, de ${path.basename(SEEN_FILES[0])}; nao decide nada)`
-    : `REGUA DO GLINT — MEDIDA OFICIAL (7.42 colhido depois de ${frozenOn}, fora de ${SEEN_FILES.map((f) => path.basename(f)).join(' + ')})`;
+    : PATCH_ARG
+      ? `REGUA DO GLINT — MEDIDA OFICIAL SO ${PATCH_ARG} (fora de ${SEEN_FILES.map((f) => path.basename(f)).join(' + ')})`
+      : `REGUA DO GLINT — MEDIDA OFICIAL (7.42 colhido depois de ${frozenOn}, fora de ${SEEN_FILES.map((f) => path.basename(f)).join(' + ')}; inclui a 7.42a, que a OpenDota nao separa)`;
   console.log(header);
   if (MODEL_ARG) console.log(`modelo medido: CANDIDATO ${path.basename(MODEL_ARG)} (nao o GLINT_MODEL do app)`);
   console.log(`partidas ${matches.length} | linhas ${matches.length * 10}`);

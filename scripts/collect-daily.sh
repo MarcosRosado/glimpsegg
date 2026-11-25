@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Rotina diaria da coleta do gabarito, feita para rodar sozinha por agendador
 # (docs/COLETA-GABARITO.md, secao "Agendamento"). Faz o que o roteiro manda fazer a mao:
-# colhe 7.42, roda o aceite da Fase 1, o criterio de corte, o agregador de benchmarks e a
+# colhe a trilha mais nova (7.42a desde 2026-11-25), roda o aceite da Fase 1, o criterio de corte, o agregador de benchmarks e a
 # regua do Glint, e guarda tudo em
 # .gabarito/logs/AAAA-MM-DD.log.
 #
@@ -27,6 +27,12 @@
 # volume de 7.41 (742 de volume para 106 pares no ultimo dia), curva de um patch que o app nao
 # usa. Os pares de 7.41 em disco continuam sendo o treino; colher mais e decisao, a mao, com
 # `node scripts/collect-pairs.cjs --lane 7.41`.
+#
+# SO A TRILHA 7.42a desde a rotina de 2026-11-25 (decisao do dono, 2026-11-24: "pode atualizar
+# para a nova versao"). A 7.42 tinha descido ate partidas de 19/11 e nunca chegaria a 7.42a, que
+# a OpenDota marca com o mesmo `patch` 61; o nivel 1 do criterio de corte em 7.42 ja estava em
+# 65,8% (referencia 60%). A 7.42a comeca do topo de `/parsedMatches` e desce; o cursor da 7.42
+# fica onde parou, e retomar é `node scripts/collect-pairs.cjs --lane 7.42`, a mao.
 # `timeout -s INT` encerra como um Ctrl+C: o coletor termina a partida atual e grava o indice.
 #
 # O token da STRATZ nao passa por aqui: o coletor o le do config do app, como sempre.
@@ -62,8 +68,8 @@ fi
 # Segundos ate o fim da janela, nunca negativo.
 secs_left() { local s=$(( END - $(date +%s) )); [ "$s" -gt 0 ] && echo "$s" || echo 0; }
 REST_S=$(secs_left)
-echo "--- trilha 7.42 (ate $(( REST_S / 60 )) min, ate o saldo do dia chegar em ${APP_RESERVE:-150}) ---"
-[ "$REST_S" -gt 0 ] && timeout -s INT -k 60 "${REST_S}s" node scripts/collect-pairs.cjs --reserve "${APP_RESERVE:-150}"
+echo "--- trilha 7.42a (ate $(( REST_S / 60 )) min, ate o saldo do dia chegar em ${APP_RESERVE:-150}) ---"
+[ "$REST_S" -gt 0 ] && timeout -s INT -k 60 "${REST_S}s" node scripts/collect-pairs.cjs --lane 7.42a --reserve "${APP_RESERVE:-150}"
 echo "--- aceite da Fase 1 ---"
 node scripts/accept-phase1.cjs | sed -n '/^POR FAIXA/,/^acertos/p;/^VEREDITO/,$p'
 echo "--- criterio de corte ---"
@@ -86,4 +92,8 @@ node scripts/measure-glint.cjs --model .gabarito/glint-candidate-2026-11-22-v5.j
 # Trocou o modelo do app? Novo congelamento antes, e esta linha muda junto.
 echo "--- Glint no ar (v5.1, travado em 2026-11-24) ---"
 node scripts/measure-glint.cjs --seen .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json,.gabarito/glint-seen-2026-11-24.json
+# A mesma v5.1 so em 7.42a: a medida acima ja passou (2026-11-24, partidas de 19/11), e esta diz
+# se ela segue valendo depois do balanceamento. A partir de 500 partidas, como a oficial.
+echo "--- Glint no ar (v5.1) so em 7.42a ---"
+node scripts/measure-glint.cjs --patch 7.42a --seen .gabarito/glint-seen-2026-11-21.json,.gabarito/glint-seen-2026-11-22.json,.gabarito/glint-seen-2026-11-24.json
 echo "=== $(date '+%F %T %z') — fim ==="

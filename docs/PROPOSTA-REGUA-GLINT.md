@@ -333,9 +333,11 @@ com mediana 56 na posição 2) sumiu: a posição 2 da lista ficou em 53.
 - **R2 sobre 47 heróis, não 101.** A amostra é de um dia; a medida acumula nos próximos logs.
 - **Uma janela só.** As 2.416 partidas começaram entre 09:29 e 10:17 UTC de 2026-11-19 — a trilha
   desce a partir do cursor, e essa faixa é contígua à do treino.
-- **Nada sobre a 7.42a** (publicada em 2026-11-24 08:00 UTC). Pelo mesmo motivo, a trilha não
-  colhe partida mais nova que o início dela, e a OpenDota dá o mesmo `patch` (61) às duas; separar
-  exigiria filtrar por `start_time >= 1795507200` e mexer no cursor (decisão do dono, ver
-  [COLETA-GABARITO.md](COLETA-GABARITO.md), "a trilha 7.42 chegou ao patch anterior").
+- **Nada sobre a 7.42a** (notícia da Steam em 2026-11-24 às 23:39 UTC; o 08:00 UTC do datafeed
+  da Valve é marcador de data). Pelo mesmo motivo, a trilha não colhia partida mais nova que o
+  início dela, e a OpenDota dá o mesmo `patch` (61) às duas. **Resolvido no mesmo dia**, por
+  decisão do dono: a rotina passou a colher a trilha 7.42a e a imprimir a medida da v5.1 só nela
+  (`measure-glint.cjs --patch 7.42a`, a partir de 500 partidas). Virada e folga em
+  [COLETA-GABARITO.md](COLETA-GABARITO.md), "Trilha 7.42a".
 - **Quarto congelamento.** Essas partidas já foram lidas: quem reajustar o modelo daqui em diante
   congela a lista antes de olhar, como nas três vezes anteriores.

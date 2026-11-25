@@ -29,7 +29,8 @@ recusa a abrir o segundo.
 node scripts/collect-pairs.cjs --status
 
 # 2. Colher até a cota do dia acabar (para sozinho, com 150 chamadas de reserva).
-#    Só a trilha 7.42 (a 7.41 parou em 2026-11-21 — ver "Prioridade da cota"):
+#    Só a trilha 7.42a desde 2026-11-25 (a 7.42 parou em partidas de 19/11 e a 7.41 em
+#    2026-11-21 — ver "Trilha 7.42a" e "Prioridade da cota"). Sem --lane, é a mais nova:
 node scripts/collect-pairs.cjs
 
 # 3. Medir (offline, não gasta cota)
@@ -59,9 +60,31 @@ os rótulos limpos: a STRATZ marca a 7.42 como 7.41f, então o IMP dela nas part
 provavelmente sai contra o 7.41. Voltar a colher 7.41 é decisão, à mão, com
 `node scripts/collect-pairs.cjs --lane 7.41`.
 
+## Trilha 7.42a (desde 2026-11-25)
+
+A 7.42a saiu em 2026-11-24 (notícia da Steam às 23:39 UTC). A OpenDota grava o **mesmo**
+`patch` (61) nas duas e não lista a 7.42a em `/constants/patch`, então o patch de letra sai do
+horário de início, em `scripts/lib/patches.cjs`: 7.42a é partida que começou depois da notícia
+**mais 2 horas** (na 7.42, notícia e virada da OpenDota divergiram em 1h27; a folga só perde
+partida, nunca põe 7.42 dentro da 7.42a). O `patch_timestamp` do datafeed da Valve não serve —
+é marcador de data, sempre 08:00 UTC.
+
+A trilha 7.42 tinha descido até partidas de 19/11 e nunca chegaria à 7.42a, então a rotina
+passou a colher **só a 7.42a**, do topo para baixo (decisão do dono em 2026-11-24, "pode
+atualizar para a nova versão"). O cursor da 7.42 fica onde parou (`--lane 7.42` retoma, à mão);
+o nível 1 do critério de corte em 7.42 já estava em 65,8%. Desde então, par e volume guardam
+`start` no índice, que é de onde o patch de letra sai ao recarregar.
+
+O que a 7.42a muda nas medidas: `measure-glint.cjs --patch 7.42a` mede só ela (seção "Glint no
+ar (v5.1) só em 7.42a" do log, a partir de 500 partidas). Os outros relatórios — aceite, critério
+de corte, benchmarks próprios, referência de contribuição e a medida oficial sem `--patch` — leem o
+`patch` da OpenDota e contam a 7.42a **dentro** de "7.42". Para o aceite da Fase 1 isso é
+indiferente; para as curvas próprias da Fase 2, é mistura de dois balanceamentos no mesmo patch,
+a mesma que os agregados da OpenDota fazem.
+
 ## Agendamento (a rotina sozinha, todo dia das 17h00 às 20h57)
 
-`scripts/collect-daily.sh` faz a rotina acima sem ninguém: colhe 7.42 até o saldo do dia chegar
+`scripts/collect-daily.sh` faz a rotina acima sem ninguém: colhe 7.42a até o saldo do dia chegar
 em `APP_RESERVE`, roda o aceite e o critério de corte, e grava tudo em
 `.gabarito/logs/AAAA-MM-DD.log`. Quatro limites, todos de propósito:
 
@@ -69,7 +92,7 @@ em `APP_RESERVE`, roda o aceite e o critério de corte, e grava tudo em
   rotina fecha o dia gastando a **sobra** da cota, logo antes de ela zerar (meia-noite UTC =
   21h): a cota fica para o app, e o que ele não usou vira coleta. O coletor já
   lê o saldo nos cabeçalhos e para na reserva; o horário existe porque, passada a virada, o saldo
-  volta a 3.000 e a coleta começaria a gastar a cota do dia seguinte. A trilha 7.42 vai até a
+  volta a 3.000 e a coleta começaria a gastar a cota do dia seguinte. A trilha vai até a
   hora de parada. Decisão do dono em 2026-11-19, depois de um
   dia em que coleta, medições e conferência do app no mesmo IP esgotaram a cota às 17h.
 - **`APP_RESERVE`** (no agendamento, `500`; padrão 150, o mínimo do coletor): saldo do dia que
@@ -166,7 +189,7 @@ segundos) e **ler** a série uma vez por semana.
 | `OpenDota 429 em ... esperando N s` | Limite da OpenDota com saldo no dia. Desde 2026-11-22 o coletor espera e repete a mesma chamada (até 4 tentativas) | Nada. Ler o `saldo minuto`: **0** com o coletor bem abaixo de 60/min = outro cliente no mesmo IP (o app aberto); minuto **e** dia com saldo = limite do lado da OpenDota |
 | `limite de chamadas atingido: parando (saldo minuto ...)` | O 429 resistiu às 4 tentativas, ou veio da STRATZ | O cursor voltou para a partida do 429; a próxima execução retoma dela. Se repetir todo dia com saldo alto, anotar os saldos no §7 do plano |
 | `OpenDota HTTP 500` avulso | Partida que a OpenDota não consegue servir | Nada: conta como `erro` e segue. Cinco seguidos param o script |
-| `a trilha 7.42 chegou ao patch anterior` | A paginação desceu até a virada | Acabou o que havia abaixo do ponto de partida da trilha. A 7.41 está parada de propósito (2026-11-21); partida de 7.42 mais nova que o início da trilha não é colhida — decidir antes de mexer no cursor |
+| `a trilha 7.42a chegou ao patch anterior` (ou outra trilha) | A paginação desceu até a virada | Acabou o que havia abaixo do ponto de partida da trilha. A 7.41 está parada de propósito (2026-11-21) e a 7.42 desde 2026-11-24; partida mais nova que o início da trilha não é colhida — decidir antes de mexer no cursor |
 | Célula que não sai do zero por dias (partida curta, Herald/Guardian) | Raridade real em `/parsedMatches` | Ver "Células raras" abaixo |
 | `accept-phase1.cjs` com divergência nova fora de posição | Bug do mapper ou mudança de API | Investigar o par listado; **não** ajustar o mapper só para passar |
 

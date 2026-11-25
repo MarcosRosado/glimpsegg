@@ -11,7 +11,8 @@
  *    celula de par ja cheia. Sem rotulo da STRATZ, custa UMA chamada, e é a materia-prima
  *    dos benchmarks proprios (Fase 2) e do criterio de corte continuo.
  *
- *   node scripts/collect-pairs.cjs                         trilha 7.42 (retoma de onde parou)
+ *   node scripts/collect-pairs.cjs                         trilha 7.42a, a mais nova (retoma de onde parou)
+ *   node scripts/collect-pairs.cjs --lane 7.42             retoma a trilha 7.42 (parada desde 2026-11-24)
  *   node scripts/collect-pairs.cjs --lane 7.41 --before <matchId>   abre a trilha 7.41
  *   node scripts/collect-pairs.cjs --lane 7.41             retoma a trilha 7.41
  *   node scripts/collect-pairs.cjs --limit 20              para depois de 20 gravacoes (teste curto)
@@ -26,9 +27,12 @@
  * novo para o mais velho) e toda partida de 7.41 cairia em `celula_cheia`.
  *
  * TRILHAS. `/parsedMatches` é paginada por id decrescente, entao cada patch tem o seu
- * cursor. A 7.42 comeca do topo; a 7.41 comeca de `--before`, um id logo acima da virada
- * (achado por bissecao no horario de inicio, em 2026-11-19: 9095964639). Partida do outro
- * patch é pulada pela triagem, sem custo. O patch vem da OpenDota — ver `PATCH_BY_OD_ID`.
+ * cursor. A mais nova (`TOP_LANE`, hoje a 7.42a) comeca do topo; as outras comecam de
+ * `--before`, um id logo acima da virada (a 7.41, achado por bissecao no horario de inicio, em
+ * 2026-11-19: 9095964639) ou seguem do cursor que ja tem (a 7.42, que comecou do topo quando era
+ * a mais nova). Partida do outro patch é pulada pela triagem, sem custo. Toda trilha acaba ao
+ * descer ate o patch anterior. O patch vem da OpenDota, com o de letra pela hora de inicio — ver
+ * `lib/patches.cjs`.
  *
  * ORCAMENTO. Sem chave, a OpenDota da 3.000 chamadas por dia e 60 por minuto, e
  * `/parsedMatches` so lista ids. A pagina inteira (100 ids) passa antes por UMA consulta
@@ -46,6 +50,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const { DATA_DIR, dataPath, requireToken, sleep, stratz, openDotaWithRetry, openDotaBudget, readJson } = require('./lib/sources.cjs');
+const { PATCH_BY_OD_ID, LANES: PATCHES, TOP_LANE, patchOfStart, patchOf } = require('./lib/patches.cjs');
 
 const TARGET_PER_CELL = 50;
 const CELL_CAP = 90;
@@ -117,13 +122,10 @@ const GENERATOR_QUERY = (id) => `{ stratz{ page{ imp{ matchGenerator(matchId:${i
  * `gameVersionId` poria tudo no mesmo saco (a primeira versao deste coletor fez isso, com
  * "190 = 7.42"). A OpenDota grava `patch` na partida (60 = 7.41, 61 = 7.42) e publica a
  * data da virada em `/constants/patch`: 7.42 em 2026-11-18T21:28:07Z. O registro usa o
- * `patch` da partida; a triagem, que ainda nao tem a partida, usa o horario de inicio.
+ * `patch` da partida (`patchOf`); a triagem, que ainda nao tem a partida, usa o horario de
+ * inicio (`patchOfStart`). Patch de LETRA (7.42a) a OpenDota nao separa: sai do horario de
+ * inicio nos dois casos, com a virada e a folga explicadas em `lib/patches.cjs`.
  */
-const PATCH_BY_OD_ID = { 60: '7.41', 61: '7.42' };
-const PATCH_742_START = Date.parse('2026-11-18T21:28:07Z') / 1000;
-const PATCHES = ['7.41', '7.42'];
-const patchOfStart = (startDateTime) =>
-  typeof startDateTime === 'number' ? (startDateTime >= PATCH_742_START ? '7.42' : '7.41') : null;
 /** Par antigo nao tem `patch` no indice: os 213 colhidos antes das trilhas sao todos `patch` 61 (conferido). */
 const patchOfEntry = (e) => e.patch || '7.42';
 /** Uma pagina de ids por vez custa uma consulta a STRATZ: 2,5 s segura ~1.400 por hora. */
@@ -146,8 +148,9 @@ function loadIndex() {
   index.cursors = index.cursors || {};
   if (index.cursor && !index.cursors['7.42']) index.cursors['7.42'] = index.cursor;
   index.volume = index.volume || {};
-  // O patch do volume sai do `patch` da OpenDota guardado junto, nao do que a trilha achava.
-  for (const e of Object.values(index.volume)) if (PATCH_BY_OD_ID[e.odPatch]) e.patch = PATCH_BY_OD_ID[e.odPatch];
+  // O patch do volume sai do `patch` da OpenDota guardado junto, nao do que a trilha achava, e o
+  // de letra do `start` (gravado desde a trilha 7.42a; entrada sem ele é de antes da 7.42a).
+  for (const e of Object.values(index.volume)) if (PATCH_BY_OD_ID[e.odPatch]) e.patch = patchOf(e.odPatch, e.start);
   return index;
 }
 
@@ -169,7 +172,7 @@ function status(index) {
   for (const patch of PATCHES) {
     const inPatch = vals.filter((e) => patchOfEntry(e) === patch).length;
     const volPatch = vol.filter((e) => e.patch === patch).length;
-    console.log(`\nPATCH ${patch} — pares ${inPatch} | volume ${volPatch} | cursor ${index.cursors[patch] ?? 'trilha nao aberta'}`);
+    console.log(`\nPATCH ${patch} — pares ${inPatch} | volume ${volPatch} | cursor ${index.cursors[patch] ?? (patch === TOP_LANE ? 'topo (abre na proxima execucao)' : 'trilha nao aberta')}`);
     console.log(' '.repeat(18) + DURATION_BANDS.map(([d]) => d.padStart(7)).join(''));
     let short = 0;
     for (const [rank] of RANK_BANDS) {
@@ -215,7 +218,7 @@ const argValue = (flag) => {
   const index = loadIndex();
   if (process.argv.includes('--status')) return status(index);
 
-  const lane = argValue('--lane') || '7.42';
+  const lane = argValue('--lane') || TOP_LANE;
   if (!PATCHES.includes(lane)) {
     console.log(`--lane aceita: ${PATCHES.join(', ')}`);
     process.exit(1);
@@ -230,7 +233,7 @@ const argValue = (flag) => {
     if (index.cursors[lane]) console.log(`trilha ${lane} ja aberta no cursor ${index.cursors[lane]}: --before ignorado.`);
     else index.cursors[lane] = Number(before);
   }
-  if (lane !== '7.42' && !index.cursors[lane]) {
+  if (lane !== TOP_LANE && !index.cursors[lane]) {
     console.log(`a trilha ${lane} ainda nao foi aberta: passe --before <matchId> com um id logo acima da virada do patch.`);
     process.exit(1);
   }
@@ -281,7 +284,7 @@ const argValue = (flag) => {
   /** Grava a partida como volume so-OpenDota. `o` ja esta enxuto e sem `account_id`. */
   const saveVolume = (id, o, cell, patch) => {
     fs.writeFileSync(dataPath('matches', `${id}.json.gz`), zlib.gzipSync(JSON.stringify({ id, od: o })));
-    index.volume[id] = { rank: cell.rank, dur: cell.dur, patch, odPatch: o.patch ?? null };
+    index.volume[id] = { rank: cell.rank, dur: cell.dur, patch, odPatch: o.patch ?? null, start: o.start_time ?? null };
     added += 1;
     addedVolume += 1;
   };
@@ -344,13 +347,14 @@ const argValue = (flag) => {
       console.log('triagem pela STRATZ indisponivel nesta pagina:', e.message);
     }
 
-    // A trilha 7.42 desce ate entrar no patch anterior; ali ela acabou. Tres paginas
-    // seguidas sem nenhuma partida do patch da trilha encerram a execucao.
+    // A trilha desce ate entrar no patch anterior; ali ela acabou. Tres paginas seguidas sem
+    // nenhuma partida do patch da trilha encerram a execucao. (So valia para a 7.42; a 7.41 foi
+    // aberta logo acima da virada e parou antes de chegar a 7.40.)
     if (triage && triage.size) {
       const mine = [...triage.values()].filter((t) => patchOfStart(t.startDateTime) === lane).length;
       wrongPatchPages = mine === 0 ? wrongPatchPages + 1 : 0;
-      if (wrongPatchPages >= 3 && lane === '7.42') {
-        console.log('a trilha 7.42 chegou ao patch anterior: nada mais a colher nela abaixo do ponto de partida.');
+      if (wrongPatchPages >= 3) {
+        console.log(`a trilha ${lane} chegou ao patch anterior: nada mais a colher nela abaixo do ponto de partida.`);
         index.cursors[lane] = page[page.length - 1].match_id;
         break;
       }
@@ -397,7 +401,7 @@ const argValue = (flag) => {
         if (!cell) { skip('fora_do_estrato'); continue; }
         // Patch de verdade: o da partida. Se nao é o da trilha (sem triagem, ou partida na
         // borda da virada), a chamada ja foi paga e ela vira volume do patch DELA.
-        const patch = PATCH_BY_OD_ID[o.patch];
+        const patch = patchOf(o.patch, o.start_time);
         if (!patch) { skip('patch_desconhecido'); continue; }
         if (patch !== lane) {
           skip('outro_patch');
@@ -443,6 +447,7 @@ const argValue = (flag) => {
           avgRank: Math.round(avgRank),
           duration: o.duration,
           patch,
+          start: o.start_time ?? null,
           gameVersionId: s.gameVersionId ?? null,
           impCount: s.players.filter((p) => typeof p.imp === 'number').length,
           laneOutcomes: ['top', 'mid', 'bottom'].filter((l) => s[`${l}LaneOutcome`]).length,
