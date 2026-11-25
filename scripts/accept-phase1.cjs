@@ -146,7 +146,9 @@ function table(title, rows, checks) {
   const byRank = new Map(RANKS.map((r) => [r, group()]));
   const byDur = new Map(DURS.map((d) => [d, group()]));
   // Par colhido antes das trilhas nao tem `patch` no indice: sao todos 7.42 (conferido).
-  const byPatch = new Map(['7.41', '7.42'].map((v) => [v, group()]));
+  // 7.42a desde 2026-11-25: o indice grava o patch de letra (`lib/patches.cjs`); sem a linha, o
+  // par contaria no total e sumiria da tabela por patch.
+  const byPatch = new Map(['7.41', '7.42', '7.42a'].map((v) => [v, group()]));
   const cellCount = {};
   const diverg = [];
   const problems = { foraDoIndice: 0, ilegivel: 0, mapperLancou: 0, jogadorSemPar: 0, heroiDiferente: 0 };
@@ -205,7 +207,7 @@ function table(title, rows, checks) {
 
   table('POR FAIXA DE RANQUE', [...byRank], core);
   table('POR DURACAO', [...byDur], core);
-  table('POR PATCH (o patch vem da OpenDota)', [...byPatch], core);
+  table('POR PATCH (o patch vem da OpenDota; a letra, da hora de inicio)', [...byPatch], core);
   table('TOTAL', [['todos', total]], core);
   console.log('\nacertos/comparados (sem gabarito na STRATZ):');
   for (const c of CHECKS) {

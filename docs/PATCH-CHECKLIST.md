@@ -27,7 +27,9 @@ higiene, não urgência.
 ## 1b. Janela de transição — abrir no dia, fechar à mão
 
 Preencher `PATCH_TRANSITION` em `src/constants/gameVersion.ts` com o patch, o `patch_timestamp`
-do datafeed da Valve (em ISO, UTC) e o prazo em dias. Enquanto valer, o `PatchTransitionNotice`
+do datafeed da Valve (em ISO, UTC) e o prazo em dias. Esse horário é marcador de data (ver o
+passo 2): serve para abrir a janela de dias do aviso, nunca para separar partidas de um patch e
+de outro. Enquanto valer, o `PatchTransitionNotice`
 avisa no topbar, na aba de coaching e no layout espelho que os agregados ainda misturam o patch
 anterior.
 
